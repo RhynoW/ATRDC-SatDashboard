@@ -1,4 +1,14 @@
-# scenario-advanced01 — 太空態勢儀表板（模組化重構版）
+---
+title: ATRDC SatDashboard
+emoji: 🛰️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 5013
+pinned: false
+---
+
+# ATRDC SatDashboard — 太空態勢儀表板（模組化重構版）
 
 原 `scenario04-Cesium-advanced04.py`（3880 行單一 Flask 檔案）依
 `scenario04_redesign_phases_20260702.md` **Phase 1（拆解與模組化）** 重構，

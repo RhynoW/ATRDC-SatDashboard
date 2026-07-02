@@ -1,0 +1,61 @@
+# 衛星分類規則（Phase 2.3）：country_map 與 constellation_rules 外部化。
+# 修改後呼叫 POST /api/admin/reload_cats 熱重載，不需重啟服務。
+# 檔案不存在或格式錯誤時，程式退回內建預設值（與本檔內容一致）。
+
+country_map:
+  "United States":                       "美國"
+  "Commonwealth of Independent States":  "俄羅斯/蘇聯"
+  "People's Republic of China":          "中國"
+  "United Kingdom":                      "英國"
+  "France":                              "法國"
+  "Japan":                               "日本"
+  "India":                               "印度"
+  "European Space Agency":               "ESA"
+  "Italy":                               "義大利"
+  "Canada":                              "加拿大"
+  "Germany":                             "德國"
+  "South Korea":                         "韓國"
+  "Israel":                              "以色列"
+  "Australia":                           "澳洲"
+  "Brazil":                              "巴西"
+  "Argentina":                           "阿根廷"
+  "United Arab Emirates":                "阿聯"
+  "Iran":                                "伊朗"
+  "North Korea":                         "朝鮮"
+  "Globalstar":                          "Globalstar"
+  "ORBCOMM":                             "ORBCOMM"
+  "SOCIETE EUROPEENNE":                  "SES"
+  "International Telecommunications":    "ITSO/Intelsat"
+  "EUTELSAT":                            "Eutelsat"
+  "TBD":                                 "不明"
+
+# 依序比對衛星名稱（大寫）關鍵字，第一個命中的標籤生效
+constellation_rules:
+  - label: "Starlink"
+    keywords: ["STARLINK"]
+  - label: "OneWeb"
+    keywords: ["ONEWEB"]
+  - label: "Kuiper"
+    keywords: ["KUIPER"]
+  - label: "千帆/Qianfan"
+    keywords: ["QIANFAN", "SPACESAIL"]
+  - label: "Iridium"
+    keywords: ["IRIDIUM"]
+  - label: "Globalstar"
+    keywords: ["GLOBALSTAR"]
+  - label: "Orbcomm"
+    keywords: ["ORBCOMM"]
+  - label: "Planet/Flock"
+    keywords: ["FLOCK", "DOVE", "SKYSAT"]
+  - label: "Spire"
+    keywords: ["LEMUR", "SPIRE"]
+  - label: "Telesat LEO"
+    keywords: ["TELESAT"]
+  - label: "吉林/Jilin"
+    keywords: ["JILIN"]
+  - label: "遙感/Yaogan"
+    keywords: ["YAOGAN"]
+  - label: "高分"
+    keywords: ["GAOFEN"]
+  - label: "風雲"
+    keywords: ["FENGYUN", "FY-"]

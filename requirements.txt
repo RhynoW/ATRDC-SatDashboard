@@ -1,0 +1,15 @@
+flask>=3.0
+flask-cors>=4.0
+duckdb>=0.10
+numpy>=1.26
+requests>=2.31
+python-dotenv>=1.0
+sgp4>=2.23
+scipy>=1.11
+PyYAML>=6.0
+
+# 開發/測試
+pytest>=8.0
+
+# 可選：多容器共享快取
+# redis>=5.0

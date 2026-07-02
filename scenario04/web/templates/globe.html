@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8"/>
+<title>太空態勢儀表板 — 進階版 04-adv01（向量化 SGP4 + 近距離掃描 + 搜尋）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/globe.css') }}"/>
+<script>
+(function(){
+  function _css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
+  function _js(src,ok,fail){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail||function(){};document.head.appendChild(s);}
+  function _err(m){
+    function _s(){var el=document.getElementById('warn');if(el){el.textContent=m;el.style.background='rgba(244,67,54,.88)';el.style.display='block';}}
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_s);else _s();
+  }
+  _css('/cesium/Widgets/widgets.css');
+  _js("{{ url_for('static', filename='js/globe.js') }}",function(){
+    _js('/cesium/Cesium.js',function(){startApp();},function(){_err('本機 Cesium 未安裝，請將 CesiumJS 解壓至 data/cesium/');});
+  },function(){_err('前端腳本 globe.js 載入失敗');});
+}());
+</script>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>&#127760; 太空態勢儀表板（進階版）</h1>
+  <div class="tcards">
+    <div class="tcard"><div class="val" id="c-total">—</div><div class="lbl">追蹤物件</div></div>
+    <div class="tcard payload"><div class="val" id="c-payload">—</div><div class="lbl">有效載荷</div></div>
+    <div class="tcard debris"><div class="val" id="c-debris">—</div><div class="lbl">碎片</div></div>
+    <div class="tcard rocket"><div class="val" id="c-rocket">—</div><div class="lbl">火箭體</div></div>
+    <div class="tcard"><div class="val" id="c-new">—</div><div class="lbl">近 1 年</div></div>
+    <div class="tcard conj clickable" id="conj-card" onclick="toggleConjPanel()" title="點選查看近距離配對清單">
+      <div class="val" id="c-conj">...</div>
+      <div class="lbl">近距離配對</div>
+    </div>
+  </div>
+  <button id="track-btn" onclick="toggleTrackPanel()" title="NORAD 監測（user_defined_tracking_NORAD 清單，可同時追蹤多顆衛星）">&#127919; NORAD 監測<span id="track-count"></span></button>
+  <a id="taipei-link" href="/taipei" target="_blank">&#127988; 台北覆蓋分析</a>
+  <div id="ts">—</div>
+</div>
+
+<div id="db-info-bar">
+  <span class="dbi-k">DB:</span>
+  <span id="dbi-name" class="dbi-v">—</span>
+  <span class="dbi-sep">|</span>
+  <span class="dbi-k">更新：</span><span id="dbi-mtime" class="dbi-v">—</span>
+  <span class="dbi-sep">|</span>
+  <span class="dbi-k">有效衛星：</span><span id="dbi-sats" class="dbi-v">—</span>
+  <span class="dbi-sep">|</span>
+  <span class="dbi-k">TLE 日期：</span><span id="dbi-epoch" class="dbi-v">—</span>
+  <span class="dbi-sep">|</span>
+  <span class="dbi-k">大小：</span><span id="dbi-size" class="dbi-v">—</span>
+</div>
+
+<div id="main">
+  <div id="panel">
+    <div id="search-box">
+      <input id="search-input" type="text" placeholder="搜尋 NORAD ID 或衛星名稱..." autocomplete="off"/>
+      <button id="search-clear" onclick="clearSearch()">×</button>
+    </div>
+    <div id="tabs">
+      <button class="tab active" data-tab="country"       onclick="switchTab('country')">國家</button>
+      <button class="tab"        data-tab="purpose"       onclick="switchTab('purpose')">用途</button>
+      <button class="tab"        data-tab="era"           onclick="switchTab('era')">年代</button>
+      <button class="tab"        data-tab="constellation" onclick="switchTab('constellation')">星座</button>
+    </div>
+    <div id="panel-back">
+      <button onclick="backToTabs()">&#8592; 返回</button>
+    </div>
+    <div id="panel-body"></div>
+    <div id="filter-status">點選左側分類以在地圖上顯示（全量，無抽樣）</div>
+    <div id="sat-detail-panel" style="display:none"></div>
+    <div id="basemap-bar">
+      <div class="sec">底圖</div>
+      <div id="basemap-btns"></div>
+    </div>
+    <div id="layer-bar">
+      <div class="sec">向量圖層</div>
+      <label>
+        <input type="checkbox" id="chk-borders" checked onchange="toggleLayer('borders',this)"/>
+        <span style="width:9px;height:9px;border-radius:50%;background:#FFD600;display:inline-block;flex-shrink:0"></span>
+        <span>全球國界</span>
+      </label>
+      <label>
+        <input type="checkbox" id="chk-ssn" onchange="toggleLayer('ssn',this)"/>
+        <span style="width:9px;height:9px;border-radius:50%;background:#00E5FF;display:inline-block;flex-shrink:0"></span>
+        <span>SSN 地面觀測站</span>
+      </label>
+    </div>
+  </div>
+
+  <div id="cesiumContainer">
+    <div id="warn"></div>
+    <div id="loading">正在初始化地球...</div>
+    <div id="logo-overlay"><img src="/api/logo" alt="ATRDC" onerror="this.parentElement.style.display='none'"/></div>
+  </div>
+</div>
+
+</body>
+</html>

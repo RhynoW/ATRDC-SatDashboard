@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8"/>
+<title>台北覆蓋分析 — Cesium 2D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/taipei.css') }}"/>
+<script>window.CESIUM_ION_TOKEN="{{ cesium_token }}";</script>
+<script>
+(function(){
+  function _css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
+  function _js(src,ok,fail){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail||function(){};document.head.appendChild(s);}
+  function _err(m){var el=document.getElementById('map-loading');if(el){el.textContent=m;el.style.color='#f44336';}}
+  _css('/cesium/Widgets/widgets.css');
+  _js("{{ url_for('static', filename='js/taipei.js') }}",function(){
+    _js('/cesium/Cesium.js',function(){startApp();},function(){_err('本機 Cesium 未安裝，請將 CesiumJS 解壓至 data/cesium/');});
+  },function(){_err('前端腳本 taipei.js 載入失敗');});
+}());
+</script>
+</head>
+<body>
+<div id="topbar">
+  <h1>&#127988; 台北覆蓋分析 &#8212; 2000 km 範圍衛星過頂</h1>
+  <div id="clock">&#8212;</div>
+  <button class="tbtn" onclick="refreshAll()">&#8635; 更新</button>
+  <a class="tbtn" href="/">&#8592; 返回主頁</a>
+</div>
+<div id="main">
+  <div id="panel">
+    <div id="panel-header">
+      <h2>衛星分類覆蓋</h2>
+      <div class="sub">台北 25.03&#176;N 121.57&#176;E &nbsp;&#183;&nbsp; 仰角遮蔽 5&#176;</div>
+    </div>
+    <div id="tab-bar">
+      <button class="ptab active" data-tab="overview" onclick="switchPanelTab('overview')">分類概況</button>
+      <button class="ptab" data-tab="passes" onclick="switchPanelTab('passes')">過頂預報</button>
+    </div>
+    <div id="step-control" style="display:none;align-items:center;gap:6px;
+         padding:4px 10px;border-bottom:1px solid #21262d;font-size:11px;">
+      <span style="color:#8b949e;white-space:nowrap;">時間步長：</span>
+      <input type="range" id="step-slider" min="1" max="60" step="1" value="15"
+             style="flex:1;accent-color:#4af;" oninput="updateStepLabel(this.value)">
+      <span id="step-label" style="color:#4af;width:38px;text-align:right;white-space:nowrap;">15 分</span>
+      <button onclick="applyStepChange()"
+              style="padding:2px 8px;background:#1a3a5c;color:#4af;
+                     border:1px solid #4af;border-radius:3px;font-size:10px;cursor:pointer;">套用</button>
+    </div>
+    <div id="panel-body"><div class="pass-empty">載入中...</div></div>
+  </div>
+  <div id="map-wrap">
+    <div id="cesiumContainer"></div>
+    <div id="map-loading">初始化地圖...</div>
+    <div id="legend">
+      <h4>衛星分類</h4>
+      <div class="leg-row" data-cat="US_EO" onclick="toggleCatFilter('US_EO')">
+        <div class="leg-dot" style="background:#4488FF"></div>
+        <span class="leg-label">美國商用光學</span>
+      </div>
+      <div class="leg-row" data-cat="CN_COMM" onclick="toggleCatFilter('CN_COMM')">
+        <div class="leg-dot" style="background:#FF9800"></div>
+        <span class="leg-label">中國商用光學</span>
+      </div>
+      <div class="leg-row" data-cat="CN_MIL" onclick="toggleCatFilter('CN_MIL')">
+        <div class="leg-dot" style="background:#F44336"></div>
+        <span class="leg-label">中國軍用偵察</span>
+      </div>
+      <div class="leg-row" data-cat="TW_TASA" onclick="toggleCatFilter('TW_TASA')">
+        <div class="leg-dot" style="background:#00E5FF"></div>
+        <span class="leg-label">台灣 TASA</span>
+      </div>
+      <div style="border-top:1px solid #21262d;margin-top:5px;padding-top:5px;
+                  display:flex;align-items:center;gap:7px">
+        <div style="width:14px;height:3px;background:#FFD600;border-radius:1px;flex-shrink:0"></div>
+        <span style="font-size:10px;color:#8b949e">2000 km 覆蓋圈</span>
+      </div>
+    </div>
+    <!-- Timeline bar -->
+    <div id="timeline">
+      <input type="range" id="tl-slider" min="-43200" max="43200" step="15" value="0"
+             oninput="tlSliderInput(this.value)" onchange="tlSliderChange(this.value)"/>
+      <div id="tl-row">
+        <span id="tl-bounds" class="tl-lb">&#8722;30天</span>
+        <span id="tl-time">&#8212;</span>
+        <span id="tl-bounds" class="tl-rb">&#43;30天</span>
+        <button class="tl-now-btn" onclick="jumpToNow()">&#9654; 現在</button>
+        <span id="tl-badge" class="tl-badge now">現在</span>
+        <span id="tl-loading"></span>
+      </div>
+    </div>
+    <div id="statusbar">
+      <div class="sitem">衛星 <span id="st-total">&#8212;</span></div>
+      <div class="sitem">可見 <span id="st-visible">&#8212;</span></div>
+      <div class="sitem">時刻 <span id="st-time">&#8212;</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

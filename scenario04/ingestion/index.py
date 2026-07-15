@@ -23,10 +23,12 @@ from .user_defined import load_user_catalogue, load_user_tles
 
 logger = logging.getLogger(__name__)
 
-_stats_cache:     dict[str, Any] = {}
-_stats_loaded_at: float = 0.0
-_sat_index:       dict[int, dict[str, Any]] = {}
-_index_loaded_at: float = 0.0
+_stats_cache:             dict[str, Any] = {}
+_stats_loaded_at:         float = 0.0
+_stats_payload_cache:     dict[str, Any] = {}
+_stats_payload_loaded_at: float = 0.0
+_sat_index:               dict[int, dict[str, Any]] = {}
+_index_loaded_at:         float = 0.0
 
 
 def _rows_to_index(rows: list[tuple]) -> dict[int, dict[str, Any]]:
@@ -131,10 +133,13 @@ def _merge_user_defined(idx: dict[int, dict[str, Any]]) -> None:
 def invalidate_index() -> None:
     """強制下次 get_sat_index() 重建（使用者自訂檔變更後由 admin API 呼叫）。"""
     global _sat_index, _index_loaded_at, _stats_cache, _stats_loaded_at
+    global _stats_payload_cache, _stats_payload_loaded_at
     _sat_index = {}
     _index_loaded_at = 0.0
     _stats_cache = {}
     _stats_loaded_at = 0.0
+    _stats_payload_cache = {}
+    _stats_payload_loaded_at = 0.0
 
 
 def build_sat_index() -> dict[int, dict[str, Any]]:
@@ -226,12 +231,15 @@ def get_index_for_time(ts: datetime) -> dict[int, dict[str, Any]]:
 
 # ── 統計 ─────────────────────────────────────────────────────────────────────
 
-def build_stats(idx: dict[int, dict[str, Any]]) -> dict[str, Any]:
+def build_stats(idx: dict[int, dict[str, Any]], *, payload_only: bool = False) -> dict[str, Any]:
+    EXCLUDE = {"碎片", "火箭體"} if payload_only else set()
     country: dict[str, int] = {}
     purpose: dict[str, int] = {}
     era:     dict[str, int] = {}
     constel: dict[str, int] = {}
     for info in idx.values():
+        if info["purpose"] in EXCLUDE:
+            continue
         country[info["country"]] = country.get(info["country"], 0) + 1
         purpose[info["purpose"]] = purpose.get(info["purpose"], 0) + 1
         era[info["era"]]         = era.get(info["era"], 0) + 1
@@ -254,14 +262,29 @@ def build_stats(idx: dict[int, dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def get_stats() -> dict[str, Any]:
-    global _stats_cache, _stats_loaded_at
-    cached = cache.cache_get("stats")
+def get_stats(*, payload_only: bool = False) -> dict[str, Any]:
+    global _stats_cache, _stats_loaded_at, _stats_payload_cache, _stats_payload_loaded_at
+    cache_key = "stats_payload" if payload_only else "stats"
+    cached = cache.cache_get(cache_key)
     if cached:
         return cached
-    if not _stats_cache or (time.monotonic() - _stats_loaded_at) > settings.STATS_TTL:
+    need_rebuild = (
+        payload_only and (not _stats_payload_cache or
+                          (time.monotonic() - _stats_payload_loaded_at) > settings.STATS_TTL)
+    ) or (
+        not payload_only and (not _stats_cache or
+                              (time.monotonic() - _stats_loaded_at) > settings.STATS_TTL)
+    )
+    if need_rebuild:
         idx = get_sat_index()
-        _stats_cache = build_stats(idx)
-        _stats_loaded_at = time.monotonic()
-    cache.cache_set("stats", _stats_cache, ttl=settings.STATS_TTL)
-    return _stats_cache
+        result = build_stats(idx, payload_only=payload_only)
+        if payload_only:
+            _stats_payload_cache = result
+            _stats_payload_loaded_at = time.monotonic()
+        else:
+            _stats_cache = result
+            _stats_loaded_at = time.monotonic()
+    else:
+        result = _stats_payload_cache if payload_only else _stats_cache
+    cache.cache_set(cache_key, result, ttl=settings.STATS_TTL)
+    return result

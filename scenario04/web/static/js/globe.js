@@ -6,6 +6,9 @@ let statsData=null, conjData=null;
 let activeTab='country', activeFtype=null, activeFval=null;
 let panelMode='tabs';
 const entMap=new Map();
+let _statsPayload=null;
+const _payloadOnly={};
+const PAYLOAD_TABS=new Set(['country','era','constellation']);
 let borderDs=null, ssnDs=null;
 let _searchTimer=null;
 
@@ -16,10 +19,17 @@ const SSN_TYPE_COLORS={
 const PURPOSE_C  ={有效載荷:'#4CAF50',碎片:'#FF9800',火箭體:'#9E9E9E',不明物體:'#607D8B'};
 const COUNTRY_C  ={美國:'#3F51B5','俄羅斯/蘇聯':'#F44336',中國:'#FF5722',英國:'#2196F3',
                    法國:'#9C27B0',日本:'#E91E63',印度:'#FF9800',ESA:'#00BCD4',
-                   其他:'#78909C',不明:'#455A64'};
+                   台灣:'#00ACC1',韓國:'#FF6F00',以色列:'#5C6BC0',澳洲:'#2E7D32',
+                   盧森堡:'#F57F17',其他:'#78909C',不明:'#455A64'};
 const CONSTEL_C  ={Starlink:'#1565C0',OneWeb:'#00897B',Kuiper:'#FF8F00',
-                   '千帆/Qianfan':'#C62828',Iridium:'#558B2F',Globalstar:'#6A1B9A',
-                   'Planet/Flock':'#2E7D32',Spire:'#00838F','吉林/Jilin':'#AD1457',
+                   '互聯網/Hulianwang':'#D32F2F',
+                   Planet:'#2E7D32','千帆/Qianfan':'#C62828',
+                   Spire:'#00838F',Iridium:'#558B2F',
+                   'GeeSat/Geespace':'#6A1B9A',Globalstar:'#4527A0',
+                   Hawk:'#E65100',Orbcomm:'#37474F',
+                   NuSat:'#00695C',Skykraft:'#1565C0',
+                   SpaceMobile:'#0277BD',Lynk:'#558B2F',
+                   'Telesat LEO':'#4A148C','吉林/Jilin':'#AD1457',
                    '遙感/Yaogan':'#B71C1C',高分:'#E64A19',風雲:'#0277BD',其他衛星:'#546E7A'};
 const ERA_C      ={'< 1 年':'#F44336','1–5 年':'#FF9800','5–10 年':'#4CAF50',
                    '> 10 年':'#607D8B',不明:'#455A64'};
@@ -211,9 +221,13 @@ async function loadUserGeojsonLayers(){
 
 async function loadStats(){
   try{
-    const r=await fetch('/api/stats');
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    statsData=await r.json();
+    const [r1,r2]=await Promise.all([
+      fetch('/api/stats'),
+      fetch('/api/stats?payload_only=1'),
+    ]);
+    if(!r1.ok) throw new Error('HTTP '+r1.status);
+    statsData=await r1.json();
+    if(r2.ok) _statsPayload=await r2.json();
     renderTopCards();
     renderPanel(activeTab);
     const ts=new Date(statsData.updated_at);
@@ -252,19 +266,37 @@ function backToTabs(){
 }
 
 function switchTab(tab){
-  activeTab=tab;
-  if(panelMode!=='tabs') setPanelMode('tabs');
+  const alreadyActive=(activeTab===tab&&panelMode==='tabs');
+  if(alreadyActive&&PAYLOAD_TABS.has(tab)){
+    _payloadOnly[tab]=!_payloadOnly[tab];
+  }else{
+    activeTab=tab;
+    if(panelMode!=='tabs') setPanelMode('tabs');
+  }
   document.querySelectorAll('.tab').forEach(t=>{
-    t.classList.toggle('active',t.dataset.tab===tab);
+    const isThis=t.dataset.tab===tab;
+    t.classList.toggle('active',t.dataset.tab===activeTab);
+    if(isThis&&PAYLOAD_TABS.has(tab)){
+      t.classList.toggle('payload-mode',!!_payloadOnly[tab]);
+      t.title=_payloadOnly[tab]?'僅有效載荷（再點切回全部）':'點選再次切換為僅顯示有效載荷';
+    }
   });
   renderPanel(tab);
 }
 
 function renderPanel(tab){
   if(!statsData||panelMode!=='tabs') return;
+  const usePayload=PAYLOAD_TABS.has(tab)&&_payloadOnly[tab]&&_statsPayload;
+  const data=usePayload?_statsPayload:statsData;
   const body=document.getElementById('panel-body');
   body.innerHTML='';
-  const rows=statsData[tab]||[];
+  if(usePayload){
+    const note=document.createElement('div');
+    note.style.cssText='padding:3px 12px 2px;font-size:10px;color:#4CAF50;flex-shrink:0';
+    note.textContent='▶ 僅有效載荷（不含碎片／火箭體）';
+    body.appendChild(note);
+  }
+  const rows=data[tab]||[];
   const maxCount=rows.length?rows[0].count:1;
   rows.forEach(row=>{
     const isActive=(activeFtype===tab&&activeFval===row.label);
@@ -299,7 +331,8 @@ async function filterGlobe(ftype,fval,color){
   renderPanel(activeTab);
   document.getElementById('filter-status').textContent='載入中：'+fval+' …';
   try{
-    const url='/api/positions?ftype='+encodeURIComponent(ftype)+'&fval='+encodeURIComponent(fval);
+    const payloadParam=(_payloadOnly[ftype]&&PAYLOAD_TABS.has(ftype))?'&payload_only=1':'';
+    const url='/api/positions?ftype='+encodeURIComponent(ftype)+'&fval='+encodeURIComponent(fval)+payloadParam;
     const r=await fetch(url);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();

@@ -135,3 +135,13 @@ body{font-family:Tahoma,sans-serif;background:#0a0e17;color:#c9d1d9;display:flex
 .st-sec:first-child{border-top:none}
 .st-row{display:flex;gap:8px;flex-wrap:wrap;padding:2px 10px 5px;font-size:11px;color:#8b949e}
 .cdm-ev{padding:4px 10px;border-bottom:1px solid #161b22;font-size:11px}
+/* ── 折疊式區段（底圖 / 向量圖層）─────────────────────────────────────────── */
+#basemap-bar .sec.collapsible,
+#layer-bar   .sec.collapsible{
+  cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  user-select:none;padding-right:10px}
+#basemap-bar .sec.collapsible:hover,
+#layer-bar   .sec.collapsible:hover{color:#8b949e}
+.sec-arrow{font-size:8px;color:#484f58;transition:transform .2s ease;flex-shrink:0}
+.sec-body{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.sec-body.open{max-height:300px}

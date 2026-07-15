@@ -145,3 +145,6 @@ body{font-family:Tahoma,sans-serif;background:#0a0e17;color:#c9d1d9;display:flex
 .sec-arrow{font-size:8px;color:#484f58;transition:transform .2s ease;flex-shrink:0}
 .sec-body{overflow:hidden;max-height:0;transition:max-height .25s ease}
 .sec-body.open{max-height:300px}
+/* payload-mode：分類 tab 切換為僅顯示有效載荷時的視覺提示 */
+.tab.payload-mode{color:#4CAF50;border-bottom-color:#4CAF50}
+.tab.payload-mode:hover{color:#66BB6A}

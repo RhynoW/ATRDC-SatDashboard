@@ -27,7 +27,8 @@ bp = Blueprint("positions", __name__)
 
 @bp.get("/api/stats")
 def api_stats():
-    return jsonify(get_stats())
+    payload_only = request.args.get("payload_only", "0") == "1"
+    return jsonify(get_stats(payload_only=payload_only))
 
 
 @bp.get("/api/db_info")
@@ -39,12 +40,15 @@ def api_db_info():
 def api_positions():
     ftype = request.args.get("ftype", "").strip()
     fval  = request.args.get("fval",  "").strip()
+    payload_only = request.args.get("payload_only", "0") == "1"
     VALID = {"country", "purpose", "era", "constellation"}
     if ftype not in VALID or not fval:
         return jsonify({"error": "ftype 必須為 country/purpose/era/constellation，且 fval 不可空白"}), 400
 
+    EXCLUDE = {"碎片", "火箭體"} if payload_only else set()
     idx = get_sat_index()
-    matched = [n for n, i in idx.items() if i.get(ftype) == fval]
+    matched = [n for n, i in idx.items()
+               if i.get(ftype) == fval and i.get("purpose") not in EXCLUDE]
 
     total = len(matched)
     t0    = time.monotonic()

@@ -72,21 +72,25 @@
     <div id="filter-status">點選左側分類以在地圖上顯示（全量，無抽樣）</div>
     <div id="sat-detail-panel" style="display:none"></div>
     <div id="basemap-bar">
-      <div class="sec">底圖</div>
-      <div id="basemap-btns"></div>
+      <div class="sec collapsible" onclick="toggleSec(this)">底圖<span class="sec-arrow">&#9654;</span></div>
+      <div class="sec-body">
+        <div id="basemap-btns"></div>
+      </div>
     </div>
     <div id="layer-bar">
-      <div class="sec">向量圖層</div>
-      <label>
-        <input type="checkbox" id="chk-borders" checked onchange="toggleLayer('borders',this)"/>
-        <span style="width:9px;height:9px;border-radius:50%;background:#FFD600;display:inline-block;flex-shrink:0"></span>
-        <span>全球國界</span>
-      </label>
-      <label>
-        <input type="checkbox" id="chk-ssn" onchange="toggleLayer('ssn',this)"/>
-        <span style="width:9px;height:9px;border-radius:50%;background:#00E5FF;display:inline-block;flex-shrink:0"></span>
-        <span>SSN 地面觀測站</span>
-      </label>
+      <div class="sec collapsible" onclick="toggleSec(this)">向量圖層<span class="sec-arrow">&#9654;</span></div>
+      <div class="sec-body">
+        <label>
+          <input type="checkbox" id="chk-borders" checked onchange="toggleLayer('borders',this)"/>
+          <span style="width:9px;height:9px;border-radius:50%;background:#FFD600;display:inline-block;flex-shrink:0"></span>
+          <span>全球國界</span>
+        </label>
+        <label>
+          <input type="checkbox" id="chk-ssn" onchange="toggleLayer('ssn',this)"/>
+          <span style="width:9px;height:9px;border-radius:50%;background:#00E5FF;display:inline-block;flex-shrink:0"></span>
+          <span>SSN 地面觀測站</span>
+        </label>
+      </div>
     </div>
   </div>
 
@@ -97,5 +101,12 @@
   </div>
 </div>
 
+<script>
+function toggleSec(el){
+  var b=el.nextElementSibling;
+  var open=b.classList.toggle('open');
+  el.querySelector('.sec-arrow').style.transform=open?'rotate(90deg)':'rotate(0deg)';
+}
+</script>
 </body>
 </html>

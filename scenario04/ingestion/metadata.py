@@ -44,20 +44,28 @@ _COUNTRY_MAP_DEFAULT: dict[str, str] = {
 }
 
 _CONSTELLATION_RULES_DEFAULT: list[tuple[str, list[str]]] = [
-    ("Starlink",     ["STARLINK"]),
-    ("OneWeb",       ["ONEWEB"]),
-    ("Kuiper",       ["KUIPER"]),
-    ("千帆/Qianfan", ["QIANFAN", "SPACESAIL"]),
-    ("Iridium",      ["IRIDIUM"]),
-    ("Globalstar",   ["GLOBALSTAR"]),
-    ("Orbcomm",      ["ORBCOMM"]),
-    ("Planet/Flock", ["FLOCK", "DOVE", "SKYSAT"]),
-    ("Spire",        ["LEMUR", "SPIRE"]),
-    ("Telesat LEO",  ["TELESAT"]),
-    ("吉林/Jilin",   ["JILIN"]),
-    ("遙感/Yaogan",  ["YAOGAN"]),
-    ("高分",         ["GAOFEN"]),
-    ("風雲",         ["FENGYUN", "FY-"]),
+    # 排列依照 InsideGNSS (2026-05) LEO 星座數量降冪，確保大型星座優先命中
+    ("Starlink",            ["STARLINK"]),
+    ("OneWeb",              ["ONEWEB"]),
+    ("Kuiper",              ["KUIPER"]),
+    ("互聯網/Hulianwang",   ["HONGYAN", "XINGYUN", "TIANQI"]),   # 鴻雁/行云/天啟
+    ("Planet",              ["FLOCK", "DOVE", "SKYSAT"]),
+    ("千帆/Qianfan",        ["QIANFAN", "SPACESAIL"]),
+    ("Spire",               ["LEMUR", "SPIRE"]),
+    ("Iridium",             ["IRIDIUM"]),
+    ("GeeSat/Geespace",     ["GEESPACE", "JIYUAN"]),             # 吉利/吉空
+    ("Globalstar",          ["GLOBALSTAR"]),
+    ("Hawk",                ["HAWK"]),                           # HawkEye 360
+    ("Orbcomm",             ["ORBCOMM"]),
+    ("NuSat",               ["NUSAT", "SATELLOGIC"]),            # Satellogic 阿根廷
+    ("Skykraft",            ["SKYKRAFT"]),
+    ("SpaceMobile",         ["BLUEBIRD", "SPACEMOBILE"]),        # AST SpaceMobile
+    ("Lynk",                ["LYNK"]),
+    ("Telesat LEO",         ["TELESAT"]),
+    ("吉林/Jilin",          ["JILIN"]),
+    ("遙感/Yaogan",         ["YAOGAN"]),
+    ("高分",                ["GAOFEN"]),
+    ("風雲",                ["FENGYUN", "FY-"]),
 ]
 
 # 模組層狀態（reload_classification_rules() 熱重載）

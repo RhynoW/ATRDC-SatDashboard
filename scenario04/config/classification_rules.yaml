@@ -30,6 +30,7 @@ country_map:
   "TBD":                                 "不明"
 
 # 依序比對衛星名稱（大寫）關鍵字，第一個命中的標籤生效
+# 排列依照 InsideGNSS (2026-05) LEO 星座數量降冪，確保大型星座優先命中
 constellation_rules:
   - label: "Starlink"
     keywords: ["STARLINK"]
@@ -37,18 +38,32 @@ constellation_rules:
     keywords: ["ONEWEB"]
   - label: "Kuiper"
     keywords: ["KUIPER"]
+  - label: "互聯網/Hulianwang"
+    keywords: ["HONGYAN", "XINGYUN", "TIANQI"]   # 鴻雁/行云/天啟 中國 LEO 互聯網星座群
+  - label: "Planet"
+    keywords: ["FLOCK", "DOVE", "SKYSAT"]
   - label: "千帆/Qianfan"
     keywords: ["QIANFAN", "SPACESAIL"]
-  - label: "Iridium"
-    keywords: ["IRIDIUM"]
-  - label: "Globalstar"
-    keywords: ["GLOBALSTAR"]
-  - label: "Orbcomm"
-    keywords: ["ORBCOMM"]
-  - label: "Planet/Flock"
-    keywords: ["FLOCK", "DOVE", "SKYSAT"]
   - label: "Spire"
     keywords: ["LEMUR", "SPIRE"]
+  - label: "Iridium"
+    keywords: ["IRIDIUM"]
+  - label: "GeeSat/Geespace"
+    keywords: ["GEESPACE", "JIYUAN"]             # 吉利/吉空星座
+  - label: "Globalstar"
+    keywords: ["GLOBALSTAR"]
+  - label: "Hawk"
+    keywords: ["HAWK"]                           # HawkEye 360
+  - label: "Orbcomm"
+    keywords: ["ORBCOMM"]
+  - label: "NuSat"
+    keywords: ["NUSAT", "SATELLOGIC"]            # Satellogic (阿根廷)
+  - label: "Skykraft"
+    keywords: ["SKYKRAFT"]                       # 澳洲
+  - label: "SpaceMobile"
+    keywords: ["BLUEBIRD", "SPACEMOBILE"]        # AST SpaceMobile
+  - label: "Lynk"
+    keywords: ["LYNK"]
   - label: "Telesat LEO"
     keywords: ["TELESAT"]
   - label: "吉林/Jilin"

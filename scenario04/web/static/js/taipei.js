@@ -7,6 +7,7 @@ const CATS={
   CN_COMM:{label:'中國商用光學衛星',sublabel:'SuperView · 高分 · 吉林',  color:'#FF9800'},
   CN_MIL: {label:'中國軍用偵察衛星',sublabel:'遙感 Yaogan',                        color:'#F44336'},
   TW_TASA:{label:'台灣 TASA 衛星',  sublabel:'Formosat-5 / -7 / -8',              color:'#00E5FF'},
+  STARLINK:{label:'Starlink 星鏈',  sublabel:'SpaceX · Gen1/Gen2/V2 Mini',         color:'#A855F7'},
 };
 
 let viewer=null, satDs=null, circleDs=null;
@@ -169,7 +170,10 @@ function _updateMarkers(){
   Object.entries(coverageData.categories).forEach(([catId,cd])=>{
     if(activeCatFilter&&activeCatFilter!==catId) return;
     const col=Cesium.Color.fromCssColorString(cd.color);
-    (cd.satellites||[]).forEach(s=>{
+    // 超過 300 顆時只畫可見衛星，避免大星座（如 Starlink）拖慢 2D 地圖
+    const allSats=cd.satellites||[];
+    const satsToPlot=allSats.length>300?allSats.filter(s=>s.visible):allSats;
+    satsToPlot.forEach(s=>{
       satDs.entities.add({
         id:'sat_'+s.norad_id,
         position:Cesium.Cartesian3.fromDegrees(s.lon,s.lat,0),

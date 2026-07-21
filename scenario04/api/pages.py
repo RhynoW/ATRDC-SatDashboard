@@ -22,6 +22,11 @@ def taipei_page():
     return render_template("taipei.html", cesium_token=settings.CESIUM_ION_TOKEN)
 
 
+@bp.get("/starlink")
+def starlink_page():
+    return render_template("starlink.html")
+
+
 @bp.get("/cesium/<path:filename>")
 def cesium_static(filename: str):
     safe = (settings.CESIUM_LOCAL_DIR / filename).resolve()

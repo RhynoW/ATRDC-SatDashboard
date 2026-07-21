@@ -1,0 +1,113 @@
+/* Starlink 服務能力分析頁面樣式 */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px}
+
+/* ── 頂欄 ── */
+#topbar{display:flex;align-items:center;gap:10px;padding:6px 14px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0}
+#topbar h1{font-size:14px;font-weight:600;color:#e6edf3;white-space:nowrap;flex-shrink:0}
+#topbar h1 .sub{font-size:11px;color:#8b949e;font-weight:400;margin-left:6px}
+#clock{margin-left:auto;font-size:11px;color:#8b949e;white-space:nowrap;font-family:monospace}
+.tbtn{padding:4px 10px;background:#21262d;color:#58a6ff;border:1px solid #30363d;border-radius:4px;font-size:11px;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s}
+.tbtn:hover{background:#30363d}
+
+/* ── 設定欄 ── */
+#settings-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 14px;background:#161b22;border-bottom:1px solid #21262d}
+.sf-label{color:#8b949e;font-size:11px;white-space:nowrap}
+.sf-input{width:90px;padding:4px 8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;font-size:12px;font-family:monospace}
+.sf-input:focus{outline:none;border-color:#A855F7}
+#preset-btn{padding:4px 10px;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;font-size:11px;cursor:pointer}
+#preset-btn:hover{background:#30363d}
+#preset-wrap{position:relative}
+#preset-menu{display:none;position:absolute;z-index:99;background:#161b22;border:1px solid #30363d;border-radius:4px;min-width:200px;top:100%;left:0}
+#preset-menu.open{display:block}
+.preset-item{padding:6px 12px;cursor:pointer;font-size:12px;color:#c9d1d9;border-bottom:1px solid #21262d}
+.preset-item:last-child{border-bottom:none}
+.preset-item:hover{background:#21262d;color:#A855F7}
+#compute-btn{padding:5px 16px;background:#A855F7;color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+#compute-btn:hover{background:#9333ea}
+#compute-btn:disabled{background:#4b2d6b;cursor:not-allowed;color:#9d7bbf}
+#settings-note{color:#8b949e;font-size:10px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── 主內容 ── */
+#main{padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+
+/* ── Loading ── */
+#loading-bar{display:none;align-items:center;gap:10px;padding:10px 14px;background:#1a2332;border:1px solid #2d4a6e;border-radius:6px;color:#58a6ff;font-size:12px}
+#loading-bar.active{display:flex}
+.spinner{width:16px;height:16px;border:2px solid #30363d;border-top-color:#A855F7;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── 統計卡片 ── */
+#stats-row{display:flex;gap:8px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:100px;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px 12px}
+.stat-card .sc-val{font-size:20px;font-weight:700;color:#A855F7;line-height:1.1}
+.stat-card .sc-val.good{color:#2ea043}
+.stat-card .sc-val.warn{color:#F44336}
+.stat-card .sc-val.rtt{color:#58a6ff;font-size:17px}
+.stat-card .sc-label{font-size:10px;color:#8b949e;margin-top:2px}
+
+/* ── 圖表區 ── */
+#charts-row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.chart-box{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px;flex:1;min-width:300px}
+.chart-box h3{font-size:12px;color:#8b949e;margin-bottom:6px;font-weight:400}
+.chart-box canvas{display:block;width:100%;border-radius:3px}
+#tl-divider{border-top:1px solid #21262d;margin:8px 0}
+#polar-box{flex:0 0 268px}
+#polar-box canvas{width:240px;height:240px;display:block;margin:0 auto}
+
+/* ── 極座標 tab ── */
+#polar-tabs{display:flex;gap:4px;margin-bottom:8px}
+.ptab{padding:3px 10px;background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:11px;cursor:pointer;transition:all .15s}
+.ptab.active{background:#A855F7;color:#fff;border-color:#A855F7}
+.ptab:hover:not(.active){background:#30363d;color:#c9d1d9}
+
+/* ── 遮蔽控制 ── */
+.obtn{padding:4px 10px;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;font-size:11px;cursor:pointer;transition:background .15s}
+.obtn:hover{background:#30363d}
+.obtn.obtn-apply{background:#A855F7;color:#fff;border-color:#A855F7}
+.obtn.obtn-apply:hover{background:#9333ea}
+.obtn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── 遮蔽模擬結果 ── */
+#obst-result{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:12px}
+.obst-result-head{display:flex;align-items:center;margin-bottom:10px}
+.obst-compare-grid{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.occ{background:#0d1117;border:1px solid #30363d;border-radius:5px;padding:8px 12px}
+.occ.before{border-color:#A855F7}
+.occ.after{border-color:#F44336}
+.occ.arrow{background:transparent;border:none;font-size:20px;color:#6e7681}
+.occ.delta{font-size:22px;font-weight:700;min-width:80px;text-align:center}
+.occ-title{font-size:10px;color:#8b949e;margin-bottom:3px}
+.occ-val{font-size:20px;font-weight:700;color:#e6edf3;line-height:1}
+.occ-sub{font-size:10px;color:#8b949e;margin-top:3px}
+#obst-chart-wrap canvas{width:100%;display:block}
+
+/* ── 空窗區 ── */
+#gaps-box{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px}
+#gaps-box h3{font-size:12px;color:#8b949e;margin-bottom:8px;font-weight:400}
+.gap-ok{color:#2ea043;font-size:13px;padding:6px 0}
+.gap-item{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid #21262d;font-size:12px}
+.gap-item:last-child{border-bottom:none}
+.gap-time{color:#c9d1d9;font-family:monospace;font-size:11px}
+.gap-dur{color:#F44336;font-weight:600;white-space:nowrap}
+
+/* ── Roadmap ── */
+#roadmap h2{font-size:14px;color:#e6edf3;margin-bottom:10px;border-bottom:1px solid #21262d;padding-bottom:6px}
+.rm-layer{margin-bottom:16px}
+.rm-layer-title{font-size:11px;font-weight:600;color:#8b949e;letter-spacing:.5px;margin-bottom:8px}
+.rm-cards{display:flex;gap:8px;flex-wrap:wrap}
+.rm-card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px 12px;flex:1;min-width:200px;max-width:280px}
+.rm-card-head{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.rm-badge{font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.rm-badge.done{background:#0f2a0f;color:#2ea043;border:1px solid #2ea043}
+.rm-badge.plan{background:#1a2332;color:#58a6ff;border:1px solid #58a6ff}
+.rm-card h4{font-size:12px;color:#e6edf3;font-weight:600}
+.rm-card p{font-size:11px;color:#8b949e;line-height:1.45;margin:0}
+
+/* ── 響應式 ── */
+@media(max-width:640px){
+  #topbar h1 .sub{display:none}
+  #charts-row{flex-direction:column}
+  #polar-box{flex:1;min-width:unset}
+  #polar-box canvas{width:100%;height:auto}
+}

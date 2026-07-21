@@ -49,6 +49,12 @@ _OVERPASS_CATS_DEFAULT: dict[str, dict] = {
             "COSMIC-2", "COSMIC2",
         ],
     },
+    "STARLINK": {
+        "label":    "Starlink 星鏈",
+        "sublabel": "SpaceX · Gen1 / Gen2 / V2 Mini",
+        "color":    "#A855F7",
+        "kw":       ["STARLINK"],
+    },
 }
 
 

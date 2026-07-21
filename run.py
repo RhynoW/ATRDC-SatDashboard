@@ -22,6 +22,7 @@ from scenario04 import create_app                       # noqa: E402
 from scenario04.config import settings                  # noqa: E402
 from scenario04.ingestion.index import get_sat_index, get_stats  # noqa: E402
 from scenario04.ingestion.manual_tle import ingest_manual_tles  # noqa: E402
+from scenario04.physics.propagator_cache import get_cache        # noqa: E402
 from scenario04.physics.conjunction import HAS_KDTREE   # noqa: E402
 from scenario04.physics.propagate import HAS_SATREC_ARRAY  # noqa: E402
 
@@ -51,4 +52,10 @@ if __name__ == "__main__":
     logger.info("預熱衛星索引…")
     get_sat_index()
     get_stats()
-    app.run(host=settings.HOST, port=settings.PORT, debug=True)
+    logger.info("啟動背景傳播快取（慢層：每 60 s 全星座重算）…")
+    # app.debug 在 app.run() 之前恆為 False，故先定義局部旗標
+    # debug=True 時 Werkzeug 啟動 reloader parent + child；只在 child（WERKZEUG_RUN_MAIN=true）啟動執行緒
+    _debug = True
+    if not _debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        get_cache().start(get_sat_index, interval=60)
+    app.run(host=settings.HOST, port=settings.PORT, debug=_debug)

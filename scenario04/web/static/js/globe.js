@@ -11,6 +11,11 @@ const _payloadOnly={};
 const PAYLOAD_TABS=new Set(['country','era','constellation']);
 let borderDs=null, ssnDs=null;
 let _searchTimer=null;
+let _filterRefreshTimer=null;
+let _filterTotal=0;       // 篩選群組伺服器端總匹配數（供伺服器負載下限計算）
+let _filterRefreshGen=0;  // 每次 _startFilterRefresh 遞增；防止舊迴圈繼續執行
+let _currentRefreshMode=null;  // 'fast'|'slow'|null；camera moveEnd 偵測慢→快切換
+let _camSettleTimer=null;      // camera.changed debounce 計時器
 
 const SSN_TYPE_COLORS={
   '光學/電光':'#FFC107','雷達':'#00E5FF','飛彈預警/協作':'#FF7043',
@@ -59,6 +64,9 @@ async function initCesium(){
   viewer.scene.globe.depthTestAgainstTerrain=false;
   satDs=new Cesium.CustomDataSource('satellites');
   await viewer.dataSources.add(satDs);
+  viewer.camera.percentageChanged=0.05;  // 預設 0.5 太鈍，縮放一格常不觸發 changed
+  viewer.camera.moveEnd.addEventListener(_onCameraMoveEnd);
+  viewer.camera.changed.addEventListener(_onCameraChanged);
 
   viewer.selectedEntityChanged.addEventListener(ent=>{
     _clearOrbit();
@@ -215,7 +223,8 @@ async function loadUserGeojsonLayers(){
       +(f.error?(' · '+f.error):'')+(heavy?' · 大型圖層，勾選後載入':'');
     label.appendChild(cb); label.appendChild(dot); label.appendChild(txt);
     bar.appendChild(label);
-    if(!f.error&&!heavy){ cb.checked=true; toggleUserGeo(f.name,cb); }
+    const skipAuto=/submarine|cable/i.test(f.name);  // 海底電纜預設不自動載入
+    if(!f.error&&!heavy&&!skipAuto){ cb.checked=true; toggleUserGeo(f.name,cb); }
   });
 }
 
@@ -318,8 +327,144 @@ function renderPanel(tab){
   });
 }
 
+// ── 即時位置自動更新 ─────────────────────────────────────────────────────────
+// 使用輕量端點 /api/positions/coords（只回傳 lat/lon/alt），就地更新 entity
+// 位置，避免清除/重建 entity 造成閃爍。
+
+function _stopFilterRefresh(){
+  if(_filterRefreshTimer){ clearTimeout(_filterRefreshTimer); _filterRefreshTimer=null; }
+  _currentRefreshMode=null;
+}
+
+// 回傳目前 Cesium 可視截錐內的衛星 NORAD ID 陣列
+function _getVisibleNorads(){
+  if(!viewer||!entMap.size) return[];
+  try{
+    const cam=viewer.scene.camera;
+    const cv=cam.frustum.computeCullingVolume(cam.position,cam.direction,cam.up);
+    const occ=new Cesium.EllipsoidalOccluder(Cesium.Ellipsoid.WGS84,cam.position);
+    const nids=[];
+    for(const [nid,ent] of entMap){
+      const pos=ent.position&&ent.position.getValue(Cesium.JulianDate.now());
+      if(pos
+        &&cv.computeVisibility(new Cesium.BoundingSphere(pos,1e5))!==Cesium.Intersect.OUTSIDE
+        &&occ.isPointVisible(pos)) nids.push(nid);
+    }
+    return nids;
+  }catch(e){ return[]; }
+}
+// 可視衛星數（快捷包裝，舊介面保持相容）
+function _countVisibleSats(){ return _getVisibleNorads().length; }
+
+// 更新間隔：可視衛星數決定 UX 頻率；載入總數設定伺服器保護下限
+function _getRefreshMs(total,visible){
+  const serverMin=total>3000?10000:total>300?2000:0;
+  const ms=visible>3000?60000:visible>100?20000:1000;
+  return Math.max(ms,serverMin);
+}
+
+// 兩段式自動更新：
+//   快速模式（≤100 顆可見）→ POST /api/positions/active → 1 s，直接 SGP4 少量衛星（<5 ms）
+//   慢速模式（>100 顆可見）→ GET  /api/positions/coords → 讀背景快取，20～60 s
+function _startFilterRefresh(total){
+  _stopFilterRefresh();
+  if(!activeFtype||!activeFval) return;
+  _filterTotal=total;
+  const gen=++_filterRefreshGen;
+  (function _loop(){
+    if(gen!==_filterRefreshGen||!activeFtype||!activeFval) return;
+    const visNids=_getVisibleNorads();
+    const visible=visNids.length;
+    if(visible>0&&visible<=100){
+      // ── 快速模式：1 s ──────────────────────────────────────────────────
+      _currentRefreshMode='fast';
+      _filterRefreshTimer=setTimeout(async()=>{
+        const freshNids=_getVisibleNorads();   // timer 期間 camera 可能移動，重新取
+        if(freshNids.length>0&&freshNids.length<=100){
+          await _refreshActiveSet(freshNids);
+        }else{
+          await _refreshFilterPositions();     // 模式切換：改走慢速路徑
+        }
+        _loop();
+      },1000);
+    }else{
+      // ── 慢速模式：從背景快取讀，依可視數決定間隔 ───────────────────────
+      _currentRefreshMode='slow';
+      const ms=_getRefreshMs(_filterTotal,visible);
+      _filterRefreshTimer=setTimeout(async()=>{
+        await _refreshFilterPositions();
+        _loop();
+      },ms);
+    }
+  })();
+}
+
+// 快速模式：只對指定 NORAD ID 列表做即時 SGP4（POST /api/positions/active）
+async function _refreshActiveSet(nids){
+  if(!activeFtype||!activeFval||!nids.length) return;
+  try{
+    const payloadParam=(_payloadOnly[activeFtype]&&PAYLOAD_TABS.has(activeFtype))?1:0;
+    const r=await fetch('/api/positions/active',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({norad_ids:nids,payload_only:payloadParam}),
+    });
+    if(!r.ok) return;
+    const d=await r.json();
+    _updateEntityPositions(d.satellites||[]);
+    const timeStr=new Date().toISOString().slice(11,19)+' UTC';
+    document.getElementById('filter-status').textContent=
+      '顯示 '+entMap.size+' 顆 — '+activeFval
+      +' ｜ ↻ '+timeStr+'（畫面 '+nids.length+' 顆 ⚡ 1 s 快速模式）';
+  }catch(e){
+    console.warn('快速位置更新失敗',e);
+  }
+}
+
+function _updateEntityPositions(sats){
+  sats.forEach(s=>{
+    const ent=entMap.get(s.norad_id);
+    if(!ent) return;
+    ent.position=Cesium.Cartesian3.fromDegrees(s.lon,s.lat,s.alt_km*1000);
+  });
+}
+
+async function _refreshFilterPositions(){
+  if(!activeFtype||!activeFval) return;
+  const payloadParam=(_payloadOnly[activeFtype]&&PAYLOAD_TABS.has(activeFtype))?'&payload_only=1':'';
+  try{
+    const url='/api/positions/coords?ftype='+encodeURIComponent(activeFtype)
+      +'&fval='+encodeURIComponent(activeFval)+payloadParam;
+    const r=await fetch(url);
+    if(!r.ok) return;
+    const d=await r.json();
+    _updateEntityPositions(d.satellites||[]);
+    const visible=_countVisibleSats();
+    const nextMs=_getRefreshMs(_filterTotal,visible);
+    const timeStr=new Date().toISOString().slice(11,19)+' UTC';
+    document.getElementById('filter-status').textContent=
+      '顯示 '+entMap.size+' 顆 — '+activeFval
+      +' ｜ ↻ '+timeStr+'（畫面 '+visible+' / 每 '+Math.round(nextMs/1000)+' s）';
+  }catch(e){
+    console.warn('位置自動更新失敗',e);
+  }
+}
+
+// camera 停止移動後，若處於慢速模式且可視衛星 ≤100 顆，立刻重啟為快速模式
+function _onCameraMoveEnd(){
+  if(_currentRefreshMode!=='slow'||!activeFtype||!activeFval) return;
+  const visible=_countVisibleSats();
+  if(visible>0&&visible<=100) _startFilterRefresh(_filterTotal);
+}
+// camera.changed 在移動過程連續觸發；300ms 無新事件才視為停止，避免高頻觸發 _onCameraMoveEnd
+function _onCameraChanged(){
+  if(_camSettleTimer) clearTimeout(_camSettleTimer);
+  _camSettleTimer=setTimeout(_onCameraMoveEnd,300);
+}
+
 async function filterGlobe(ftype,fval,color){
   if(activeFtype===ftype&&activeFval===fval){
+    _stopFilterRefresh();
     activeFtype=activeFval=null;
     _clearOrbit();
     satDs.entities.removeAll(); entMap.clear();
@@ -327,6 +472,7 @@ async function filterGlobe(ftype,fval,color){
     renderPanel(activeTab);
     return;
   }
+  _stopFilterRefresh();
   activeFtype=ftype; activeFval=fval;
   renderPanel(activeTab);
   document.getElementById('filter-status').textContent='載入中：'+fval+' …';
@@ -339,8 +485,14 @@ async function filterGlobe(ftype,fval,color){
     renderEntities(d.satellites,ftype);
     const vflag=d.vectorized?'，向量化':'';
     const elapsed=d.elapsed_sec?'（'+d.elapsed_sec+' s'+vflag+'）':'';
+    _startFilterRefresh(d.total_matched);
+    const initVisible=_countVisibleSats();
+    const initMode=initVisible>0&&initVisible<=100
+      ?'⚡ 1 s 快速模式'
+      :'每 '+Math.round(_getRefreshMs(d.total_matched,initVisible)/1000)+' s 慢速模式（快取）';
     document.getElementById('filter-status').textContent=
-      '顯示 '+d.count+' / '+d.total_matched+' 顆'+elapsed+' — '+fval;
+      '顯示 '+d.count+' / '+d.total_matched+' 顆'+elapsed+' — '+fval
+      +' ｜ 畫面 '+initVisible+' 顆 / '+initMode;
   }catch(e){
     document.getElementById('filter-status').textContent='載入失敗: '+e.message;
   }
@@ -1178,7 +1330,24 @@ function renderTrackPanel(){
   });
 }
 
+function _tickUtcClock(){
+  const n=new Date();
+  const el=document.getElementById('led-time');
+  if(el) el.textContent=[n.getUTCHours(),n.getUTCMinutes(),n.getUTCSeconds()]
+    .map(v=>String(v).padStart(2,'0')).join(':');
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    _stopFilterRefresh();
+  } else {
+    if(activeFtype&&activeFval) _startFilterRefresh(entMap.size);
+  }
+});
+
 async function init(){
+  _tickUtcClock();
+  setInterval(_tickUtcClock,1000);
   await initCesium();
   await loadBordersLayer();
   loadUserGeojsonLayers();

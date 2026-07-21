@@ -29,6 +29,7 @@ _stats_payload_cache:     dict[str, Any] = {}
 _stats_payload_loaded_at: float = 0.0
 _sat_index:               dict[int, dict[str, Any]] = {}
 _index_loaded_at:         float = 0.0
+_db_mtime_at_load:        float = 0.0
 
 
 def _rows_to_index(rows: list[tuple]) -> dict[int, dict[str, Any]]:
@@ -133,9 +134,10 @@ def _merge_user_defined(idx: dict[int, dict[str, Any]]) -> None:
 def invalidate_index() -> None:
     """強制下次 get_sat_index() 重建（使用者自訂檔變更後由 admin API 呼叫）。"""
     global _sat_index, _index_loaded_at, _stats_cache, _stats_loaded_at
-    global _stats_payload_cache, _stats_payload_loaded_at
+    global _stats_payload_cache, _stats_payload_loaded_at, _db_mtime_at_load
     _sat_index = {}
     _index_loaded_at = 0.0
+    _db_mtime_at_load = 0.0
     _stats_cache = {}
     _stats_loaded_at = 0.0
     _stats_payload_cache = {}
@@ -186,10 +188,30 @@ def build_sat_index() -> dict[int, dict[str, Any]]:
 
 
 def get_sat_index() -> dict[int, dict[str, Any]]:
-    global _sat_index, _index_loaded_at
-    if not _sat_index or (time.monotonic() - _index_loaded_at) > settings.INDEX_TTL:
+    global _sat_index, _index_loaded_at, _db_mtime_at_load
+    ttl_expired = not _sat_index or (time.monotonic() - _index_loaded_at) > settings.INDEX_TTL
+    db_changed  = False
+    if not ttl_expired:
+        db = resolve_db()
+        if db is not None:
+            try:
+                mtime = db.stat().st_mtime
+                if mtime != _db_mtime_at_load:
+                    logger.info("DB 檔案已更新（mtime 變更），強制重建衛星索引")
+                    db_changed = True
+            except OSError:
+                pass
+    if ttl_expired or db_changed:
+        db = resolve_db()
+        _db_mtime_at_load = db.stat().st_mtime if db is not None else 0.0
         _sat_index = build_sat_index()
         _index_loaded_at = time.monotonic()
+        # 同步清除統計快取
+        global _stats_cache, _stats_loaded_at, _stats_payload_cache, _stats_payload_loaded_at
+        _stats_cache = {}
+        _stats_loaded_at = 0.0
+        _stats_payload_cache = {}
+        _stats_payload_loaded_at = 0.0
     return _sat_index
 
 

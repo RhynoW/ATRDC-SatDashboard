@@ -24,7 +24,7 @@ load_dotenv(BASE_DIR / ".env")
 # 預設讀取 scenario04/DB/；該目錄找不到時 resolve_db() 回退專案根目錄（舊位置）
 DB_DIR        = PACKAGE_DIR / "DB"
 LEGACY_DB_DIR = BASE_DIR
-DEFAULT_DB    = str(DB_DIR / "space_db.duckdb")
+DEFAULT_DB    = str(DB_DIR / "space_db_slim.duckdb")
 DB_PATH       = Path(os.getenv("DB_PATH", DEFAULT_DB))
 RAW_TABLE     = "raw_tle_archive"
 META_TABLE    = "sat_n2yo_metadata"

@@ -80,6 +80,7 @@ SSN_STATIONS_FILE         = CONFIG_DIR / "ssn_stations.geojson"
 CLASSIFICATION_RULES_FILE = CONFIG_DIR / "classification_rules.yaml"
 
 # ── 使用者自訂資料（放檔案即生效；格式見各目錄 README.md）────────────────────
+MANUAL_TLE_DIR     = APP_DIR / "manual_tle_downloads"             # 啟動時自動匯入 DB 的 *.tle
 USER_TLE_DIR       = PACKAGE_DIR / "user_defined_TLE"             # *.tle / *.txt（2 行或 3 行 TLE）
 USER_CATALOGUE_DIR = PACKAGE_DIR / "user_defined_SaTCatalogue"    # *.csv（衛星目錄，支援繁中）
 USER_TRACKING_DIR  = PACKAGE_DIR / "user_defined_tracking_NORAD"  # *.csv（NORAD 監測清單，支援繁中）

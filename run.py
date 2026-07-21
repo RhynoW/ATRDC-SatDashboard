@@ -21,6 +21,7 @@ logging.basicConfig(
 from scenario04 import create_app                       # noqa: E402
 from scenario04.config import settings                  # noqa: E402
 from scenario04.ingestion.index import get_sat_index, get_stats  # noqa: E402
+from scenario04.ingestion.manual_tle import ingest_manual_tles  # noqa: E402
 from scenario04.physics.conjunction import HAS_KDTREE   # noqa: E402
 from scenario04.physics.propagate import HAS_SATREC_ARRAY  # noqa: E402
 
@@ -37,6 +38,16 @@ if __name__ == "__main__":
         "SatrecArray=%s  KD-tree=%s  接近閾值=%.0f km  快取 TTL=%d s",
         HAS_SATREC_ARRAY, HAS_KDTREE, settings.CONJ_THRESHOLD_KM, settings.CONJ_TTL,
     )
+    logger.info("掃描 manual_tle_downloads/ …")
+    result = ingest_manual_tles()
+    if result["files"]:
+        logger.info(
+            "manual_tle 匯入完成: %d 檔 / %d 顆衛星 TLE（%d 檔跳過）",
+            result["files"], result["satellites"], result["skipped"],
+        )
+    else:
+        logger.info("manual_tle_downloads/ 無待處理 *.tle 檔")
+
     logger.info("預熱衛星索引…")
     get_sat_index()
     get_stats()

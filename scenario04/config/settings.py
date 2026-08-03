@@ -21,13 +21,16 @@ BASE_DIR    = Path(os.getenv("ATRDC_BASE_DIR", str(APP_DIR.parent)))
 load_dotenv(BASE_DIR / ".env")
 
 # ── 資料庫 ────────────────────────────────────────────────────────────────────
-# 預設讀取 scenario04/DB/；該目錄找不到時 resolve_db() 回退專案根目錄（舊位置）
+# 解析順序（resolve_db()）：DB_PATH → 專案根目錄主 archive（較新、完整）→
+# 同目錄 slim 快照 → 舊位置 slim。優先用較新之完整 archive，避免誤用過期打包快照。
 DB_DIR        = PACKAGE_DIR / "DB"
 LEGACY_DB_DIR = BASE_DIR
 DEFAULT_DB    = str(DB_DIR / "space_db.duckdb")
 DB_PATH       = Path(os.getenv("DB_PATH", DEFAULT_DB))
 RAW_TABLE     = "raw_tle_archive"
 META_TABLE    = "sat_n2yo_metadata"
+# 啟動時 TLE 資料齡告警門檻（天）；最新 epoch 早於此值即告警。0/負值＝停用。
+STALE_WARN_DAYS = float(os.getenv("STALE_WARN_DAYS", "3"))
 # sat_metadata.csv 同樣優先讀 DB 目錄，缺檔時退回專案根目錄
 SAT_META_CSV = (DB_DIR / "sat_metadata.csv"
                 if (DB_DIR / "sat_metadata.csv").exists()
@@ -70,12 +73,19 @@ MAX_PASSES_MATRIX_MB = 512   # 過頂預報矩陣記憶體上限
 CESIUM_ION_TOKEN = os.getenv("CESIUM_ION_TOKEN", "")
 
 # ── 檔案資源 ──────────────────────────────────────────────────────────────────
-OVERPASS_CATS_FILE        = BASE_DIR / "overpass_cats.yaml"
-GLOBE_TEXTURE_LOCAL       = BASE_DIR / "data" / "globe_texture.jpg"
-CESIUM_LOCAL_DIR          = BASE_DIR / "data" / "cesium"
-BORDERS_LOCAL             = BASE_DIR / "data" / "borders.geojson"
-TEXTURE_DIR               = BASE_DIR / "data" / "textures"
-LOGO_FILE                 = BASE_DIR / "Logo_ATRDC.png"
+# 前端資產（Cesium／Logo／貼圖等）優先讀 app 目錄（隨附打包），退回 BASE_DIR
+# （專案根，可用環境變數 ATRDC_BASE_DIR 覆寫）。避免因 BASE_DIR 指向專案根而找不到
+# 打包於 app 目錄之資產（Cesium 404 之根因）。
+def _asset(rel: str) -> Path:
+    app_p = APP_DIR / rel
+    return app_p if app_p.exists() else (BASE_DIR / rel)
+
+OVERPASS_CATS_FILE        = _asset("overpass_cats.yaml")
+GLOBE_TEXTURE_LOCAL       = _asset("data/globe_texture.jpg")
+CESIUM_LOCAL_DIR          = _asset("data/cesium")
+BORDERS_LOCAL             = _asset("data/borders.geojson")
+TEXTURE_DIR               = _asset("data/textures")
+LOGO_FILE                 = _asset("Logo_ATRDC.png")
 SSN_STATIONS_FILE         = CONFIG_DIR / "ssn_stations.geojson"
 CLASSIFICATION_RULES_FILE = CONFIG_DIR / "classification_rules.yaml"
 

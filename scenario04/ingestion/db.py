@@ -19,28 +19,76 @@ META_TABLE = settings.META_TABLE
 
 
 def resolve_db() -> Path | None:
-    """依序解析資料庫位置：
-    1. DB_PATH（預設 scenario04/DB/space_db.duckdb，可用環境變數覆寫）
-    2. 同目錄的 full/slim 替代檔名
-    3. 舊位置（專案根目錄）的 full/slim
+    """依序解析資料庫位置（優先較新之完整 archive，避免誤用過期打包快照）：
+    1. DB_PATH（可用環境變數覆寫；預設 scenario04/DB/space_db.duckdb）
+    2. 專案根目錄之完整主 archive（space_db.duckdb）——通常較新、隨管線每日更新
+    3. 同目錄之 slim 快照（scenario04/DB/space_db_slim.duckdb，隨附離線快照）
+    4. 舊位置之 slim 快照
     """
-    if settings.DB_PATH.exists():
-        return settings.DB_PATH
-    alt_name = ("space_db_slim.duckdb"
-                if settings.DB_PATH.name == "space_db.duckdb" else "space_db.duckdb")
-    alt = settings.DB_PATH.parent / alt_name
-    if alt.exists():
-        logger.warning("DB %s 不存在，改用 %s", settings.DB_PATH.name, alt.name)
-        return alt
-    for legacy in (settings.LEGACY_DB_DIR / settings.DB_PATH.name,
-                   settings.LEGACY_DB_DIR / alt_name):
-        if legacy.exists():
-            logger.warning("DB 目錄 %s 無資料庫，回退舊位置 %s",
-                           settings.DB_PATH.parent, legacy)
-            return legacy
-    logger.error("找不到資料庫: %s（含舊位置 %s）",
-                 settings.DB_PATH, settings.LEGACY_DB_DIR)
+    candidates: list[tuple[Path, str]] = [
+        (settings.DB_PATH, "設定路徑 (DB_PATH)"),
+        (settings.LEGACY_DB_DIR / "space_db.duckdb", "專案根目錄主 archive（較新、完整）"),
+        (settings.DB_PATH.parent / "space_db_slim.duckdb", "同目錄 slim 快照"),
+        (settings.LEGACY_DB_DIR / "space_db_slim.duckdb", "舊位置 slim 快照"),
+    ]
+    seen: set[Path] = set()
+    for path, desc in candidates:
+        if path in seen:
+            continue
+        seen.add(path)
+        if path.exists():
+            if path != settings.DB_PATH:
+                logger.warning("DB 解析：%s（%s）優先於預設路徑 %s",
+                               path, desc, settings.DB_PATH.name)
+            return path
+    logger.error("找不到資料庫: %s（含專案根與 slim 各回退位置皆無）", settings.DB_PATH)
     return None
+
+
+def check_db_freshness(db_path: Path | None = None,
+                       warn_days: float | None = None) -> dict[str, Any]:
+    """檢查資料庫 TLE 最新 epoch 之資料齡；過期則以 WARNING 告警（啟動時呼叫）。
+
+    回傳 {latest_epoch, age_days, stale, warn_days}；查不到時 age_days=None。
+    """
+    warn_days = settings.STALE_WARN_DAYS if warn_days is None else warn_days
+    path = db_path or resolve_db()
+    out: dict[str, Any] = {"db_path": str(path) if path else None,
+                           "latest_epoch": None, "age_days": None,
+                           "stale": False, "warn_days": warn_days}
+    if path is None:
+        return out
+    try:
+        con = duckdb.connect(str(path), read_only=True)
+        try:
+            latest = con.execute(
+                f"SELECT max(epoch_utc) FROM {RAW_TABLE}").fetchone()[0]
+        finally:
+            con.close()
+    except Exception as exc:                       # 表不存在或查詢失敗
+        logger.warning("DB 資料齡檢查失敗（%s）：%s", path, exc)
+        return out
+    if latest is None:
+        logger.warning("DB 資料齡檢查：%s 之 %s 無 epoch 資料", path, RAW_TABLE)
+        return out
+    latest = latest if isinstance(latest, datetime) else datetime.fromisoformat(str(latest))
+    if latest.tzinfo is None:
+        latest = latest.replace(tzinfo=timezone.utc)
+    age = (datetime.now(timezone.utc) - latest).total_seconds() / 86400.0
+    out.update(latest_epoch=latest.isoformat(), age_days=round(age, 1),
+               stale=(warn_days > 0 and age > warn_days))
+    if out["stale"]:
+        logger.warning(
+            "⚠ TLE 資料齡 %.1f 天（最新 epoch %s）已超過 %.0f 天門檻——"
+            "接近/行為結果恐失真，建議更新 TLE（Space-Track 或 CelesTrak）。DB=%s",
+            age, latest.date(), warn_days, path.name)
+    elif age < 0:
+        logger.info("TLE 最新 epoch %s（含未來 epoch，資料為最新）。DB=%s",
+                    latest.date(), path.name)
+    else:
+        logger.info("TLE 最新 epoch %s（資料齡 %.1f 天，未逾 %.0f 天門檻）。DB=%s",
+                    latest.date(), age, warn_days, path.name)
+    return out
 
 
 def tle_select_sql(con: duckdb.DuckDBPyConnection, extra_where: str = "") -> str:

@@ -21,6 +21,7 @@ logging.basicConfig(
 from scenario04 import create_app                       # noqa: E402
 from scenario04.config import settings                  # noqa: E402
 from scenario04.ingestion.index import get_sat_index, get_stats  # noqa: E402
+from scenario04.ingestion.db import check_db_freshness  # noqa: E402
 from scenario04.physics.conjunction import HAS_KDTREE   # noqa: E402
 from scenario04.physics.propagate import HAS_SATREC_ARRAY  # noqa: E402
 
@@ -37,6 +38,8 @@ if __name__ == "__main__":
         "SatrecArray=%s  KD-tree=%s  接近閾值=%.0f km  快取 TTL=%d s",
         HAS_SATREC_ARRAY, HAS_KDTREE, settings.CONJ_THRESHOLD_KM, settings.CONJ_TTL,
     )
+    logger.info("檢查資料庫 TLE 資料齡…")
+    check_db_freshness()          # 過期則以 WARNING 告警（門檻 settings.STALE_WARN_DAYS）
     logger.info("預熱衛星索引…")
     get_sat_index()
     get_stats()

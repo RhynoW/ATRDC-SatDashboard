@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, request
 from ..config import settings
 from ..ingestion.db import get_db_info
 from ..ingestion.index import get_sat_index, get_stats
+from ..physics.propagator_cache import get_cache
 from ..physics.propagate import (
     HAS_SATREC_ARRAY,
     propagate_arc,
@@ -89,6 +90,86 @@ def api_positions():
         "vectorized":    HAS_SATREC_ARRAY,
         "satellites":    results,
         "timestamp":     datetime.now(timezone.utc).isoformat(),
+    })
+
+
+@bp.get("/api/positions/coords")
+def api_positions_coords():
+    """中頻更新端點：從背景快取讀取位置，不在請求路徑觸發 SGP4。
+    快取過期（>120 s）或尚未就緒時自動退回即時傳播（fallback）。
+    """
+    ftype = request.args.get("ftype", "").strip()
+    fval  = request.args.get("fval",  "").strip()
+    payload_only = request.args.get("payload_only", "0") == "1"
+    VALID = {"country", "purpose", "era", "constellation"}
+    if ftype not in VALID or not fval:
+        return jsonify({"error": "ftype 必須為 country/purpose/era/constellation，且 fval 不可空白"}), 400
+
+    EXCLUDE = {"碎片", "火箭體"} if payload_only else set()
+    idx     = get_sat_index()
+    matched = [n for n, i in idx.items()
+               if i.get(ftype) == fval and i.get("purpose") not in EXCLUDE]
+
+    cache      = get_cache()
+    from_cache = cache.ready and cache.age_seconds < 120
+    if from_cache:
+        snapshot = cache.get_snapshot(matched)
+        sats = [{"norad_id": nid, **d} for nid, d in snapshot.items()]
+    else:
+        # 快取尚未就緒或過期：退回即時傳播
+        positions = propagate_batch(matched, idx)
+        sats = []
+        for nid, pos in zip(matched, positions):
+            if pos is None:
+                continue
+            lat, lon, alt = pos
+            sats.append({"norad_id": nid, "lat": round(lat, 4),
+                         "lon": round(lon, 4), "alt_km": round(alt, 1)})
+
+    return jsonify({
+        "count":      len(sats),
+        "from_cache": from_cache,
+        "cache_age":  round(cache.age_seconds, 1) if cache.ready else None,
+        "timestamp":  datetime.now(timezone.utc).isoformat(),
+        "satellites": sats,
+    })
+
+
+@bp.post("/api/positions/active")
+def api_positions_active():
+    """快速更新端點：對前端指定的少量可見衛星（≤100）即時計算 SGP4，供 1 Hz 輪詢。
+    直接即時計算，不走快取（≤100 顆向量化 SGP4 < 5 ms，不影響伺服器負載）。
+    """
+    MAX_ACTIVE = 100
+    data    = request.get_json(silent=True) or {}
+    raw_ids = (data.get("norad_ids") or [])[:MAX_ACTIVE]
+    norad_ids = [int(x) for x in raw_ids
+                 if isinstance(x, int) or (isinstance(x, str) and x.isdigit())]
+    if not norad_ids:
+        return jsonify({"satellites": [], "count": 0}), 200
+
+    idx   = get_sat_index()
+    valid = [n for n in norad_ids if n in idx]
+    if not valid:
+        return jsonify({"satellites": [], "count": 0}), 200
+
+    t0        = time.monotonic()
+    positions = propagate_batch(valid, idx)
+    elapsed   = round(time.monotonic() - t0, 4)
+
+    sats = []
+    for nid, pos in zip(valid, positions):
+        if pos is None:
+            continue
+        lat, lon, alt = pos
+        sats.append({"norad_id": nid, "lat": round(lat, 4),
+                     "lon": round(lon, 4), "alt_km": round(alt, 1)})
+
+    return jsonify({
+        "count":       len(sats),
+        "elapsed_sec": elapsed,
+        "timestamp":   datetime.now(timezone.utc).isoformat(),
+        "satellites":  sats,
     })
 
 

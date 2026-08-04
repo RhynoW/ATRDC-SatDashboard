@@ -1,7 +1,7 @@
 """manual_tle_downloads 啟動時自動匯入至 DuckDB。
 
 run.py 啟動時掃描 MANUAL_TLE_DIR 下所有 *.tle，解析後用
-單一事務 + 批次 INSERT + 明確 CHECKPOINT 寫入 resolve_db() 目標資料庫，
+單一事務 + 批次 INSERT + 明確 CHECKPOINT 寫入 space_db_slim.duckdb，
 完成後移至 processed/ 子目錄（以時間戳前綴避免重名）。
 
 注意：不呼叫 upsert_tle_to_db（設計給小批量 Space-Track 用），

@@ -35,3 +35,9 @@ TW_TASA:
     - "FORMOSAT8"
     - "COSMIC-2"
     - "COSMIC2"
+
+STARLINK:
+  label: "Starlink 星鏈"
+  sublabel: "SpaceX · Gen1 / Gen2 / V2 Mini"
+  color: "#A855F7"
+  kw: ["STARLINK"]

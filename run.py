@@ -45,8 +45,7 @@ _prefer_local_db()   # 須在匯入 scenario04（讀取 settings.DB_PATH）之�
 from scenario04 import create_app                       # noqa: E402
 from scenario04.config import settings                  # noqa: E402
 from scenario04.ingestion.index import get_sat_index, get_stats  # noqa: E402
-from scenario04.ingestion.db import check_db_freshness  # noqa: E402
-from scenario04.ingestion.manual_tle import ingest_manual_tles   # noqa: E402
+from scenario04.ingestion.manual_tle import ingest_manual_tles  # noqa: E402
 from scenario04.physics.propagator_cache import get_cache        # noqa: E402
 from scenario04.physics.conjunction import HAS_KDTREE   # noqa: E402
 from scenario04.physics.propagate import HAS_SATREC_ARRAY  # noqa: E402
@@ -69,23 +68,22 @@ if __name__ == "__main__":
         HAS_SATREC_ARRAY, HAS_KDTREE, settings.CONJ_THRESHOLD_KM, settings.CONJ_TTL,
     )
     logger.info("掃描 manual_tle_downloads/ …")
-    _res = ingest_manual_tles()   # 丟新鮮 *.tle 進 manual_tle_downloads/ 即批次匯入 DB
-    if _res["files"]:
-        logger.info("manual_tle 匯入完成: %d 檔 / %d 顆衛星 TLE（%d 檔跳過）",
-                    _res["files"], _res["satellites"], _res["skipped"])
+    result = ingest_manual_tles()
+    if result["files"]:
+        logger.info(
+            "manual_tle 匯入完成: %d 檔 / %d 顆衛星 TLE（%d 檔跳過）",
+            result["files"], result["satellites"], result["skipped"],
+        )
     else:
         logger.info("manual_tle_downloads/ 無待處理 *.tle 檔")
 
-    logger.info("檢查資料庫 TLE 資料齡…")
-    check_db_freshness()          # 過期則以 WARNING 告警（門檻 settings.STALE_WARN_DAYS）
     logger.info("預熱衛星索引…")
     get_sat_index()
     get_stats()
-
-    logger.info("啟動背景傳播快取（慢層：每 60 s 全星座重算位置）…")
-    # debug=True 時 Werkzeug 啟動 reloader parent + child；只在 child（WERKZEUG_RUN_MAIN=true）
-    # 啟動背景執行緒，避免 parent 亦起一份造成雙重重算。
+    logger.info("啟動背景傳播快取（慢層：每 60 s 全星座重算）…")
+    # app.debug 在 app.run() 之前恆為 False，故先定義局部旗標
+    # debug=True 時 Werkzeug 啟動 reloader parent + child；只在 child（WERKZEUG_RUN_MAIN=true）啟動執行緒
     _debug = True
-    if not _debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+    if not _debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         get_cache().start(get_sat_index, interval=60)
     app.run(host=settings.HOST, port=settings.PORT, debug=_debug)

@@ -50,8 +50,9 @@ REDIS_URL   = os.getenv("REDIS_URL", "")
 # ── 接近事件 / 碰撞機率 ───────────────────────────────────────────────────────
 CONJ_THRESHOLD_KM = float(os.getenv("CONJ_THRESHOLD_KM", "10.0"))
 CONJ_TTL          = int(os.getenv("CONJ_TTL", "120"))
-SIGMA_R_KM        = float(os.getenv("SIGMA_R_KM", "0.1"))   # 位置 1-sigma (km)
-SIGMA_T_KM        = float(os.getenv("SIGMA_T_KM", "0.5"))   # 切向 1-sigma
+SIGMA_R_KM        = float(os.getenv("SIGMA_R_KM", "0.1"))   # 徑向 1-sigma (km)
+SIGMA_T_KM        = float(os.getenv("SIGMA_T_KM", "0.5"))   # 切向（沿軌）1-sigma
+SIGMA_N_KM        = float(os.getenv("SIGMA_N_KM", "0.1"))   # 法向（越軌）1-sigma
 SAT_RADIUS_KM     = 0.005  # 衛星等效硬體半徑
 
 # ── Space-Track ───────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ USER_TLE_DIR       = PACKAGE_DIR / "user_defined_TLE"             # *.tle / *.tx
 USER_CATALOGUE_DIR = PACKAGE_DIR / "user_defined_SaTCatalogue"    # *.csv（衛星目錄，支援繁中）
 USER_TRACKING_DIR  = PACKAGE_DIR / "user_defined_tracking_NORAD"  # *.csv（NORAD 監測清單，支援繁中）
 USER_GEOJSON_DIR   = PACKAGE_DIR / "geojson"                      # *.geojson（自訂向量圖層）
+MANUAL_TLE_DIR     = APP_DIR / "manual_tle_downloads"            # 啟動時批次匯入 DB 的 *.tle（丟檔即更新資料）
 # 精細台灣行政界：檔案存在時，全球國界圖層自動剔除粗糙的台灣輪廓改用本檔
 TAIWAN_ADMIN_FILE  = USER_GEOJSON_DIR / "Taiwan-admin-ploygon.geojson"
 

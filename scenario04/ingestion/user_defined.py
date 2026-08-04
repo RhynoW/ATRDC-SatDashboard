@@ -38,10 +38,20 @@ _TRACK_AUTO_COLORS = [
 ]
 
 
+# Alpha-5：0-9 為數字，A 起為字母（排除 I、O），覆蓋編目 100000–339999
+_A5 = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+
+
 def _tle_norad_id(line: str) -> int | None:
-    """取 TLE line1/line2 第 3–7 欄的 NORAD ID。"""
+    """取 TLE line1/line2 第 3–7 欄的 NORAD ID（Alpha-5 相容，支援 6 位數 100000+）。"""
     try:
-        return int(line[2:7].strip())
+        s = line[2:7].strip().upper()
+        if s[0].isdigit():
+            return int(s)                       # 傳統 ≤99999
+        tens = _A5.find(s[0])                    # Alpha-5：首字母 → 萬千位
+        if tens < 10 or not s[1:].isdigit():
+            return None
+        return tens * 10000 + int(s[1:])
     except (ValueError, IndexError):
         return None
 

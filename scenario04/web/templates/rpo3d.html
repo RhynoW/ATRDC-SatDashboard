@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RPO 3D — 兩衛星相對接近與 Pc</title>
+<link rel="stylesheet" href="/cesium/Widgets/widgets.css">
+<style>
+  :root{
+    --bg:#0A0D13;--panel:rgba(16,20,29,.92);--line:rgba(255,255,255,.10);
+    --ink:#E8ECF4;--muted:#8894AC;--prim:#F2A73B;--sec:#35C6F4;--crit:#FF5C4E;--ok:#4FD08A;
+    --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI","Microsoft JhengHei",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+  #cesiumContainer{position:absolute;inset:0}
+  .cesium-widget-credits{display:none!important}
+  #hud{position:absolute;top:14px;left:14px;width:340px;max-width:calc(100vw - 28px);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px 12px;
+    backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(0,0,0,.45);z-index:10;max-height:calc(100vh - 28px);overflow:auto}
+  #hud h1{font-size:16px;margin:0 0 4px;line-height:1.25;font-weight:700}
+  #hud .sub{color:var(--muted);font-size:12px;margin:0 0 12px;line-height:1.5}
+  .picker{margin:0 0 12px;border:1px solid var(--line);border-radius:9px;padding:10px}
+  .picker label{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin:0 0 6px}
+  .picker select,.picker input{width:100%;background:rgba(10,13,19,.85);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:7px 9px;font-family:var(--mono);font-size:12px}
+  .picker .row{display:flex;gap:7px;margin-top:8px;align-items:center}
+  .picker .row input{width:auto;flex:1}
+  .picker button{background:var(--sec);color:#08131b;border:0;border-radius:7px;padding:7px 11px;
+    font-family:var(--mono);font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .picker button:hover{filter:brightness(1.1)}
+  .picker .stat{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:7px;min-height:14px}
+  .picker .stat.err{color:var(--crit)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);
+    border-radius:9px;overflow:hidden;margin:0 0 12px}
+  .kpi{background:rgba(10,13,19,.75);padding:9px 11px}
+  .kpi .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .kpi .v{font-family:var(--mono);font-size:19px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kpi.crit .v{color:var(--crit)} .kpi.prim .v{color:var(--prim)} .kpi.sec .v{color:var(--sec)} .kpi.ok .v{color:var(--ok)}
+  .kpi .v small{font-size:11px;color:var(--muted);font-weight:400}
+  .legend{display:flex;gap:14px;margin:0 0 12px;font-family:var(--mono);font-size:11.5px;flex-wrap:wrap}
+  .legend .it{display:flex;align-items:center;gap:6px}
+  .legend .sw{width:11px;height:11px;border-radius:50%}
+  .vpctl{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+  .vpctl button{background:var(--prim);color:#1a1205;border:0;border-radius:7px;padding:7px 12px;
+    font-family:var(--mono);font-size:11.5px;font-weight:600;cursor:pointer}
+  .vpctl button:hover{filter:brightness(1.08)}
+  .vpctl #vpLabel{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .pcctl{margin:0 0 12px;font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .pcctl label{display:flex;align-items:center;gap:7px;cursor:pointer}
+  .pcctl input{accent-color:var(--crit)}
+  .pcctl #pcSphereInfo{display:block;color:var(--muted);font-size:10px;margin:5px 0 0 22px}
+  .tl{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+  .tl h2{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  .tlrow{display:grid;grid-template-columns:82px 1fr;gap:9px;padding:6px 0;border-top:1px solid rgba(255,255,255,.05);font-size:12px}
+  .tlrow:first-child{border-top:0}
+  .tlrow .d{font-family:var(--mono);font-size:10.5px;color:var(--prim)}
+  .tlrow .t{color:var(--ink);line-height:1.45} .tlrow .t b{font-weight:600}
+  .note{color:var(--muted);font-size:10.5px;font-family:var(--mono);margin-top:10px;line-height:1.6;border-top:1px solid var(--line);padding-top:9px}
+  #warn{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:20;display:none;
+    background:rgba(224,90,80,.92);color:#fff;padding:9px 15px;border-radius:8px;font-size:13px;font-family:var(--mono)}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:15;
+    background:var(--bg);color:var(--muted);font-family:var(--mono);font-size:14px}
+  a.back{position:absolute;top:14px;right:14px;z-index:10;background:var(--panel);border:1px solid var(--line);
+    border-radius:8px;padding:8px 12px;color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:12px}
+  a.back:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+  <a class="back" href="/">← 地球儀主頁</a>
+  <div id="warn"></div>
+  <div id="loading">載入 3D 場景中 …</div>
+  <div id="hud">
+    <h1 id="title">RPO 3D 場景</h1>
+    <p class="sub" id="subtitle"></p>
+    <div class="picker">
+      <label>近距離配對（選擇即切換該對衛星視角）</label>
+      <select id="pairSel"></select>
+      <div class="row">
+        <input id="thr" type="number" min="1" max="500" step="1" value="10" title="篩選閾值 km">
+        <button id="rescan">重新掃描</button>
+      </div>
+      <div class="stat" id="pstat"></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi crit"><div class="k">目前距離</div><div class="v"><span id="k_range">—</span> <small>km</small></div></div>
+      <div class="kpi ok"><div class="k">Pc（proxy）</div><div class="v" id="k_pc">—</div></div>
+      <div class="kpi prim"><div class="k" id="k_pname">Primary 高度</div><div class="v"><span id="k_palt">—</span> <small>km</small></div></div>
+      <div class="kpi sec"><div class="k" id="k_sname">Secondary 高度</div><div class="v"><span id="k_salt">—</span> <small>km</small></div></div>
+    </div>
+    <div class="legend">
+      <span class="it"><span class="sw" style="background:var(--prim)"></span><span id="lg_p">primary</span></span>
+      <span class="it"><span class="sw" style="background:var(--sec)"></span><span id="lg_s">secondary</span></span>
+      <span class="it"><span class="sw" style="background:var(--crit)"></span>最接近 (TCA)</span>
+    </div>
+    <div class="vpctl">
+      <button id="vpToggle">🎥 切換視角</button>
+      <span id="vpLabel">目前視角：—</span>
+    </div>
+    <div class="pcctl">
+      <label><input type="checkbox" id="pcSphereChk" checked> 🔴 碰撞機率球（3σ R/T/N 橢球）</label>
+      <span id="pcSphereInfo"></span>
+    </div>
+    <div class="tl"><h2>事件時間軸</h2><div id="timeline"></div></div>
+    <div class="note" id="note"></div>
+  </div>
+
+  <script>window.RPO_PRIMARY={{ default_primary }};window.RPO_SECONDARY={{ default_secondary }};</script>
+  <script>
+  (function(){
+    function fail(m){var w=document.getElementById('warn');w.textContent=m;w.style.display='block';
+      var l=document.getElementById('loading');if(l)l.textContent=m;}
+    var s=document.createElement('script');
+    s.src='/cesium/Cesium.js';
+    s.onload=function(){ if(window.startRPO) window.startRPO(); else fail('rpo3d.js 未載入'); };
+    s.onerror=function(){ fail('本機 Cesium 未安裝（請將 CesiumJS 解壓至 data/cesium/）'); };
+    var app=document.createElement('script');
+    app.src="{{ url_for('static', filename='js/rpo3d.js') }}";
+    app.onload=function(){ document.head.appendChild(s); };
+    app.onerror=function(){ fail('前端腳本 rpo3d.js 載入失敗'); };
+    document.head.appendChild(app);
+  })();
+  </script>
+</body>
+</html>

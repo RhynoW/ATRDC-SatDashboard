@@ -31,3 +31,12 @@ Thumbs.db
 # DuckDB WAL / temp files (大型 DB 以 Git LFS 管理)
 *.duckdb.wal
 *.tmp
+
+# ATRDC logo（發布時排除；SatDashboard 為自主研發，不掛機構署名）
+Logo_ATRDC.png
+
+# RPO 場景快取（由 DB 自動重算，不入庫）
+**/rpo_scene_*.json
+
+# 執行期手動 TLE 匯入資料夾（本機輸入，不入庫）
+manual_tle_downloads/

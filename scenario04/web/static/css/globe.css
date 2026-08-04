@@ -21,6 +21,9 @@ body{font-family:Tahoma,sans-serif;background:#0a0e17;color:#c9d1d9;display:flex
 #taipei-link{font-size:11px;color:#00E5FF;text-decoration:none;
   border:1px solid #00E5FF44;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0}
 #taipei-link:hover{background:#00E5FF22}
+#rpo-link{font-size:11px;color:#F2A73B;text-decoration:none;
+  border:1px solid #F2A73B44;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+#rpo-link:hover{background:#F2A73B22}
 #track-btn{font-size:11px;color:#FF80AB;background:none;cursor:pointer;font-family:inherit;
   border:1px solid #FF80AB44;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;
   display:inline-flex;align-items:center;gap:3px}

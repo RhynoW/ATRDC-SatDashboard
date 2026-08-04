@@ -14,6 +14,10 @@ pinned: false
 `scenario04_redesign_phases_20260702.md` **Phase 1（拆解與模組化）** 重構，
 功能不變，另外先行落實 Phase 2 兩項低風險改善（分類規則與 SSN 站點外部化 + 熱重載）。
 
+**新增功能**：全目錄 3D 態勢儀表板、台北在地覆蓋/過頂預報，以及
+**RPO 3D 相對接近與碰撞機率視覺化**（`/rpo`）——對任一近距離配對重建兩顆衛星之
+相對接近場景、可切換衛星視角、並以 3σ 三軸橢球視覺化碰撞機率（詳見下節）。
+
 ## 目錄結構
 
 ```
@@ -37,7 +41,8 @@ scenario-advanced01/
 │   │   ├── coords.py             # GMST、ECI→LLH、ECI→仰角/方位
 │   │   ├── propagate.py          # SGP4（向量化 SatrecArray 優先）
 │   │   ├── coverage.py           # 台北覆蓋 / 過頂預報（含時間軸版本）
-│   │   └── conjunction.py        # KD-tree 接近事件 + Chan (2008) Pc
+│   │   ├── conjunction.py        # KD-tree 接近事件 + Chan (2008) Pc
+│   │   └── rpo.py                # RPO 場景資料：歷史 TLE → 相對幾何 + Pc；schema 相容（line/根數）
 │   ├── services/
 │   │   └── passes_service.py     # 過頂預報背景執行服務（封裝原模組層共享狀態）
 │   ├── api/                      # Flask Blueprints：每組路由一個檔案
@@ -46,10 +51,12 @@ scenario-advanced01/
 │   │   ├── passes.py             # /api/taipei_coverage(_at)、/api/taipei_passes(_at)
 │   │   ├── conjunctions.py       # /api/conjunctions、/api/cdm/*、/api/decay/*…
 │   │   ├── layers.py             # /api/layers/*、/api/globe_texture*、/api/textures
+│   │   ├── rpo.py                # /rpo（RPO 3D 場景）、/api/rpo/<primary>/<secondary>
 │   │   └── admin.py              # POST /api/admin/reload_cats（熱重載所有設定檔）
 │   └── web/                      # 前後端分離（Phase 1.1）
-│       ├── templates/            # globe.html、taipei.html（Jinja2）
-│       └── static/               # css/globe.css、css/taipei.css、js/globe.js、js/taipei.js
+│       ├── templates/            # globe.html、taipei.html、rpo3d.html（Jinja2）
+│       └── static/               # css/*.css、js/globe.js、js/taipei.js、js/rpo3d.js
+├── DB/                           # 本機打包精簡 DB（space_db_slim.duckdb，run.py 優先採用）
 └── tests/                        # pytest（Phase 1.4）：純函式單元測試 + app 冒煙測試
 ```
 
@@ -61,13 +68,33 @@ pip install -r requirements.txt
 python run.py
 # http://localhost:5013          3D 地球儀
 # http://localhost:5013/taipei   台北 2D 覆蓋（時間軸）
+# http://localhost:5013/rpo      RPO 3D 相對接近 + 碰撞機率
 ```
 
-**資料庫預設位置：`scenario04/DB/`**（`space_db.duckdb`，缺檔時依序改用
-同目錄 `space_db_slim.duckdb` → 舊位置專案根目錄的 full/slim）；
-`sat_metadata.csv` 亦優先讀 `scenario04/DB/`。可用環境變數 `DB_PATH` 覆寫。
-其他資料檔（`data/`、`overpass_cats.yaml`、`.env`、`Logo_ATRDC.png`）仍讀取
-上層專案根目錄，可用 `ATRDC_BASE_DIR` 指到其他位置。
+**資料庫優先序**：`run.py` 啟動時優先採用 `scenario-advanced01/DB/*.duckdb`
+（本機打包之精簡 DB，取最新 mtime 者）；缺檔則退化為 `scenario04/DB/space_db.duckdb`
+→ 專案根目錄的 full/slim。可用環境變數 `DB_PATH` 覆寫。
+發布用精簡 DB **保留 line1/line2**（live 目錄傳播、conjunction、RPO 皆需），
+全衛星保留最近 14 天 + 白名單（`58573,59884`）完整歷史，約 50 MB；
+以 `download_tle_unified.bat`（`--keep-lines --recent-days 14 --whitelist 58573,59884`）重建。
+其他資料檔（`data/`、`overpass_cats.yaml`、`.env` 等）讀取上層專案根目錄，
+可用 `ATRDC_BASE_DIR` 指到其他位置（`/api/logo` 於缺 logo 檔時回 404，不影響功能）。
+
+## RPO 3D 相對接近與碰撞機率視覺化（`/rpo`）
+
+主頁功能列「🛰 RPO功能測試」進入。對任一「近距離配對」以歷史 TLE 重建兩顆衛星之相對接近 3D 場景：
+
+- **配對選單**：清單來自 `/api/conjunctions`（KD-tree 瞬時鄰近篩選），選任一配對即切換該對視角；
+  亦支援 `?primary=&secondary=` 深連結。
+- **衛星視角切換**：點選配對後自動進入其中一顆衛星視角（相機跟隨），可用按鈕**來回切換**另一顆。
+- **碰撞機率球（預設開啟、可關閉）**：兩顆衛星**各繪一個 3σ 三軸橢球**（徑向 R / 沿軌 T / 越軌 N
+  獨立，`SIGMA_R/T/N_KM` 可調），各自配向至該衛星 RTN(LVLH) 座標系；顏色隨當下 Pc
+  （綠 <1e-6 / 琥珀 / 紅 >1e-4）。
+- **Pc 為 Chan (2008) 各向同性首階「排序代理」**，非作業級碰撞機率，HUD 明確標註界定。
+- 預設展示案例：神龍太空梭 **58573 × 59884**（2024 在軌釋放與 6 月再接近至 ~1.2 km）。
+
+資料由 `physics/rpo.py` 產生，並落地為 `scenario04/DB/rpo_scene_<p>_<s>.json` 快取（與 archive 鎖狀態解耦）。
+相容兩種 `raw_tle_archive` schema：含 `line1/line2` 者用 `twoline2rv`；僅平均根數者以 `sgp4init` 重建。
 
 ## 測試
 

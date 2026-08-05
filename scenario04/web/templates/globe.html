@@ -23,22 +23,27 @@
 <body>
 
 <div id="topbar">
-  <h1>&#127760; 太空態勢儀表板（進階版）</h1>
+  <h1>&#127760; <span data-i18n="app_title">太空態勢儀表板（進階版）</span></h1>
   <div class="tcards">
-    <div class="tcard"><div class="val" id="c-total">—</div><div class="lbl">追蹤物件</div></div>
-    <div class="tcard payload"><div class="val" id="c-payload">—</div><div class="lbl">有效載荷</div></div>
-    <div class="tcard debris"><div class="val" id="c-debris">—</div><div class="lbl">碎片</div></div>
-    <div class="tcard rocket"><div class="val" id="c-rocket">—</div><div class="lbl">火箭體</div></div>
-    <div class="tcard"><div class="val" id="c-new">—</div><div class="lbl">近 1 年</div></div>
-    <div class="tcard conj clickable" id="conj-card" onclick="toggleConjPanel()" title="點選查看近距離配對清單">
+    <div class="tcard"><div class="val" id="c-total">—</div><div class="lbl" data-i18n="lbl_total">追蹤物件</div></div>
+    <div class="tcard payload"><div class="val" id="c-payload">—</div><div class="lbl" data-i18n="lbl_payload">有效載荷</div></div>
+    <div class="tcard debris"><div class="val" id="c-debris">—</div><div class="lbl" data-i18n="lbl_debris">碎片</div></div>
+    <div class="tcard rocket"><div class="val" id="c-rocket">—</div><div class="lbl" data-i18n="lbl_rocket">火箭體</div></div>
+    <div class="tcard"><div class="val" id="c-new">—</div><div class="lbl" data-i18n="lbl_new">近 1 年</div></div>
+    <div class="tcard conj clickable" id="conj-card" onclick="toggleConjPanel()" data-i18n-title="tip_conj" title="點選查看近距離配對清單">
       <div class="val" id="c-conj">...</div>
-      <div class="lbl">近距離配對</div>
+      <div class="lbl" data-i18n="lbl_conj">近距離配對</div>
     </div>
   </div>
-  <button id="track-btn" onclick="toggleTrackPanel()" title="NORAD 監測（user_defined_tracking_NORAD 清單，可同時追蹤多顆衛星）">&#127919; NORAD 監測<span id="track-count"></span></button>
-  <a id="taipei-link" href="/taipei" target="_blank">&#127988; 台北覆蓋分析</a>
-  <a id="starlink-link" href="/starlink" target="_blank">&#127921; Starlink 分析</a>
-  <a id="rpo-link" href="/rpo" target="_blank" title="近距離配對相對接近 3D 場景 + Chan Pc（可切換兩顆衛星視角）">&#128752; RPO功能測試</a>
+  <button id="track-btn" onclick="toggleTrackPanel()" data-i18n-title="tip_track" title="NORAD 監測（user_defined_tracking_NORAD 清單，可同時追蹤多顆衛星）">&#127919; <span data-i18n="btn_track">NORAD 監測</span><span id="track-count"></span></button>
+  <button type="button" id="taipei-link" class="tbtn" onclick="window.open('/taipei','_blank')">&#127988; <span data-i18n="nav_taipei">台北覆蓋分析</span></button>
+  <button type="button" id="starlink-link" class="tbtn" onclick="window.open('/starlink','_blank')">&#127921; <span data-i18n="nav_starlink">Starlink 分析</span></button>
+  <button type="button" id="rpo-link" class="tbtn" onclick="window.open('/rpo','_blank')" data-i18n-title="tip_rpo" title="近距離配對相對接近 3D 場景 + Chan Pc（可切換兩顆衛星視角）">&#128752; <span data-i18n="nav_rpo">RPO功能測試</span></button>
+  <div id="lang-switcher">
+    <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+    <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+  </div>
   <div id="ts">—</div>
   <div id="utc-clock">
     <div class="led-time" id="led-time">--:--:--</div>
@@ -47,54 +52,54 @@
 </div>
 
 <div id="db-info-bar">
-  <span class="dbi-k">DB:</span>
+  <span class="dbi-k" data-i18n="dbi_db">DB:</span>
   <span id="dbi-name" class="dbi-v">—</span>
   <span class="dbi-sep">|</span>
-  <span class="dbi-k">更新：</span><span id="dbi-mtime" class="dbi-v">—</span>
+  <span class="dbi-k" data-i18n="dbi_update">更新：</span><span id="dbi-mtime" class="dbi-v">—</span>
   <span class="dbi-sep">|</span>
-  <span class="dbi-k">有效衛星：</span><span id="dbi-sats" class="dbi-v">—</span>
+  <span class="dbi-k" data-i18n="dbi_valid">有效衛星：</span><span id="dbi-sats" class="dbi-v">—</span>
   <span class="dbi-sep">|</span>
-  <span class="dbi-k">TLE 日期：</span><span id="dbi-epoch" class="dbi-v">—</span>
+  <span class="dbi-k" data-i18n="dbi_epoch">TLE 日期：</span><span id="dbi-epoch" class="dbi-v">—</span>
   <span class="dbi-sep">|</span>
-  <span class="dbi-k">大小：</span><span id="dbi-size" class="dbi-v">—</span>
+  <span class="dbi-k" data-i18n="dbi_size">大小：</span><span id="dbi-size" class="dbi-v">—</span>
 </div>
 
 <div id="main">
   <div id="panel">
     <div id="search-box">
-      <input id="search-input" type="text" placeholder="搜尋 NORAD ID 或衛星名稱..." autocomplete="off"/>
+      <input id="search-input" type="text" data-i18n-placeholder="search_placeholder" placeholder="搜尋 NORAD ID 或衛星名稱..." autocomplete="off"/>
       <button id="search-clear" onclick="clearSearch()">×</button>
     </div>
     <div id="tabs">
-      <button class="tab active" data-tab="country"       onclick="switchTab('country')">國家</button>
-      <button class="tab"        data-tab="purpose"       onclick="switchTab('purpose')">用途</button>
-      <button class="tab"        data-tab="era"           onclick="switchTab('era')">年代</button>
-      <button class="tab"        data-tab="constellation" onclick="switchTab('constellation')">星座</button>
+      <button class="tab active" data-tab="country"       onclick="switchTab('country')" data-i18n="tab_country">國家</button>
+      <button class="tab"        data-tab="purpose"       onclick="switchTab('purpose')" data-i18n="tab_purpose">用途</button>
+      <button class="tab"        data-tab="era"           onclick="switchTab('era')" data-i18n="tab_era">年代</button>
+      <button class="tab"        data-tab="constellation" onclick="switchTab('constellation')" data-i18n="tab_constellation">星座</button>
     </div>
     <div id="panel-back">
-      <button onclick="backToTabs()">&#8592; 返回</button>
+      <button onclick="backToTabs()">&#8592; <span data-i18n="btn_back">返回</span></button>
     </div>
     <div id="panel-body"></div>
     <div id="filter-status">點選左側分類以在地圖上顯示（全量，無抽樣）</div>
     <div id="sat-detail-panel" style="display:none"></div>
     <div id="basemap-bar">
-      <div class="sec collapsible" onclick="toggleSec(this)">底圖<span class="sec-arrow">&#9654;</span></div>
+      <div class="sec collapsible" onclick="toggleSec(this)"><span data-i18n="sec_basemap">底圖</span><span class="sec-arrow">&#9654;</span></div>
       <div class="sec-body">
         <div id="basemap-btns"></div>
       </div>
     </div>
     <div id="layer-bar">
-      <div class="sec collapsible" onclick="toggleSec(this)">向量圖層<span class="sec-arrow">&#9654;</span></div>
+      <div class="sec collapsible" onclick="toggleSec(this)"><span data-i18n="sec_layers">向量圖層</span><span class="sec-arrow">&#9654;</span></div>
       <div class="sec-body">
         <label>
           <input type="checkbox" id="chk-borders" checked onchange="toggleLayer('borders',this)"/>
           <span style="width:9px;height:9px;border-radius:50%;background:#FFD600;display:inline-block;flex-shrink:0"></span>
-          <span>全球國界</span>
+          <span data-i18n="chk_borders">全球國界</span>
         </label>
         <label>
           <input type="checkbox" id="chk-ssn" onchange="toggleLayer('ssn',this)"/>
           <span style="width:9px;height:9px;border-radius:50%;background:#00E5FF;display:inline-block;flex-shrink:0"></span>
-          <span>SSN 地面觀測站</span>
+          <span data-i18n="chk_ssn">SSN 地面觀測站</span>
         </label>
       </div>
     </div>
@@ -102,7 +107,7 @@
 
   <div id="cesiumContainer">
     <div id="warn"></div>
-    <div id="loading">正在初始化地球...</div>
+    <div id="loading" data-i18n="loading_text">正在初始化地球...</div>
     <div id="logo-overlay"><img src="/api/logo" alt="ATRDC" onerror="this.parentElement.style.display='none'"/></div>
   </div>
 </div>

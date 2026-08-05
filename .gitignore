@@ -40,3 +40,6 @@ Logo_ATRDC.png
 
 # 執行期手動 TLE 匯入資料夾（本機輸入，不入庫）
 manual_tle_downloads/
+
+# 本機打包 DB 目錄（run.py 優先讀取，但發布用 scenario04/DB 之精簡 DB）
+DB/

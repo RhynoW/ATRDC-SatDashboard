@@ -18,12 +18,21 @@ body{font-family:Tahoma,sans-serif;background:#0a0e17;color:#c9d1d9;display:flex
 .tcard.rocket  .val{color:#9E9E9E}
 .tcard.conj    .val{color:#FF6B6B}
 #ts{font-size:10px;color:#484f58;white-space:nowrap;flex-shrink:0}
-#taipei-link{font-size:11px;color:#00E5FF;text-decoration:none;
-  border:1px solid #00E5FF44;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+.tbtn{font-size:11px;text-decoration:none;background:none;cursor:pointer;font-family:inherit;
+  padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;transition:background .15s}
+#taipei-link{color:#00E5FF;border:1px solid #00E5FF44}
 #taipei-link:hover{background:#00E5FF22}
-#rpo-link{font-size:11px;color:#F2A73B;text-decoration:none;
-  border:1px solid #F2A73B44;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+#starlink-link{color:#A855F7;border:1px solid #A855F744}
+#starlink-link:hover{background:#A855F722}
+#rpo-link{color:#F2A73B;border:1px solid #F2A73B44}
 #rpo-link:hover{background:#F2A73B22}
+
+/* ── 語言切換 ── */
+#lang-switcher{display:flex;gap:4px;flex-shrink:0}
+.lang-btn{padding:3px 7px;background:none;color:#8b949e;border:1px solid #30363d;border-radius:3px;
+  font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.lang-btn:hover{background:#ffffff11;color:#c9d1d9}
+.lang-btn.active{background:#58a6ff;color:#0d1117;border-color:#58a6ff}
 #track-btn{font-size:11px;color:#FF80AB;background:none;cursor:pointer;font-family:inherit;
   border:1px solid #FF80AB44;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;
   display:inline-flex;align-items:center;gap:3px}

@@ -1,4 +1,86 @@
 'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 頂欄三語（中/英/日）— 僅涵蓋靜態 UI 文字，國家/用途/星座等動態分類內容維持中文
+// ═══════════════════════════════════════════════════════════════════════════════
+const GLOBE_I18N = {
+  zh: {
+    doc_title: '太空態勢儀表板 — 進階版 04-adv01（向量化 SGP4 + 近距離掃描 + 搜尋）',
+    app_title: '太空態勢儀表板（進階版）',
+    lbl_total: '追蹤物件', lbl_payload: '有效載荷', lbl_debris: '碎片', lbl_rocket: '火箭體',
+    lbl_new: '近 1 年', lbl_conj: '近距離配對',
+    tip_conj: '點選查看近距離配對清單',
+    btn_track: 'NORAD 監測',
+    tip_track: 'NORAD 監測（user_defined_tracking_NORAD 清單，可同時追蹤多顆衛星）',
+    nav_taipei: '台北覆蓋分析', nav_starlink: 'Starlink 分析', nav_rpo: 'RPO功能測試',
+    tip_rpo: '近距離配對相對接近 3D 場景 + Chan Pc（可切換兩顆衛星視角）',
+    dbi_db: 'DB:', dbi_update: '更新：', dbi_valid: '有效衛星：', dbi_epoch: 'TLE 日期：', dbi_size: '大小：',
+    search_placeholder: '搜尋 NORAD ID 或衛星名稱...',
+    tab_country: '國家', tab_purpose: '用途', tab_era: '年代', tab_constellation: '星座',
+    btn_back: '返回',
+    loading_text: '正在初始化地球...',
+    sec_basemap: '底圖', sec_layers: '向量圖層',
+    chk_borders: '全球國界', chk_ssn: 'SSN 地面觀測站',
+  },
+  en: {
+    doc_title: 'Space Situational Awareness Dashboard — Advanced 04-adv01 (Vectorized SGP4 + Proximity Scan + Search)',
+    app_title: 'Space Situational Awareness Dashboard (Advanced)',
+    lbl_total: 'Tracked Objects', lbl_payload: 'Payloads', lbl_debris: 'Debris', lbl_rocket: 'Rocket Bodies',
+    lbl_new: '< 1 Year', lbl_conj: 'Close-Approach Pairs',
+    tip_conj: 'Click to view the close-approach pair list',
+    btn_track: 'NORAD Tracking',
+    tip_track: 'NORAD Tracking (user_defined_tracking_NORAD list; multiple satellites can be tracked simultaneously)',
+    nav_taipei: 'Taipei Coverage Analysis', nav_starlink: 'Starlink Analysis', nav_rpo: 'RPO Feature Test',
+    tip_rpo: '3D relative-approach scene for close-approach pairs + Chan Pc (switchable dual-satellite viewpoint)',
+    dbi_db: 'DB:', dbi_update: 'Updated:', dbi_valid: 'Valid Satellites:', dbi_epoch: 'TLE Epoch:', dbi_size: 'Size:',
+    search_placeholder: 'Search NORAD ID or satellite name...',
+    tab_country: 'Country', tab_purpose: 'Purpose', tab_era: 'Era', tab_constellation: 'Constellation',
+    btn_back: 'Back',
+    loading_text: 'Initializing globe...',
+    sec_basemap: 'Basemap', sec_layers: 'Vector Layers',
+    chk_borders: 'Global Borders', chk_ssn: 'SSN Ground Stations',
+  },
+  ja: {
+    doc_title: 'スペース・シチュエーショナル・アウェアネス・ダッシュボード — 進化版 04-adv01（ベクトル化SGP4＋近接スキャン＋検索）',
+    app_title: 'スペース・シチュエーショナル・アウェアネス・ダッシュボード（進化版）',
+    lbl_total: '追跡オブジェクト', lbl_payload: 'ペイロード', lbl_debris: 'デブリ', lbl_rocket: 'ロケット本体',
+    lbl_new: '1年未満', lbl_conj: '近接ペア',
+    tip_conj: 'クリックして近接ペア一覧を表示',
+    btn_track: 'NORAD 監視',
+    tip_track: 'NORAD監視（user_defined_tracking_NORADリスト、複数衛星を同時追跡可能）',
+    nav_taipei: '台北カバレッジ分析', nav_starlink: 'Starlink 分析', nav_rpo: 'RPO機能テスト',
+    tip_rpo: '近接ペアの相対接近3Dシーン＋Chan Pc（2衛星視点切替可能）',
+    dbi_db: 'DB:', dbi_update: '更新：', dbi_valid: '有効衛星：', dbi_epoch: 'TLE日付：', dbi_size: 'サイズ：',
+    search_placeholder: 'NORAD IDまたは衛星名で検索...',
+    tab_country: '国', tab_purpose: '用途', tab_era: '年代', tab_constellation: 'コンステレーション',
+    btn_back: '戻る',
+    loading_text: '地球を初期化中...',
+    sec_basemap: 'ベースマップ', sec_layers: 'ベクターレイヤー',
+    chk_borders: '世界の国境', chk_ssn: 'SSN地上観測局',
+  },
+};
+const GLOBE_LOCALE_MAP = {zh:'zh-TW', en:'en-US', ja:'ja-JP'};
+let GLOBE_LANG = localStorage.getItem('starlink_lang') || 'zh';
+if(!GLOBE_I18N[GLOBE_LANG]) GLOBE_LANG = 'zh';
+
+function t(key){
+  const d = GLOBE_I18N[GLOBE_LANG] || GLOBE_I18N.zh;
+  return (key in d) ? d[key] : (GLOBE_I18N.zh[key] !== undefined ? GLOBE_I18N.zh[key] : key);
+}
+function setLang(lang){
+  if(!GLOBE_I18N[lang]) return;
+  GLOBE_LANG = lang;
+  localStorage.setItem('starlink_lang', lang);
+  document.documentElement.lang = GLOBE_LOCALE_MAP[lang] || 'zh-TW';
+  document.title = t('doc_title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.getAttribute('data-i18n-title')); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
+  document.querySelectorAll('.lang-btn').forEach(b => { b.classList.toggle('active', b.dataset.lang === lang); });
+}
+document.addEventListener('DOMContentLoaded', () => setLang(GLOBE_LANG));
+window.setLang = setLang;
+
 function startApp(){
 
 let viewer=null, satDs=null; let orbitEnts=[];

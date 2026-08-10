@@ -272,23 +272,34 @@
   function populatePairs(threshold) {
     var sel = document.getElementById("pairSel");
     stat("掃描近距離配對 …");
-    fetch("/api/conjunctions?threshold_km=" + (threshold || 10)).then(function (r) { return r.json(); }).then(function (d) {
-      var pairs = (d && d.pairs) || [];
-      var html = "";
-      // 保留目前（預設/深連結）配對於清單頂端
-      if (_curP != null) {
-        html += '<option value="' + _curP + "," + _curS + '">★ 目前：' + _curP + " × " + _curS + "</option>";
-      }
-      for (var i = 0; i < pairs.length && i < 150; i++) {
-        var p = pairs[i];
-        var v = p.primary_norad + "," + p.secondary_norad;
-        if (_curP != null && v === (_curP + "," + _curS)) continue;   // 避免重複
-        html += '<option value="' + v + '">' + optionLabel(p) + "</option>";
-      }
-      sel.innerHTML = html || '<option value="">（無近距離配對）</option>';
-      if (_curP != null) sel.value = _curP + "," + _curS;
-      stat(pairs.length + " 個近距離配對（閾值 " + (threshold || 10) + " km）");
-    }).catch(function (e) { stat("配對清單載入失敗：" + e.message, true); });
+    // 先取精選案例（歷史 RPO，如神龍系列），再併入即時近距離配對
+    fetch("/api/rpo/presets").then(function (r) { return r.json(); }).catch(function () { return { presets: [] }; })
+      .then(function (pd) {
+        var presets = (pd && pd.presets) || [];
+        fetch("/api/conjunctions?threshold_km=" + (threshold || 10)).then(function (r) { return r.json(); }).then(function (d) {
+          var pairs = (d && d.pairs) || [];
+          var html = "";
+          var cur = _curP != null ? (_curP + "," + _curS) : null;
+          // 保留目前（預設/深連結）配對於清單頂端
+          if (cur) html += '<option value="' + cur + '">★ 目前：' + _curP + " × " + _curS + "</option>";
+          // 精選案例（置於即時配對之前）
+          for (var j = 0; j < presets.length; j++) {
+            var pr = presets[j];
+            var pv = pr.primary + "," + pr.secondary;
+            if (pv === cur) continue;
+            html += '<option value="' + pv + '">◎ 案例：' + pr.title + "</option>";
+          }
+          for (var i = 0; i < pairs.length && i < 150; i++) {
+            var p = pairs[i];
+            var v = p.primary_norad + "," + p.secondary_norad;
+            if (v === cur) continue;   // 避免重複
+            html += '<option value="' + v + '">' + optionLabel(p) + "</option>";
+          }
+          sel.innerHTML = html || '<option value="">（無近距離配對）</option>';
+          if (cur) sel.value = cur;
+          stat(presets.length + " 個精選案例 + " + pairs.length + " 個近距離配對（閾值 " + (threshold || 10) + " km）");
+        }).catch(function (e) { stat("配對清單載入失敗：" + e.message, true); });
+      });
   }
 
   window.startRPO = function () {

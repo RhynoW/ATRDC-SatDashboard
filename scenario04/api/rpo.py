@@ -9,7 +9,7 @@ import logging
 
 from flask import Blueprint, jsonify, render_template, request
 
-from ..physics.rpo import get_rpo_scene
+from ..physics.rpo import _PRESETS, get_rpo_scene
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,14 @@ bp = Blueprint("rpo", __name__)
 # 預設展示案例：神龍太空梭在軌釋放與再接近（可經 ?primary=&secondary= 切換任一配對）
 DEFAULT_PRIMARY = 58573
 DEFAULT_SECONDARY = 59884
+
+
+@bp.get("/api/rpo/presets")
+def rpo_presets():
+    """精選 RPO 案例配對（供選單置頂）；源自 physics.rpo._PRESETS。"""
+    out = [{"primary": p, "secondary": s, "title": info.get("title", f"{p} × {s}")}
+           for (p, s), info in _PRESETS.items()]
+    return jsonify({"presets": out})
 
 
 @bp.get("/rpo", strict_slashes=False)

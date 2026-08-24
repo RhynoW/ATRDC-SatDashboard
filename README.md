@@ -134,7 +134,8 @@ python run.py
 
 | Method | Endpoint | 說明 |
 |--------|----------|------|
-| GET | `/api/stats` | 衛星統計摘要（各類別數量） |
+| GET | `/api/stats` | 衛星統計摘要（各類別數量；`?payload_only=1` 排除碎片/火箭體） |
+| GET | `/api/stats/constellations` | 星座排行 — 僅有效載荷（不含碎片/火箭體），附色碼；`?top=N` 取前 N 名 |
 | GET | `/api/positions` | 即時位置（ECI → LLH，含過濾） |
 | GET | `/api/search` | NORAD ID / 名稱搜尋 |
 

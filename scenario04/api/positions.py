@@ -32,6 +32,30 @@ def api_stats():
     return jsonify(get_stats(payload_only=payload_only))
 
 
+@bp.get("/api/stats/constellations")
+def api_stats_constellations():
+    """星座排行 — 僅有效載荷（不含碎片／火箭體），依數量降冪，附前端色碼。
+
+    可選參數 top=N 只回傳前 N 名（預設全部）。
+    """
+    s = get_stats(payload_only=True)
+    rows = s["constellation"]
+    try:
+        top = int(request.args.get("top", 0))
+    except ValueError:
+        top = 0
+    if top > 0:
+        rows = rows[:top]
+    return json_response({
+        "payload_total": sum(x["count"] for x in s["constellation"]),
+        "constellation": [
+            {**row, "color": get_color("constellation", row["label"])} for row in rows
+        ],
+        "payload_only":  True,
+        "updated_at":    s["updated_at"],
+    }, max_age=settings.STATS_TTL)
+
+
 @bp.get("/api/db_info")
 def api_db_info():
     return json_response(get_db_info(), max_age=settings.DB_INFO_TTL, default=str)

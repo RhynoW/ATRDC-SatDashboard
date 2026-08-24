@@ -90,6 +90,8 @@ constellation_rules:
     keywords: ["BLUEBIRD", "SPACEMOBILE"]        # AST SpaceMobile
   - label: "Lynk"
     keywords: ["LYNK"]
+  - label: "Formosat-7"
+    keywords: ["FORMOSAT7", "FORMOSAT-7", "COSMIC-2", "COSMIC2"]  # 福衛七號/COSMIC-2 + 7R獵風者
   - label: "Telesat LEO"
     keywords: ["TELESAT"]
   - label: "吉林/Jilin"

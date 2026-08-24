@@ -118,6 +118,7 @@ const CONSTEL_C  ={Starlink:'#1565C0',OneWeb:'#00897B',Kuiper:'#FF8F00',
                    NuSat:'#00695C',Skykraft:'#1565C0',
                    SpaceMobile:'#0277BD',Lynk:'#558B2F',
                    'Telesat LEO':'#4A148C','吉林/Jilin':'#AD1457',
+                   'Formosat-7':'#00ACC1',
                    '遙感/Yaogan':'#B71C1C',高分:'#E64A19',風雲:'#0277BD',其他衛星:'#546E7A'};
 const ERA_C      ={'< 1 年':'#F44336','1–5 年':'#FF9800','5–10 年':'#4CAF50',
                    '> 10 年':'#607D8B',不明:'#455A64'};

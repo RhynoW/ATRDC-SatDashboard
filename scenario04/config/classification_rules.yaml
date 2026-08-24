@@ -50,7 +50,7 @@ country_map:
   "TBD":                                 "不明"
 
 # 依序比對衛星名稱（大寫）關鍵字，第一個命中的標籤生效
-# 排列依照 InsideGNSS (2026-05) LEO 星座數量降冪，確保大型星座優先命中
+# 排列依照 2026-08 CelesTrak SATCAT 在軌實測數降冪，確保大型星座優先命中
 constellation_rules:
   - label: "Starlink"
     keywords: ["STARLINK"]
@@ -58,20 +58,26 @@ constellation_rules:
     keywords: ["ONEWEB"]
   - label: "Kuiper"
     keywords: ["KUIPER"]
-  - label: "互聯網/Hulianwang"
-    keywords: ["HONGYAN", "XINGYUN", "TIANQI"]   # 鴻雁/行云/天啟 中國 LEO 互聯網星座群
-  - label: "Planet"
-    keywords: ["FLOCK", "DOVE", "SKYSAT"]
   - label: "千帆/Qianfan"
     keywords: ["QIANFAN", "SPACESAIL"]
+  - label: "國網/Guowang"
+    keywords: ["HULIANWANG", "GUOWANG", "SATNET"]  # 編目名 HULIANWANG DIGUI（互聯網低軌）
+  - label: "Starshield"
+    keywords: ["STARSHIELD"]                     # 目前以 USA ### 編目且 TLE 扣留；預留未來命名
+  - label: "Planet/Flock"
+    keywords: ["FLOCK", "DOVE", "SKYSAT", "PELICAN", "TANAGER"]
   - label: "Spire"
     keywords: ["LEMUR", "SPIRE"]
   - label: "Iridium"
     keywords: ["IRIDIUM"]
-  - label: "GeeSat/Geespace"
-    keywords: ["GEESPACE", "JIYUAN"]             # 吉利/吉空星座
   - label: "Globalstar"
     keywords: ["GLOBALSTAR"]
+  - label: "PWSA/SDA"
+    keywords: ["PRAETORIAN", "CHECKMATE", "WILDFIRE", "BB3", "BB4"]  # SDA T0/T1 編目代號
+  - label: "GeeSat/Geespace"
+    keywords: ["GEESAT", "GEESPACE", "JIYUAN"]   # 吉利/吉空星座（編目名 GEESAT）
+  - label: "中國IoT(天啟/行雲)"
+    keywords: ["HONGYAN", "XINGYUN", "TIANQI"]   # 鴻雁/行雲/天啟 中國 LEO 物聯網星座群
   - label: "Hawk"
     keywords: ["HAWK"]                           # HawkEye 360
   - label: "Orbcomm"
@@ -87,7 +93,7 @@ constellation_rules:
   - label: "Telesat LEO"
     keywords: ["TELESAT"]
   - label: "吉林/Jilin"
-    keywords: ["JILIN"]
+    keywords: ["JILIN", "DONGPO", "LINGQIAO", "LQSAT"]  # 含長光衛星冠名星（東坡號/靈巧視頻星等）
   - label: "遙感/Yaogan"
     keywords: ["YAOGAN"]
   - label: "高分"

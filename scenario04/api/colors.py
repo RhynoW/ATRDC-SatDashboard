@@ -12,8 +12,11 @@ COUNTRY_COLORS = {
 }
 CONSTELLATION_COLORS = {
     "Starlink": "#1565C0", "OneWeb": "#00897B", "Kuiper": "#FF8F00",
-    "千帆/Qianfan": "#C62828", "Iridium": "#558B2F", "Globalstar": "#6A1B9A",
-    "Planet/Flock": "#2E7D32", "Spire": "#00838F", "吉林/Jilin": "#AD1457",
+    "千帆/Qianfan": "#C62828", "國網/Guowang": "#D32F2F", "Starshield": "#455A64",
+    "Iridium": "#558B2F", "Globalstar": "#6A1B9A",
+    "Planet/Flock": "#2E7D32", "Spire": "#00838F", "PWSA/SDA": "#5D4037",
+    "GeeSat/Geespace": "#7B1FA2", "中國IoT(天啟/行雲)": "#8D6E63",
+    "吉林/Jilin": "#AD1457",
     "遙感/Yaogan": "#B71C1C", "高分": "#E64A19", "風雲": "#0277BD",
     "其他衛星": "#546E7A",
 }

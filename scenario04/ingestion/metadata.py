@@ -58,17 +58,20 @@ _COUNTRY_MAP_DEFAULT: dict[str, str] = {
 }
 
 _CONSTELLATION_RULES_DEFAULT: list[tuple[str, list[str]]] = [
-    # 排列依照 InsideGNSS (2026-05) LEO 星座數量降冪，確保大型星座優先命中
+    # 排列依照 2026-08 CelesTrak SATCAT 在軌實測數降冪，確保大型星座優先命中
     ("Starlink",            ["STARLINK"]),
     ("OneWeb",              ["ONEWEB"]),
     ("Kuiper",              ["KUIPER"]),
-    ("互聯網/Hulianwang",   ["HONGYAN", "XINGYUN", "TIANQI"]),   # 鴻雁/行云/天啟
-    ("Planet",              ["FLOCK", "DOVE", "SKYSAT"]),
     ("千帆/Qianfan",        ["QIANFAN", "SPACESAIL"]),
+    ("國網/Guowang",        ["HULIANWANG", "GUOWANG", "SATNET"]),  # 編目名 HULIANWANG DIGUI
+    ("Starshield",          ["STARSHIELD"]),                     # 現以 USA ### 編目且 TLE 扣留；預留
+    ("Planet/Flock",        ["FLOCK", "DOVE", "SKYSAT", "PELICAN", "TANAGER"]),
     ("Spire",               ["LEMUR", "SPIRE"]),
     ("Iridium",             ["IRIDIUM"]),
-    ("GeeSat/Geespace",     ["GEESPACE", "JIYUAN"]),             # 吉利/吉空
     ("Globalstar",          ["GLOBALSTAR"]),
+    ("PWSA/SDA",            ["PRAETORIAN", "CHECKMATE", "WILDFIRE", "BB3", "BB4"]),  # SDA T0/T1 代號
+    ("GeeSat/Geespace",     ["GEESAT", "GEESPACE", "JIYUAN"]),   # 吉利/吉空（編目名 GEESAT）
+    ("中國IoT(天啟/行雲)",  ["HONGYAN", "XINGYUN", "TIANQI"]),   # 鴻雁/行雲/天啟 物聯網群
     ("Hawk",                ["HAWK"]),                           # HawkEye 360
     ("Orbcomm",             ["ORBCOMM"]),
     ("NuSat",               ["NUSAT", "SATELLOGIC"]),            # Satellogic 阿根廷
@@ -76,7 +79,7 @@ _CONSTELLATION_RULES_DEFAULT: list[tuple[str, list[str]]] = [
     ("SpaceMobile",         ["BLUEBIRD", "SPACEMOBILE"]),        # AST SpaceMobile
     ("Lynk",                ["LYNK"]),
     ("Telesat LEO",         ["TELESAT"]),
-    ("吉林/Jilin",          ["JILIN"]),
+    ("吉林/Jilin",          ["JILIN", "DONGPO", "LINGQIAO", "LQSAT"]),  # 含長光冠名星
     ("遙感/Yaogan",         ["YAOGAN"]),
     ("高分",                ["GAOFEN"]),
     ("風雲",                ["FENGYUN", "FY-"]),

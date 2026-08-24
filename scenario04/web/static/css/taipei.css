@@ -36,6 +36,7 @@ html,body{height:100%;overflow:hidden;background:#0a0e17;color:#c9d1d9;font-fami
 .cstat{flex:1;text-align:center;background:#0d1117;border-radius:3px;padding:4px 2px}
 .cstat .sv{font-size:15px;font-weight:bold}
 .cstat .sl{font-size:9px;color:#484f58;text-transform:uppercase;letter-spacing:.5px}
+.cat-note{font-size:9.5px;color:#8b949e;padding:0 8px 7px;letter-spacing:.3px}
 .pass-item{padding:7px 10px;border-bottom:1px solid #161b22}
 .pass-name{font-size:11px;font-weight:bold;color:#c9d1d9;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}

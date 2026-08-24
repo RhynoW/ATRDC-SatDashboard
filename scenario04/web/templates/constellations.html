@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<title>星座排行 — 僅有效載荷</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft JhengHei',sans-serif;min-height:100vh}
+#hdr{display:flex;align-items:center;gap:14px;padding:14px 22px;background:#161b22;border-bottom:1px solid #21262d;flex-wrap:wrap}
+#hdr h1{font-size:17px;color:#e6edf3;font-weight:600}
+#hdr .sub{font-size:12px;color:#8b949e}
+#hdr .sp{flex:1}
+#hdr a{color:#58a6ff;font-size:12.5px;text-decoration:none;border:1px solid #30363d;border-radius:5px;padding:5px 11px;background:#21262d}
+#hdr a:hover{background:#30363d}
+#meta{padding:10px 22px 0;font-size:12px;color:#8b949e;display:flex;gap:18px;flex-wrap:wrap}
+#meta b{color:#e6edf3}
+#ctrl{padding:10px 22px;display:flex;gap:16px;align-items:center;font-size:12.5px;color:#8b949e;flex-wrap:wrap}
+#ctrl select{background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:3px 8px;font-size:12.5px}
+#ctrl label{display:flex;gap:5px;align-items:center;cursor:pointer}
+#list{padding:6px 22px 30px;max-width:980px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #161b22}
+.rk{width:26px;text-align:right;font-size:11.5px;color:#484f58}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.lb{width:225px;font-size:13.5px;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.barwrap{flex:1;height:14px;background:#161b22;border-radius:7px;overflow:hidden;display:block}
+.bar{display:block;height:100%;border-radius:7px;min-width:3px;transition:width .4s}
+.ct{width:76px;text-align:right;font-size:13.5px;font-weight:600;color:#e6edf3}
+#empty{padding:30px 22px;color:#8b949e}
+@media(max-width:640px){.lb{width:130px;font-size:12px}.ct{width:60px;font-size:12px}}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <h1>&#127756; 星座排行</h1>
+  <span class="sub">僅有效載荷（不含碎片／火箭體）</span>
+  <span class="sp"></span>
+  <a href="/api/stats/constellations" target="_blank">JSON API</a>
+  <a href="/">&#8592; 返回主頁</a>
+</div>
+<div id="meta">
+  <span>有效載荷總數 <b id="m-total">—</b></span>
+  <span>星座數 <b id="m-n">—</b></span>
+  <span>統計時間 <b id="m-time">—</b></span>
+</div>
+<div id="ctrl">
+  <label>顯示前
+    <select id="sel-top">
+      <option value="10">10</option>
+      <option value="20" selected>20</option>
+      <option value="30">30</option>
+      <option value="0">全部</option>
+    </select> 名
+  </label>
+  <label><input type="checkbox" id="chk-other" checked/> 隱藏「其他衛星」</label>
+  <label>長條比例
+    <select id="sel-scale">
+      <option value="linear" selected>線性</option>
+      <option value="sqrt">平方根（易讀小星座）</option>
+    </select>
+  </label>
+</div>
+<div id="list"><div id="empty">載入中...</div></div>
+<script>
+'use strict';
+let DATA=null;
+function fmt(n){return n.toLocaleString('zh-Hant');}
+function render(){
+  const list=document.getElementById('list');
+  if(!DATA){list.innerHTML="<div id='empty'>載入失敗，請重新整理</div>";return;}
+  const hideOther=document.getElementById('chk-other').checked;
+  const top=parseInt(document.getElementById('sel-top').value);
+  const scale=document.getElementById('sel-scale').value;
+  let rows=DATA.constellation.filter(r=>!(hideOther&&r.label==='其他衛星'));
+  if(top>0) rows=rows.slice(0,top);
+  const mx=Math.max(...rows.map(r=>r.count),1);
+  const w=c=>scale==='sqrt'?Math.sqrt(c)/Math.sqrt(mx)*100:c/mx*100;
+  list.innerHTML='';
+  rows.forEach((r,i)=>{
+    const d=document.createElement('div');
+    d.className='row';
+    d.innerHTML=
+      "<span class='rk'>"+String(i+1).padStart(2,'0')+"</span>"
+      +"<span class='dot' style='background:"+r.color+"'></span>"
+      +"<span class='lb' title='"+r.label+"'>"+r.label+"</span>"
+      +"<span class='barwrap'><span class='bar' style='width:"+w(r.count).toFixed(2)+"%;background:"+r.color+"'></span></span>"
+      +"<span class='ct'>"+fmt(r.count)+"</span>";
+    list.appendChild(d);
+  });
+  document.getElementById('m-n').textContent=DATA.constellation.length;
+}
+async function load(){
+  try{
+    const r=await fetch('/api/stats/constellations');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DATA=await r.json();
+    document.getElementById('m-total').textContent=fmt(DATA.payload_total);
+    const t=new Date(DATA.updated_at);
+    document.getElementById('m-time').textContent=
+      new Date(t.getTime()+8*3600*1000).toISOString().replace('T',' ').slice(0,19)+' CST';
+  }catch(e){console.error(e);DATA=null;}
+  render();
+}
+['sel-top','chk-other','sel-scale'].forEach(id=>
+  document.getElementById(id).addEventListener('change',render));
+load();
+</script>
+</body>
+</html>

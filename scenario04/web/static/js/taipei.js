@@ -10,10 +10,11 @@ const CATS={
   STARLINK:{label:'Starlink 星鏈',  sublabel:'SpaceX · Gen1/Gen2/V2 Mini',         color:'#A855F7'},
 };
 
-let viewer=null, satDs=null, circleDs=null;
+let viewer=null, satDs=null, circleDs=null, bordersDs=null;
 let coverageData=null, passesData=null;
 let activePanelTab='overview';
 let activeCatFilter=null;
+let _plotted={};   // 各類別圖上實繪顆數（與分類概況面板同步）
 
 // ── Timeline state ─────────────────────────────────────────────────────────
 let _tlMin=0;            // minutes offset from now (0=now, negative=past)
@@ -22,6 +23,7 @@ let _autoTimer=null;
 let _coverageCtrl=null;   // AbortController for in-flight coverage fetch
 let _passesCtrl=null;     // AbortController for in-flight passes fetch
 let _loading=false;       // prevents concurrent _loadForTs calls
+let _pendingReload=false; // 載入期間的時間軸操作 → 排隊於完成後重載（避免默默丟棄）
 let _lastAction=0;        // rate-limit timestamp for buttons
 const _TL_MAX=43200;     // 30 days in minutes
 
@@ -76,6 +78,18 @@ async function initCesium(){
   await viewer.dataSources.add(satDs);
   await viewer.dataSources.add(circleDs);
   _drawCircle();
+
+  // 渲染防護：Cesium 遇幾何錯誤（如 RangeError）會停止渲染，
+  // 這裡移除肇事的國界圖層並重啟 render loop，避免整頁死掉。
+  viewer.scene.renderError.addEventListener(function(_scene,error){
+    console.error('Cesium 渲染錯誤，嘗試自動恢復:',error);
+    try{
+      if(bordersDs){viewer.dataSources.remove(bordersDs,true);bordersDs=null;}
+    }catch(_e){/* noop */}
+    setTimeout(function(){
+      try{viewer.useDefaultRenderLoop=true;}catch(_e){/* noop */}
+    },200);
+  });
 
   document.getElementById('map-loading').style.display='none';
 }
@@ -167,12 +181,14 @@ function _updateMarkers(){
   if(!coverageData||!satDs) return;
   satDs.entities.suspendEvents();
   satDs.entities.removeAll();
+  _plotted={};
   Object.entries(coverageData.categories).forEach(([catId,cd])=>{
-    if(activeCatFilter&&activeCatFilter!==catId) return;
+    if(activeCatFilter&&activeCatFilter!==catId){_plotted[catId]=0;return;}
     const col=Cesium.Color.fromCssColorString(cd.color);
     // 超過 300 顆時只畫可見衛星，避免大星座（如 Starlink）拖慢 2D 地圖
     const allSats=cd.satellites||[];
     const satsToPlot=allSats.length>300?allSats.filter(s=>s.visible):allSats;
+    _plotted[catId]=satsToPlot.length;
     satsToPlot.forEach(s=>{
       satDs.entities.add({
         id:'sat_'+s.norad_id,
@@ -200,6 +216,8 @@ function _updateMarkers(){
     });
   });
   satDs.entities.resumeEvents();
+  _updateStatus();
+  if(activePanelTab==='overview') renderOverview();
 }
 
 // ── Category filter ────────────────────────────────────────────────────────
@@ -208,10 +226,7 @@ function toggleCatFilter(catId){
   document.querySelectorAll('.leg-row[data-cat]').forEach(el=>{
     el.classList.toggle('muted',activeCatFilter!==null&&el.dataset.cat!==activeCatFilter);
   });
-  document.querySelectorAll('.cat-card').forEach(el=>{
-    el.classList.toggle('active',activeCatFilter!==null&&el.dataset.cat===activeCatFilter);
-  });
-  _updateMarkers();
+  _updateMarkers();   // 內部會同步重繪分類概況（含 active 樣式與圖上顆數）
 }
 
 // ── Panel tabs ─────────────────────────────────────────────────────────────
@@ -234,18 +249,27 @@ function renderOverview(){
   Object.entries(CATS).forEach(([catId,cfg])=>{
     const cd=coverageData.categories[catId];
     if(!cd) return;
+    // 圖上實繪數：與 _updateMarkers 相同邏輯推算，避免面板與地圖不同步
+    const nAll=cd.count||0;
+    const plotted=(catId in _plotted)?_plotted[catId]
+                  :(nAll>300?cd.visible_count:nAll);
+    const truncated=nAll>300;
+    const filtered=activeCatFilter!==null&&activeCatFilter!==catId;
     const card=document.createElement('div');
     card.className='cat-card'+(activeCatFilter===catId?' active':'');
     card.dataset.cat=catId;
     card.innerHTML=
       "<div class='cat-header'><div class='cat-dot' style='background:"+cfg.color+"'></div>"
       +"<span class='cat-label'>"+cfg.label+"</span>"
-      +"<span class='cat-cnt'>"+cd.count+" 顆</span></div>"
+      +"<span class='cat-cnt'>"+nAll+" 顆</span></div>"
       +"<div class='cat-sublabel'>"+cfg.sublabel+"</div>"
       +"<div class='cat-stats'>"
-      +"<div class='cstat'><div class='sv' style='color:"+cfg.color+"'>"+cd.count+"</div><div class='sl'>資料庫</div></div>"
+      +"<div class='cstat'><div class='sv' style='color:"+cfg.color+"'>"+nAll+"</div><div class='sl'>資料庫</div></div>"
       +"<div class='cstat'><div class='sv' style='color:#4CAF50'>"+cd.visible_count+"</div><div class='sl'>可見</div></div>"
-      +"</div>";
+      +"<div class='cstat'><div class='sv' style='color:#FFD600'>"+plotted+"</div><div class='sl'>圖上</div></div>"
+      +"</div>"
+      +(filtered?"<div class='cat-note'>已被篩選隱藏</div>"
+        :(truncated?"<div class='cat-note'>大星座僅繪台北可見衛星</div>":""));
     card.addEventListener('click',()=>toggleCatFilter(catId));
     body.appendChild(card);
   });
@@ -297,10 +321,16 @@ function renderPasses(){
 // ── Status bar ─────────────────────────────────────────────────────────────
 function _updateStatus(){
   if(!coverageData) return;
-  let tot=0,vis=0;
-  Object.values(coverageData.categories).forEach(c=>{tot+=c.count||0;vis+=c.visible_count||0;});
+  let tot=0,vis=0,plot=0;
+  Object.entries(coverageData.categories).forEach(([catId,c])=>{
+    tot+=c.count||0;vis+=c.visible_count||0;
+    plot+=(catId in _plotted)?_plotted[catId]
+          :((c.count||0)>300?c.visible_count||0:c.count||0);
+  });
   document.getElementById('st-total').textContent=tot;
   document.getElementById('st-visible').textContent=vis;
+  const sp=document.getElementById('st-plotted');
+  if(sp) sp.textContent=plot;
   const t=new Date(coverageData.timestamp);
   document.getElementById('st-time').textContent=
     new Date(t.getTime()+8*3600*1000).toISOString().replace('T',' ').slice(11,19)+' CST';
@@ -355,7 +385,7 @@ function jumpToNow(){
 }
 
 async function _loadForTs(){
-  if(_loading) return;
+  if(_loading){_pendingReload=true;return;}
   _loading=true;
   const ts=_tlTs();
   const ldEl=document.getElementById('tl-loading');
@@ -366,6 +396,12 @@ async function _loadForTs(){
     _loading=false;
   }
   if(ldEl) ldEl.textContent='';
+  if(_pendingReload){
+    // 載入期間使用者又拉動了時間軸 → 立即以最新滑桿位置重載
+    _pendingReload=false;
+    _loadForTs();
+    return;
+  }
   // Schedule next auto-refresh only when at "now"
   if(!ts){
     clearTimeout(_autoTimer);
@@ -376,14 +412,31 @@ async function _loadForTs(){
 // ── Borders layer (2D) ─────────────────────────────────────────────────────
 async function loadBorders(){
   try{
-    // GeoJsonDataSource handles 2D polygon rendering correctly when fill is
-    // transparent — gives clean national border outlines without filled shapes.
-    const ds=await Cesium.GeoJsonDataSource.load('/api/layers/borders',{
-      stroke:      Cesium.Color.fromCssColorString('#FFD600').withAlpha(0.7),
-      strokeWidth: 1.5,
-      fill:        Cesium.Color.TRANSPARENT,
-      markerSymbol:' ',
+    const ds=await Cesium.GeoJsonDataSource.load('/api/layers/borders');
+    // GeoJSON 多邊形在 Cesium 預設走 RHUMB 弧型細分，超大國界多邊形會觸發
+    // 「RangeError: Too many properties to enumerate」並中止渲染。
+    // 防護：多邊形一律轉為 GEODESIC 折線外框，並隱藏原多邊形（與 globe.js 同法）。
+    const lineColor=Cesium.Color.fromCssColorString('#FFD600').withAlpha(0.7);
+    [...ds.entities.values].forEach(ent=>{
+      if(ent.polygon){
+        const hier=ent.polygon.hierarchy&&ent.polygon.hierarchy.getValue(Cesium.JulianDate.now());
+        if(hier&&hier.positions&&hier.positions.length){
+          ds.entities.add({polyline:{
+            positions:[...hier.positions,hier.positions[0]],
+            width:1.5,
+            material:new Cesium.ColorMaterialProperty(lineColor),
+            arcType:Cesium.ArcType.GEODESIC,
+          }});
+        }
+        ent.polygon.show=new Cesium.ConstantProperty(false);
+      }
+      if(ent.polyline&&ent.polyline.arcType===undefined){
+        ent.polyline.arcType=Cesium.ArcType.GEODESIC;
+      }
+      if(ent.label) ent.label.show=new Cesium.ConstantProperty(false);
+      if(ent.billboard) ent.billboard.show=new Cesium.ConstantProperty(false);
     });
+    bordersDs=ds;
     await viewer.dataSources.add(ds);
   }catch(e){
     console.warn('Borders load failed',e);

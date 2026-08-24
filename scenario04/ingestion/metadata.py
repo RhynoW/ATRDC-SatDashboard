@@ -78,6 +78,7 @@ _CONSTELLATION_RULES_DEFAULT: list[tuple[str, list[str]]] = [
     ("Skykraft",            ["SKYKRAFT"]),
     ("SpaceMobile",         ["BLUEBIRD", "SPACEMOBILE"]),        # AST SpaceMobile
     ("Lynk",                ["LYNK"]),
+    ("Formosat-7",          ["FORMOSAT7", "FORMOSAT-7", "COSMIC-2", "COSMIC2"]),  # 福衛七號/COSMIC-2
     ("Telesat LEO",         ["TELESAT"]),
     ("吉林/Jilin",          ["JILIN", "DONGPO", "LINGQIAO", "LQSAT"]),  # 含長光冠名星
     ("遙感/Yaogan",         ["YAOGAN"]),

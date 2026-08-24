@@ -74,6 +74,11 @@ class TestClassifyConstellation:
         assert classify_constellation("LINGQIAO VIDEO A") == "吉林/Jilin"
         assert classify_constellation("LQSAT") == "吉林/Jilin"
 
+    def test_formosat7(self):
+        # 福衛七號編目名為 FORMOSAT7-x/COSMIC2-x；7R 獵風者亦歸入
+        assert classify_constellation("FORMOSAT7-1/COSMIC2-1") == "Formosat-7"
+        assert classify_constellation("FORMOSAT-7R/TRITON") == "Formosat-7"
+
     def test_no_match(self):
         assert classify_constellation("ISS (ZARYA)") is None
 

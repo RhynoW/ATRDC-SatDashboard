@@ -12,6 +12,7 @@ scenario04_redesign_phases_20260702.md Phase 1 拆分為：
 from __future__ import annotations
 
 import logging
+import os
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -30,6 +31,17 @@ def create_app() -> Flask:
         static_folder=str(_WEB_DIR / "static"),
     )
     CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+    # 靜態檔 cache-busting：url_for('static', …) 自動附 ?v=<mtime>，
+    # 佈署更新後瀏覽器不會沿用快取的舊 JS/CSS（曾致前端修正未生效）。
+    @app.url_defaults
+    def _static_cache_bust(endpoint, values):
+        if endpoint == "static" and "filename" in values and "v" not in values:
+            fp = os.path.join(app.static_folder, values["filename"])
+            try:
+                values["v"] = int(os.stat(fp).st_mtime)
+            except OSError:
+                pass
 
     from .api import register_blueprints
     register_blueprints(app)

@@ -16,7 +16,7 @@ CONSTELLATION_COLORS = {
     "Iridium": "#558B2F", "Globalstar": "#6A1B9A",
     "Planet/Flock": "#2E7D32", "Spire": "#00838F", "PWSA/SDA": "#5D4037",
     "GeeSat/Geespace": "#7B1FA2", "中國IoT(天啟/行雲)": "#8D6E63",
-    "吉林/Jilin": "#AD1457",
+    "吉林/Jilin": "#AD1457", "Formosat-7": "#00ACC1",
     "遙感/Yaogan": "#B71C1C", "高分": "#E64A19", "風雲": "#0277BD",
     "其他衛星": "#546E7A",
 }

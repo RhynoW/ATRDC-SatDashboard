@@ -27,6 +27,12 @@ def starlink_page():
     return render_template("starlink.html")
 
 
+@bp.get("/constellations")
+def constellations_page():
+    """星座排行頁 — 僅有效載荷（資料源 /api/stats/constellations）。"""
+    return render_template("constellations.html")
+
+
 @bp.get("/cesium/<path:filename>")
 def cesium_static(filename: str):
     safe = (settings.CESIUM_LOCAL_DIR / filename).resolve()

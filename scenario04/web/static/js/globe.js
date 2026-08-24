@@ -109,9 +109,10 @@ const COUNTRY_C  ={美國:'#3F51B5','俄羅斯/蘇聯':'#F44336',中國:'#FF5722
                    台灣:'#00ACC1',韓國:'#FF6F00',以色列:'#5C6BC0',澳洲:'#2E7D32',
                    盧森堡:'#F57F17',其他:'#78909C',不明:'#455A64'};
 const CONSTEL_C  ={Starlink:'#1565C0',OneWeb:'#00897B',Kuiper:'#FF8F00',
-                   '互聯網/Hulianwang':'#D32F2F',
-                   Planet:'#2E7D32','千帆/Qianfan':'#C62828',
+                   '國網/Guowang':'#D32F2F','中國IoT(天啟/行雲)':'#8D6E63',
+                   'Planet/Flock':'#2E7D32','千帆/Qianfan':'#C62828',
                    Spire:'#00838F',Iridium:'#558B2F',
+                   'PWSA/SDA':'#5D4037',Starshield:'#455A64',
                    'GeeSat/Geespace':'#6A1B9A',Globalstar:'#4527A0',
                    Hawk:'#E65100',Orbcomm:'#37474F',
                    NuSat:'#00695C',Skykraft:'#1565C0',

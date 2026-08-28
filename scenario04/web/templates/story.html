@@ -22,7 +22,14 @@ body{padding-right:56px}
 #hdr .nav button:hover{background:#30363d;color:#fff}
 #hdr .nav button b{font-size:14px}
 #hdr .nav button span{writing-mode:vertical-rl;letter-spacing:2px}
-#hdr .nav button:disabled{opacity:.35;cursor:default}
+#hdr .nav button:disabled{opacity:.35;cursor:default;box-shadow:none}
+/* 凸顯上下步控制：下一步亮綠、上一步亮橘 */
+#hdr .nav button{width:44px;padding:10px 0 8px;font-weight:700;border-width:2px}
+#hdr .nav button b{font-size:18px}
+#nav-next{background:#2ea043;border-color:#3fb950;color:#fff;box-shadow:0 0 12px rgba(63,185,80,.55)}
+#nav-next:hover{background:#3fb950;border-color:#56d364;color:#fff;box-shadow:0 0 18px rgba(86,211,100,.8)}
+#nav-prev{background:#d9730d;border-color:#f0883e;color:#fff;box-shadow:0 0 12px rgba(240,136,62,.55)}
+#nav-prev:hover{background:#f0883e;border-color:#ffa657;color:#fff;box-shadow:0 0 18px rgba(255,166,87,.8)}
 /* 投影片式：每節正好一個視窗高度、逐頁吸附 */
 html{scroll-snap-type:y mandatory}
 html.nosnap{scroll-snap-type:none}

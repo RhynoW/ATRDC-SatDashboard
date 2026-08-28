@@ -47,12 +47,14 @@ I18N = {
            "open": "開啟「{t}」", "open_sec": "開啟本節「{t}」", "open_home": "開啟故事首頁",
            "block": "互動區塊", "data": "資料", "page": "頁面", "prov": "資料口徑", "limits": "使用限制",
            "item": "項目", "content": "內容", "limit": "限制", "impact": "影響",
+           "live_note": "註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準",
            "footer": "*本文件由 SatDashboard StoryMap 匯出（tools/export_story_md.py）。軌道數據為公開 TLE 以 SGP4 傳播之結果，"
                      "屬態勢展示等級；互動圖表請開啟線上版。*"},
     "ja": {"updated": "ストーリー更新日", "snapshot": "データスナップショット", "exported": "エクスポート時刻", "interactive": "インタラクティブ版",
            "open": "「{t}」を開く", "open_sec": "本節「{t}」を開く", "open_home": "ストーリーのトップを開く",
            "block": "インタラクティブ要素", "data": "データ", "page": "ページ", "prov": "データ定義", "limits": "利用上の制限",
            "item": "項目", "content": "内容", "limit": "制限", "impact": "影響",
+           "live_note": "注：API とインタラクティブページはリアルタイム照会（リクエスト時点のデータベースと UTC 時刻で計算）であり、本ドキュメントのデータスナップショットには固定されない。本文の数値はデータ定義表のスナップショット時刻を基準とする",
            "footer": "*本ドキュメントは SatDashboard StoryMap（tools/export_story_md.py）から出力されています。軌道データは公開 TLE を SGP4 で"
                      "伝播した結果であり、状況認識表示レベルです。インタラクティブな図表はオンライン版を参照してください。*"},
 }
@@ -162,6 +164,7 @@ def sec_extra(sec: dict, sid: str, lang: str = "zh") -> str:
         parts.append(f"- {T['data']}：{link('maneuvers API', '/api/story/maneuvers')}")
     elif t == "cdm":
         parts.append(f"- {T['data']}：{link('conjunctions API', '/api/conjunctions', threshold_km=sec.get('threshold_km', 10))}")
+    parts.append(f"- {T['live_note']}")
     if sec.get("anchor"):
         parts.append(f"- {T['interactive']}：[{T['open_sec'].format(t=sec.get('title', ''))}]({BASE_URL}/story/{sid}#{sec['anchor']})")
     else:
@@ -196,7 +199,7 @@ def provenance_md(lang: str = "zh") -> str:
                           "これらは履歴再生や「現在」の状態値としては使用せず、最新 epoch と経過日数の算出から除外済み" if lang == "ja" else
                           "相對於文件匯出時間，資料庫含少數 epoch 較晚之紀錄（GEO 等常見）；"
                           "此類紀錄不作為歷史回放或「目前」狀態值，計算最新 epoch 與資料齡時已排除")],
-        ["通過資料齡篩選", (f"{fmt('fresh_sat_count_7d')} 機；最新 TLE の経過日数 ≤ 7 日（鮮度フィルタ）；SGP4 エラーコードと減衰／再突入状態は個別未確認"
+        ["資料齡篩選通過（不代表全部傳播成功）", (f"{fmt('fresh_sat_count_7d')} 機；最新 TLE の経過日数 ≤ 7 日（鮮度フィルタ）；SGP4 エラーコードと減衰／再突入状態は個別未確認"
                           if lang == "ja" else f"{fmt('fresh_sat_count_7d')} 顆；{pv.get('fresh_criteria') or ''}")],
         ["TLE 最新 epoch（≤ 匯出時）", (pv.get("tle_epoch_latest_past") or "")[:16].replace("T", " ") + " UTC"],
         ["TLE 資料齡", (("—" if pv.get("tle_age_days") is None else
@@ -215,7 +218,36 @@ def provenance_md(lang: str = "zh") -> str:
         ["匯出時間", pv.get("generated_at")],
     ]
     if lang == "ja":
-        rows = [[PROV_ROWS_JA.get(k, k), v] for k, v in rows]
+        ver = fmt("propagator").split("python-sgp4 ")[-1].split("，")[0] if "python-sgp4" in fmt("propagator") else "?"
+        rows = [
+            ["データソース", "Space-Track GP（公開 TLE）；本システムの DuckDB による日次集計"],
+            ["カタログ物体数", f"{fmt('catalog_sat_count')} 物体（NORAD ID で重複排除、履歴を含む）"],
+            ["TLE レコード数", f"{fmt('tle_record_count')} 件"],
+            ["TLE epoch 範囲", f"{(pv.get('tle_epoch_min') or '')[:10]} 〜 {(pv.get('tle_epoch_max') or '')[:10]}"],
+            ["epoch 品質注記", "エクスポート時刻に対し、データベースには epoch が遅い少数のレコード（GEO 等で一般的）が含まれる；"
+                             "履歴再生や「現在」の状態値としては使用せず、最新 epoch と経過日数の算出から除外済み"],
+            ["データ鮮度フィルタ通過（全物体の伝播成功を意味しない）",
+             f"{fmt('fresh_sat_count_7d')} 物体；最新 TLE の経過日数 ≤ 7 日。ただし SGP4 エラーコードおよび減衰・再突入状態は個別確認していない"],
+            ["最新 TLE epoch（≤ エクスポート時）", (pv.get("tle_epoch_latest_past") or "")[:16].replace("T", " ") + " UTC"],
+            ["TLE データ経過日数", f"{pv.get('tle_age_days')} 日（エクスポート時刻に対する最新 TLE epoch）" if pv.get("tle_age_days") is not None else "—"],
+            ["データスナップショット（DB 更新）", (pv.get("db_updated_at") or "")[:16].replace("T", " ") + " UTC"],
+            ["伝播モデル", f"python-sgp4 {ver}；軌道周期に応じて SGP4 または SDP4 を自動選択"],
+            ["座標系", "SGP4 出力は TEME。UTC を UT1 の近似として GMST を計算し TEME から ECEF へ回転した後、WGS-84 楕円体から測地緯度・経度・楕円体高を算出。"
+                     "極運動・章動・UT1−UTC・完全な ITRF 地球姿勢パラメータは未考慮（地上位置は状況認識表示レベル）"],
+            ["精度レベル", "公開 TLE レベル（LEO では along-track 誤差が 1〜3 km/日のオーダーで増大）。精密暦ではなく、運用判断には不適"],
+            ["幾何学的接近スクリーニング", "単一伝播時刻（リクエスト時 UTC）における全カタログのペアワイズ距離スクリーニング（KD-tree）であり、時間窓内の TCA 探索ではない。"
+                                   "3D 展開後に、2衛星の TLE 重複期間を 30 分間隔で粗走査（区間が長い場合は総点数 ≤1,500 となるよう間隔を拡大）して全体最小距離を求め、"
+                                   "最接近時刻 ±12 h を 60 秒間隔で精走査する。距離閾値は初期スクリーニングにのみ使用"],
+            ["Pc proxy（衝突リスク順位付け代理値）", "Chan (2008) 2-D 簡略式：相対 RTN 座標系での固定的な概念的標準偏差 σ_R/σ_T を合成した単一の相対共分散"
+                                          "（σ_R/T/N = 100/500/100 m；σ_N は 3D 楕円体描画のみに使用）、等価衝突半径 5 m、最接近点 B-plane 仮定。"
+                                          "2衛星それぞれの CDM 共分散の合成ではなく、Pc proxy はイベントの順位付けのみに用いる"],
+            ["マヌーバ候補", "隣接 TLE の軌道長半径ジャンプ |Δa| 閾値（LEO 0.5 km、MEO/GEO 2 km、間隔 ≤5 日）による候補イベント；"
+                        "Δv は Δa から Δv≈n·Δa/2 で換算した等価値；代替説明：TLE 品質の変動、抗力モデル誤差、データ欠落"],
+            ["分類ルール版", f"ISR_RES_RULES v{fmt('classification_version')}（commit {fmt('app_commit')}）"],
+            ["APP バージョン", f"git commit {fmt('app_commit')}"],
+            ["ドキュメント状態", "技術デモ／運用レベルではない"],
+            ["エクスポート時刻", pv.get("generated_at")],
+        ]
     return f"### {T['prov']}\n\n" + md_table([T["item"], T["content"]], rows)
 
 

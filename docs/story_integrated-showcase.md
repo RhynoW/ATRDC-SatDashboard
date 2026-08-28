@@ -6,7 +6,7 @@
 
 > 故事內容更新：2026-08-28  
 > 資料快照：2026-08-28 11:14 UTC  
-> 文件匯出：2026-08-28T13:01:07+00:00  
+> 文件匯出：2026-08-28T13:10:42+00:00  
 > 互動版：[開啟「太空態勢整合展示：星系・機動・地基追蹤・碰撞預警」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase)
 
 ### 使用限制
@@ -31,20 +31,20 @@
 | TLE 記錄數 | 857961 筆 |
 | TLE epoch 範圍 | 2021-12-23 ～ 2026-08-27 |
 | epoch 品質註記 | 相對於文件匯出時間，資料庫含少數 epoch 較晚之紀錄（GEO 等常見）；此類紀錄不作為歷史回放或「目前」狀態值，計算最新 epoch 與資料齡時已排除 |
-| 通過資料齡篩選 | 29331 顆；最新 TLE 年齡 ≤ 7 天（資料齡篩選）；未逐一檢查 SGP4 誤差碼與衰減／再入狀態 |
+| 資料齡篩選通過（不代表全部傳播成功） | 29330 顆；最新 TLE 年齡 ≤ 7 天（資料齡篩選）；未逐一檢查 SGP4 誤差碼與衰減／再入狀態 |
 | TLE 最新 epoch（≤ 匯出時） | 2026-08-27 22:02 UTC |
 | TLE 資料齡 | 0.6 天（相對於文件匯出時間之最新 TLE epoch） |
 | 資料快照（DB 更新） | 2026-08-28 11:14 UTC |
 | 傳播模型 | python-sgp4 2.25，依軌道週期自動使用 SGP4（近地）或 SDP4（週期 ≥225 min 深空） |
 | 座標系 | SGP4 輸出 TEME；以 UTC 近似 UT1 計算 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級） |
 | 精度等級 | 公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據 |
-| 幾何接近篩選 | 幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），非時間窗 TCA 搜尋；展開 3D 後才於重疊期間粗掃（≥30 min）＋聚焦窗細掃（60 s）求最接近時刻 |
-| Pc proxy（碰撞風險排序代理值） | Chan (2008) 2-D 近似；σ_R/T/N = 100/500/100 m 為固定假設值（非 CDM 協方差），Pc 僅供排序 |
+| 幾何接近篩選 | 幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），非時間窗 TCA 搜尋；展開 3D 後才於兩星 TLE 重疊期間以 30 分鐘取樣間隔粗掃（區間過長時放大至總點數 ≤1,500）求全域最小距離，再於最接近時刻 ±12 h 聚焦窗以 60 秒取樣細掃；距離門檻僅用於初始篩選 |
+| Pc proxy（碰撞風險排序代理值） | Chan (2008) 2-D 簡化式：以相對 RTN 框架之固定示意標準差 σ_R/σ_T 合成單一相對協方差（σ_R/T/N = 100/500/100 m；σ_N 僅用於 3D 橢球繪製），等效碰撞半徑 5 m，最接近點 B-plane 假設；非兩星各自 CDM 協方差相加，Pc proxy 僅供事件排序 |
 | 機動候選 | 相鄰 TLE 半長軸跳變 \|Δa\| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏 |
-| 分類規則版本 | ISR_RES_RULES v1.0（commit 11e5603） |
-| APP 版本 | git commit 11e5603 |
+| 分類規則版本 | ISR_RES_RULES v1.0（commit 6ed982d） |
+| APP 版本 | git commit 6ed982d |
 | 文件狀態 | 技術展示／非操作級 |
-| 匯出時間 | 2026-08-28T13:01:07+00:00 |
+| 匯出時間 | 2026-08-28T13:10:42+00:00 |
 
 ## 章節總覽
 
@@ -65,12 +65,14 @@
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=group&val=gps)（mode=group, val=gps）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「GPS（NAVSTAR）— TLE 傳播軌道位置」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#pos-gps)
 
 ## GPS — 儀表板
 
 *（互動區塊：群組儀表板）*
 - 資料：[group_stats API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/group_stats?group=gps)（group=gps）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「GPS — 儀表板」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#stats-gps)
 
 ## 北斗（BeiDou）— TLE 傳播軌道位置
@@ -79,12 +81,14 @@
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=group&val=beidou)（mode=group, val=beidou）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「北斗（BeiDou）— TLE 傳播軌道位置」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#pos-beidou)
 
 ## 北斗 — 儀表板
 
 *（互動區塊：群組儀表板）*
 - 資料：[group_stats API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/group_stats?group=beidou)（group=beidou）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「北斗 — 儀表板」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#stats-beidou)
 
 ## Starlink — TLE 傳播軌道位置
@@ -93,12 +97,14 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=group&val=starlink)（mode=group, val=starlink）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「Starlink — TLE 傳播軌道位置」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#pos-starlink)
 
 ## Starlink — 儀表板
 
 *（互動區塊：群組儀表板）*
 - 資料：[group_stats API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/group_stats?group=starlink)（group=starlink）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「Starlink — 儀表板」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#stats-starlink)
 
 ## OneWeb — TLE 傳播軌道位置
@@ -107,12 +113,14 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=group&val=oneweb)（mode=group, val=oneweb）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「OneWeb — TLE 傳播軌道位置」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#pos-oneweb)
 
 ## OneWeb — 儀表板
 
 *（互動區塊：群組儀表板）*
 - 資料：[group_stats API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/group_stats?group=oneweb)（group=oneweb）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「OneWeb — 儀表板」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#stats-oneweb)
 
 ## 大陸 ISR／遙感衛星（遙感／尖兵、高分、吉林、天繪、海洋、TJS…，含北斗）
@@ -121,12 +129,14 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=group&val=prc_isr)（mode=group, val=prc_isr）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「大陸 ISR／遙感衛星（遙感／尖兵、高分、吉林、天繪、海洋、TJS…，含北斗）」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#pos-prc-isr)
 
 ## 大陸 ISR／遙感（含北斗）— 儀表板
 
 *（互動區塊：群組儀表板）*
 - 資料：[group_stats API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/group_stats?group=prc_isr)（group=prc_isr）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「大陸 ISR／遙感（含北斗）— 儀表板」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#stats-prc-isr)
 
 ## 偵照衛星感測器類型與光學解析度分類統計
@@ -135,6 +145,7 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：感測器／解析度分類（公開資料分類））*
 - 資料：[isr_resolution API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/isr_resolution?group=prc_isr)（group=prc_isr）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「偵照衛星感測器類型與光學解析度分類統計」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#isr-resolution)
 
 ## 大陸通訊星系（千帆、國網、中星、亞太、天鏈、天通）
@@ -143,12 +154,14 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=group&val=prc_comm)（mode=group, val=prc_comm）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「大陸通訊星系（千帆、國網、中星、亞太、天鏈、天通）」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#pos-prc-comm)
 
 ## 大陸通訊星系 — 儀表板
 
 *（互動區塊：群組儀表板）*
 - 資料：[group_stats API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/group_stats?group=prc_comm)（group=prc_comm）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「大陸通訊星系 — 儀表板」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#stats-prc-comm)
 
 ## 第二部：2026 年度機動偵測成果
@@ -159,6 +172,7 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：機動候選事件統計）*
 - 資料：[maneuvers API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/maneuvers)
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「各星系 2026 年機動候選事件：月分佈與活躍衛星」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#maneuvers-2026)
 
 ## 第三部：台灣假想地面追蹤站——可見性與觀測覆蓋評估
@@ -169,6 +183,7 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：假想地面追蹤站可見性與觀測覆蓋評估（API 名稱 radar_eval 沿用既有實作，輸出為幾何可見性指標））*
 - 資料：[radar_eval API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/radar_eval?group=prc_isr)（group=prc_isr）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「建立前 vs 建立後：可見性與觀測覆蓋評估（大陸 ISR 低軌樣本 30 顆）」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#visibility-eval)
 
 ## 追蹤示範：樂山站對大陸遙感衛星之未來過頂（方位／仰角天空圖）
@@ -177,6 +192,7 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：過頂 Skyplot（radar_eval 之視圖；API 名稱沿用既有實作，輸出為幾何可見性指標））*
 - 資料：[radar_eval API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/radar_eval?group=prc_isr)（group=prc_isr）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「追蹤示範：樂山站對大陸遙感衛星之未來過頂（方位／仰角天空圖）」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#skyplot-leshan)
 
 ## 3D 追蹤示範（Cesium）：台北站覆蓋與時間軸（既有獨立示範頁）
@@ -185,6 +201,7 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：內嵌頁面）*
 - 頁面：[/taipei](https://rhynowu-atrdc-satdashboard.hf.space/taipei)
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「3D 追蹤示範（Cesium）：台北站覆蓋與時間軸（既有獨立示範頁）」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#taipei-embed)
 
 ## 第四部：幾何接近事件篩選示範
@@ -195,6 +212,7 @@ SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570
 
 *（互動區塊：幾何接近事件（單一時刻距離篩選，非碰撞風險判定））*
 - 資料：[conjunctions API](https://rhynowu-atrdc-satdashboard.hf.space/api/conjunctions?threshold_km=10)（threshold_km=10）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「幾何接近配對（<10 km，TLE 傳播）與 3D 展開」](https://rhynowu-atrdc-satdashboard.hf.space/story/integrated-showcase#conjunction-screen)
 
 ## 結語

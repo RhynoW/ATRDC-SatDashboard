@@ -20,6 +20,9 @@ except ImportError:
     HAS_SATREC_ARRAY = False
 
 
+# 傳播結果高度合理範圍上限（km）：需涵蓋 Cluster 等高橢圓軌道遠地點（~131,000 km）
+MAX_ALT_KM = 140_000.0
+
 def sgp4_propagate_raw(
     nids:   list[int],
     line1s: list[str],
@@ -89,7 +92,7 @@ def propagate_batch(
             results.append(None)
             continue
         lat, lon, alt = float(llh[i, 0]), float(llh[i, 1]), float(llh[i, 2])
-        if not (-500.0 < alt < 80_000.0):
+        if not (-500.0 < alt < MAX_ALT_KM):
             results.append(None)
             continue
         results.append((lat, lon, alt))
@@ -117,7 +120,7 @@ def propagate_arc(
             lat, lon, alt = float(llh[0, 0]), float(llh[0, 1]), float(llh[0, 2])
         except Exception:
             continue
-        if not (-500.0 < alt < 80_000.0):
+        if not (-500.0 < alt < MAX_ALT_KM):
             continue
         positions.append({
             "lat":    round(lat, 4),
@@ -138,7 +141,7 @@ def propagate_now(line1: str, line2: str) -> tuple[float, float, float] | None:
             return None
         llh = eci_to_llh_batch(np.array([r_eci], dtype=float), t)
         lat, lon, alt = float(llh[0, 0]), float(llh[0, 1]), float(llh[0, 2])
-        if not (-500.0 < alt < 80_000.0):
+        if not (-500.0 < alt < MAX_ALT_KM):
             return None
         return lat, lon, alt
     except Exception:

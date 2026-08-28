@@ -126,8 +126,9 @@ def main() -> int:
     cutoff = datetime.now(timezone.utc) - timedelta(days=args.history_days)
     con = duckdb.connect(str(target), read_only=args.dry_run)
     con.execute(f"ATTACH '{source.as_posix()}' AS src (READ_ONLY)")
-    con.execute("CREATE TEMP TABLE want(norad_id BIGINT)")
-    con.executemany("INSERT INTO want VALUES (?)", [(i,) for i in sorted(ids)])
+    # full_hist=1：故事 JSON 明列之 NORAD（/orbit 單星時序需完整歷史），不受 history_days 限制
+    con.execute("CREATE TEMP TABLE want(norad_id BIGINT, full_hist BOOLEAN)")
+    con.executemany("INSERT INTO want VALUES (?, ?)", [(i, i in sj) for i in sorted(ids)])
 
     before = con.execute("SELECT count(*), count(DISTINCT norad_id) FROM raw_tle_archive").fetchone()
     cols = ", ".join(TLE_COLS)
@@ -138,7 +139,8 @@ def main() -> int:
         WITH recent AS (
             SELECT {src_cols} FROM src.raw_tle_archive s
             JOIN want w USING (norad_id)
-            WHERE s.line1 IS NOT NULL AND s.line2 IS NOT NULL AND s.epoch_utc >= ?
+            WHERE s.line1 IS NOT NULL AND s.line2 IS NOT NULL
+              AND (s.epoch_utc >= ? OR w.full_hist)
         ), latest AS (
             SELECT {src_cols} FROM src.raw_tle_archive s
             JOIN want w USING (norad_id)

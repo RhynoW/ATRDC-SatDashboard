@@ -42,7 +42,7 @@ def test_story_pages(client):
 def test_story_list_and_json(client):
     lst = client.get("/api/story/list").get_json()
     ids = {s["id"] for s in lst}
-    assert {"integrated-showcase", "japan-launches-2026"} <= ids
+    assert {"integrated-showcase", "japan-launches-2026", "starlink-lifecycle"} <= ids
     d = client.get("/api/story/integrated-showcase").get_json()
     assert d["id"] == "integrated-showcase" and d["sections"]
     assert client.get("/api/story/no-such-story").status_code == 404
@@ -71,6 +71,15 @@ def test_story_positions_japan_ids(client):
     d = client.get("/api/story/positions?mode=ids&val=" + ",".join(map(str, ids))).get_json()
     assert {s[0] for s in d["sats"]} == set(ids)
     assert client.get("/api/story/positions?mode=constellation&val=QZSS").get_json()["count"] >= 5
+
+
+def test_story_starlink_lifecycle_sats(client):
+    """starlink-lifecycle 三階段代表星（含 6 位數 100294）應有 TLE 與軌道歷史。"""
+    ids = [100294, 48881, 53506]
+    d = client.get("/api/story/positions?mode=ids&val=" + ",".join(map(str, ids))).get_json()
+    assert {s[0] for s in d["sats"]} >= {100294, 48881}   # 53506 再入後可能消失
+    h = client.get("/api/orbit/history?norad=48881&start=2026-03-31").get_json()
+    assert isinstance(h, dict) and not h.get("error")
 
 
 def test_story_group_stats_and_isr(client):

@@ -6,7 +6,7 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 
 > 故事內容更新：2026-08-28  
 > 資料快照：2026-08-28 11:14 UTC  
-> 文件匯出：2026-08-28T12:44:35+00:00  
+> 文件匯出：2026-08-28T12:45:06+00:00  
 > 互動版：[https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango](https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango)
 
 ### 使用限制
@@ -39,9 +39,9 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 | 精度等級 | 公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據 |
 | Pc proxy | Chan (2008) 2-D 近似；σ_R/T/N = 100/500/100 m 為固定假設值（非 CDM 協方差），Pc 僅供排序 |
 | 機動候選 | 相鄰 TLE 半長軸跳變 \|Δa\| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏 |
-| APP 版本 | git commit 3b8c593 |
+| APP 版本 | git commit a26aca1 |
 | 文件狀態 | 技術展示／非操作級 |
-| 匯出時間 | 2026-08-28T12:44:36+00:00 |
+| 匯出時間 | 2026-08-28T12:45:06+00:00 |
 
 ## 導言：為什麼要讓兩顆衛星「約好」再入
 

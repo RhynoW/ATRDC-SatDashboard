@@ -20,7 +20,9 @@ async function renderList(){
   const wrap = $id('wrap');
   const r = await fetch('/api/story/list');
   const list = await r.json();
-  let h = '<div class="hero"><h2>太空態勢敘事</h2>' +
+  // 清單頁不用滿頁吸附（否則 hero 100vh + mandatory snap 會把頁面吸回頂端、卡片永遠捲不到）
+  document.documentElement.classList.add('nosnap');
+  let h = '<div class="hero list"><h2>太空態勢敘事</h2>' +
           '<div class="sub">StoryMaps 式互動故事 — 以軌道資料說故事</div></div>' +
           '<div class="cards">';
   list.forEach(s => {

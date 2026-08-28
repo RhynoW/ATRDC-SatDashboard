@@ -402,6 +402,24 @@ def provenance() -> dict:
                     f"SELECT max(epoch_utc) FROM {settings.RAW_TABLE} WHERE epoch_utc <= now()").fetchone()[0]
     except Exception as exc:  # noqa: BLE001
         logger.debug("provenance latest_past 查詢失敗: %s", exc)
+    # 目錄／有效衛星數拆分：≤7 天內有 TLE 者視為「可用於目前傳播」
+    n_fresh7 = None
+    try:
+        if db is not None:
+            with duckdb.connect(str(db), read_only=True) as con:
+                n_fresh7 = con.execute(
+                    f"SELECT count(DISTINCT norad_id) FROM {settings.RAW_TABLE} "
+                    "WHERE epoch_utc >= now() - INTERVAL 7 DAY AND epoch_utc <= now() + INTERVAL 1 DAY").fetchone()[0]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("provenance n_fresh7 查詢失敗: %s", exc)
+    # 程式版本（git commit）
+    commit = None
+    try:
+        import subprocess
+        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=str(settings.APP_DIR),
+                                capture_output=True, text=True, timeout=5).stdout.strip() or None
+    except Exception:  # noqa: BLE001
+        commit = None
     ref = latest_past or info.get("epoch_max")
     if ref:
         try:
@@ -417,10 +435,16 @@ def provenance() -> dict:
         "db_name": info.get("db_name"), "db_updated_at": info.get("db_updated_at"),
         "tle_epoch_min": info.get("epoch_min"), "tle_epoch_max": info.get("epoch_max"),
         "tle_epoch_latest_past": latest_past, "tle_age_days": age,
-        "valid_sat_count": info.get("valid_sat_count"),
+        "catalog_sat_count": info.get("valid_sat_count"),       # 去重 NORAD 數（含歷史）
+        "tle_record_count": info.get("total_records"),          # 所有 TLE 筆數
+        "fresh_sat_count_7d": n_fresh7,                         # ≤7 天內有 TLE，可用於目前傳播
+        "valid_sat_count": info.get("valid_sat_count"),         # 舊欄位（相容）
+        "app_commit": commit,
         "propagator": f"SGP4/SDP4（python-sgp4 {sgp4_ver}）",
-        "frame": "TEME → GMST 轉 ECEF → WGS-84 經緯高（無極移／章動修正）",
+        "frame": "SGP4 輸出 TEME；以 UTC 近似 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；"
+                 "未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級）",
         "accuracy": "公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據",
+        "status": "技術展示／非操作級",
         "pc_model": "Chan (2008) 2-D 近似；σ_R/T/N = "
                     f"{settings.SIGMA_R_KM*1000:.0f}/{settings.SIGMA_T_KM*1000:.0f}/{settings.SIGMA_N_KM*1000:.0f} m "
                     "為固定假設值（非 CDM 協方差），Pc 僅供排序",

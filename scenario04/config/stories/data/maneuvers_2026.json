@@ -13,6 +13,10 @@
    "n_with_tle_2026": 73,
    "n_events": 5,
    "n_sats_with_event": 4,
+   "n_tle_transitions": 12485,
+   "rate_per_100_sats": 6.85,
+   "rate_per_1000_transitions": 0.4,
+   "median_abs_da_km": 2.184,
    "monthly": {
     "2026-07": 4,
     "2026-08": 1
@@ -29,13 +33,13 @@
      "events": 1
     },
     {
-     "norad": 40534,
-     "name": "NAVSTAR 73 (USA 260)",
+     "norad": 35752,
+     "name": "NAVSTAR 64 (USA 206)",
      "events": 1
     },
     {
-     "norad": 35752,
-     "name": "NAVSTAR 64 (USA 206)",
+     "norad": 40534,
+     "name": "NAVSTAR 73 (USA 260)",
      "events": 1
     }
    ],
@@ -100,6 +104,10 @@
    "n_with_tle_2026": 63,
    "n_events": 50,
    "n_sats_with_event": 14,
+   "n_tle_transitions": 13889,
+   "rate_per_100_sats": 79.37,
+   "rate_per_1000_transitions": 3.6,
+   "median_abs_da_km": 3.457,
    "monthly": {
     "2026-03": 1,
     "2026-04": 9,
@@ -160,13 +168,13 @@
      "events": 2
     },
     {
-     "norad": 44337,
-     "name": "BEIDOU 3 IGSO 2",
+     "norad": 43539,
+     "name": "BEIDOU IGSO 7",
      "events": 1
     },
     {
-     "norad": 37384,
-     "name": "BEIDOU IGSO 3",
+     "norad": 37763,
+     "name": "BEIDOU IGSO 4",
      "events": 1
     }
    ],
@@ -207,7 +215,7 @@
      "epoch_before": "2026-05-05T08:32",
      "epoch_after": "2026-05-06T08:29",
      "gap_h": 24.0,
-     "da_km": 41.27,
+     "da_km": 41.28,
      "dv_ms": 1.503,
      "regime": "GEO/IGSO"
     },
@@ -281,6 +289,10 @@
    "n_with_tle_2026": 10983,
    "n_events": 188276,
    "n_sats_with_event": 8173,
+   "n_tle_transitions": 3882409,
+   "rate_per_100_sats": 1714.25,
+   "rate_per_1000_transitions": 48.49,
+   "median_abs_da_km": 1.268,
    "monthly": {
     "2026-03": 3,
     "2026-04": 29101,
@@ -462,6 +474,10 @@
    "n_with_tle_2026": 654,
    "n_events": 383,
    "n_sats_with_event": 53,
+   "n_tle_transitions": 301387,
+   "rate_per_100_sats": 58.56,
+   "rate_per_1000_transitions": 1.27,
+   "median_abs_da_km": 1.155,
    "monthly": {
     "2026-03": 51,
     "2026-04": 134,
@@ -492,13 +508,13 @@
      "events": 7
     },
     {
-     "norad": 48785,
-     "name": "ONEWEB-0240",
+     "norad": 54678,
+     "name": "ONEWEB-0659",
      "events": 6
     },
     {
-     "norad": 54678,
-     "name": "ONEWEB-0659",
+     "norad": 48785,
+     "name": "ONEWEB-0240",
      "events": 6
     },
     {
@@ -517,18 +533,18 @@
      "events": 5
     },
     {
-     "norad": 56724,
-     "name": "ONEWEB-0703",
-     "events": 4
-    },
-    {
-     "norad": 49294,
-     "name": "ONEWEB-0368",
-     "events": 4
-    },
-    {
      "norad": 45138,
      "name": "ONEWEB-0025",
+     "events": 4
+    },
+    {
+     "norad": 49214,
+     "name": "ONEWEB-0350",
+     "events": 4
+    },
+    {
+     "norad": 56724,
+     "name": "ONEWEB-0703",
      "events": 4
     }
    ],
@@ -643,6 +659,10 @@
    "n_with_tle_2026": 583,
    "n_events": 1120,
    "n_sats_with_event": 169,
+   "n_tle_transitions": 445314,
+   "rate_per_100_sats": 192.11,
+   "rate_per_1000_transitions": 2.52,
+   "median_abs_da_km": 1.055,
    "monthly": {
     "2026-01": 66,
     "2026-02": 56,
@@ -842,6 +862,10 @@
    "n_with_tle_2026": 411,
    "n_events": 5799,
    "n_sats_with_event": 143,
+   "n_tle_transitions": 192953,
+   "rate_per_100_sats": 1410.95,
+   "rate_per_1000_transitions": 30.05,
+   "median_abs_da_km": 5.497,
    "monthly": {
     "2026-04": 132,
     "2026-05": 1320,

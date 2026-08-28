@@ -29,7 +29,10 @@ function provHtml(){
   return '<details class="prov"' + (stale ? ' open' : '') + '><summary>資料口徑' +
     (stale ? '<b class="stale">⚠ TLE 資料齡 ' + age + '</b>' : '<span class="ok">TLE 最新 epoch ' + (PROV.tle_epoch_latest_past || PROV.tle_epoch_max || '').slice(0, 10) + '・資料齡 ' + age + '</span>') +
     '</summary><div class="pgrid">' +
-    row('資料來源', PROV.source) + row('TLE epoch 範圍', (PROV.tle_epoch_min || '').slice(0, 10) + ' ～ ' + (PROV.tle_epoch_max || '').slice(0, 10) + '（' + fmtN(PROV.valid_sat_count) + ' 顆' + (PROV.tle_epoch_max > (PROV.tle_epoch_latest_past || '') ? '；含未來 epoch' : '') + '）') +
+    row('資料來源', PROV.source) +
+    row('目錄／有效', fmtN(PROV.catalog_sat_count || PROV.valid_sat_count) + ' 顆去重 NORAD（' + fmtN(PROV.tle_record_count) + ' 筆 TLE）；≤7 天有 TLE 可傳播 ' + fmtN(PROV.fresh_sat_count_7d) + ' 顆') +
+    row('歷史範圍', (PROV.tle_epoch_min || '').slice(0, 10) + ' ～ ' + (PROV.tle_epoch_max || '').slice(0, 10) + (PROV.tle_epoch_max > (PROV.tle_epoch_latest_past || '') ? '（含未來 epoch）' : '')) +
+    row('版本／狀態', (PROV.app_commit ? 'commit ' + PROV.app_commit + '・' : '') + (PROV.status || '技術展示／非操作級')) +
     row('資料庫更新', (PROV.db_updated_at || '').slice(0, 16).replace('T', ' ') + ' UTC') + row('傳播模型', PROV.propagator) +
     row('座標系', PROV.frame) + row('精度等級', PROV.accuracy) + row('碰撞機率', PROV.pc_model) + row('機動候選', PROV.maneuver_method) +
     '</div></details>';
@@ -492,6 +495,9 @@ async function initManeuvers(el){
     h += '<h4 style="margin:16px 0 4px;font-size:14px;color:#e6edf3">' + esc(g.label) + '</h4>' +
       '<div class="kpis">' + kpi(fmtN(g.n_sats), '星系衛星數') + kpi(fmtN(g.n_events), '2026 機動候選事件') +
       kpi(fmtN(g.n_sats_with_event) + '（' + pct + '%）', '有事件之衛星') +
+      (g.rate_per_100_sats != null ? kpi(g.rate_per_100_sats, '每 100 顆衛星事件數') : '') +
+      (g.rate_per_1000_transitions != null ? kpi(g.rate_per_1000_transitions, '每千次 TLE 轉移事件數') : '') +
+      (g.median_abs_da_km != null ? kpi(g.median_abs_da_km + ' km', '中位 |Δa|') : '') +
       (g.prc_pipeline ? kpi(fmtN(g.prc_pipeline.n_events), 'PRC 管線旗標事件（1–5 月）') : '') + '</div>' +
       '<div class="two"><div class="bars"><h5>月分佈</h5><canvas id="' + el.id + '-m' + i + '"></canvas></div>' +
       '<div><div class="note" style="margin:0 0 4px">最活躍衛星（事件數）</div><div class="chips">' +
@@ -529,7 +535,7 @@ async function initRadar(el){
     kpi(arrow(s.gap_max_before_min, s.gap_max_after_min, ' 分', s.gap_max_after_min < s.gap_max_before_min), '最大無觀測間隙') +
     kpi(arrow(s.track_min_before, s.track_min_after, ' 分', s.track_min_after > s.track_min_before), '累計追蹤時間／24 h') +
     kpi(s.taiwan_only_min + ' 分', '僅台灣站可見（全球站皆不可見）') +
-    kpi('+' + s.precision_gain_pct + '%', '定軌精度提升（σ∝1/√N 代理）', 'gain') +
+    kpi('+' + (s.info_gain_pct != null ? s.info_gain_pct : s.precision_gain_pct) + '%', '相對觀測資訊增益（σ∝1/√N 概念指標）', 'gain') +
     kpi(s.sats_with_taiwan_arc + '/' + s.n_sats, '台灣站有弧段之衛星') + '</div>' +
     '<div class="bars"><h5>建立前 vs 建立後（樣本平均）</h5><canvas id="' + el.id + '-pb"></canvas></div>' +
     '<div class="two"><div><div class="bars"><h5>地面站佈局：全球已知 SSN 站（' + d.n_stations_before + '）＋台灣假想站</h5>' +
@@ -537,9 +543,12 @@ async function initRadar(el){
     '<div><table class="data"><tr><th>衛星</th><th>弧段 前→後</th><th>台灣弧段</th><th>最大間隙 前→後（分）</th><th>精度提升</th></tr>' +
     d.sats.slice(0, 8).map(x => '<tr><td><a href="/orbit?norad=' + x.norad + '" target="_blank">' + esc(x.name) + '</a></td>' +
       '<td>' + x.arcs_before + ' → ' + x.arcs_after + '</td><td>' + x.arcs_taiwan + '</td>' +
-      '<td>' + x.gap_max_before_min + ' → ' + x.gap_max_after_min + '</td><td>+' + x.precision_gain_pct + '%</td></tr>').join('') +
+      '<td>' + x.gap_max_before_min + ' → ' + x.gap_max_after_min + '</td><td>+' + (x.info_gain_pct != null ? x.info_gain_pct : x.precision_gain_pct) + '%</td></tr>').join('') +
     '</table></div></div>' +
-    '<div class="note">' + esc(d.model_note) + ' 樣本：' + esc(d.label) + ' 低軌 ' + s.n_sats + ' 顆，評估起點 ' + d.t0 + '，仰角遮蔽 ' + d.mask_deg + '°。</div>';
+    '<div class="note">' + esc(d.model_note) + ' 樣本：' + esc(d.label) + ' 低軌 ' + s.n_sats + ' 顆，評估起點 ' + d.t0 + '，仰角遮蔽 ' + d.mask_deg + '°。</div>' +
+    (d.assumptions ? '<details class="evd"><summary>模型假設表</summary><table class="data">' +
+      Object.entries(d.assumptions).map(([k, v]) => '<tr><td style="text-align:left">' + esc(k) + '</td><td style="text-align:left">' + esc(String(v)) + '</td></tr>').join('') +
+      '</table></details>' : '');
   drawPaired($id(el.id + '-pb'), ['追蹤弧段／日', '最大間隙（分）', '累計追蹤（分）'],
              [s.arcs_before, s.gap_max_before_min, s.track_min_before],
              [s.arcs_after, s.gap_max_after_min, s.track_min_after], ['', '', '']);

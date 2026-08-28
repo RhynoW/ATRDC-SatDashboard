@@ -1,0 +1,84 @@
+# Samba 與 Tango 的一生：ESA Cluster 雙星受控再入
+
+**從 2000 年發射到 2026-08-31／09-01 南太平洋再入 — 為了一架觀測飛機而挪動的兩顆衛星**
+
+ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 年發射，2024 年 9 月 Salsa 首開先例受控再入；最後兩顆 Samba（NORAD 26410）與 Tango（26464）在 2026 年 1 月經小幅點火調整，使再入點分別略往東、略往西移，讓同一架觀測飛機能在相隔 24 小時的兩次任務中完整記錄解體過程。本故事以本系統 TLE 歷史還原這段旅程。
+
+> 更新：2026-08-28　|　互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango
+
+## 導言：為什麼要讓兩顆衛星「約好」再入
+
+衛星再入解體的實測資料極為稀少——事件轉瞬即逝、地點多在無人海域，儀器只能靠飛機帶到現場。Cluster 四顆衛星完全相同，於不同軌跡與氣象條件下觀測多次再入，等於一組可重複的解體物理實驗，有助設計下一代「零碎片」（zero-debris、design-for-demise）衛星。Samba 與 Tango 原已處於安全處置軌道、會自然再入南太平洋，但兩者再入的時間與地點相距太遠，單一飛機任務無法兼顧。ESA 飛行動力團隊在 2026 年 1 月 19～20 日各執行一次小幅點火：Samba 再入點略向東、Tango 略向西，讓兩次再入相隔約 24 小時，飛機得以返回基地加油、輪休後再次出勤。（資料來源：ESA〈Moving satellites to meet a plane for rare reentry data〉、ESA Rocket Science blog 2026-08-24）
+
+## ① Cluster 四星：同一批孿生衛星的四種結局
+
+| 衛星 | NORAD | 國際編號 | 發射 | 結局 |
+|---|---|---|---|---|
+| Rumba（Cluster 1 / FM5） | 26463 | 2000-045A | 2000-08-09 Soyuz-Fregat | 2025 年秋受控再入（本庫無其 TLE 歷史） |
+| Salsa（Cluster 2 / FM6） | 26411 | 2000-041B | 2000-07-16 Soyuz-Fregat | 2024-09-08 首例「目標式再入」（南太平洋，飛機觀測成功） |
+| Samba（Cluster 3 / FM7） | 26410 | 2000-041A | 2000-07-16 Soyuz-Fregat | 預報 2026-08-31 21:42 UTC ±10 min 再入（紐西蘭以北南太平洋） |
+| Tango（Cluster 4 / FM8） | 26464 | 2000-045B | 2000-08-09 Soyuz-Fregat | 預報 2026-09-01 21:33 UTC ±10 min 再入（同區域，相隔 24 h） |
+
+> Cluster 軌道為高橢圓極軌（原始約 19,000 × 119,000 km，本庫 TLE 顯示遠地點 ~131,000 km、傾角 ~150°）。再入預報取自 ESA 2026-08-24 以最後地面過境資料所作之預測。NORAD 與暱稱對應依 CelesTrak／Space-Track（26410=Samba、26464=Tango）。
+
+## ② Samba 與 Tango 現在在哪（3D 即時位置）
+
+兩顆衛星的即時位置（以最後一筆 TLE 傳播；Samba 最後 TLE 2026-08-16、Tango 2026-08-26）。遠地點 13 萬公里、近地點已低於 100 km 的極端橢圓軌道，讓它們大部分時間遠在月球軌道三分之一的距離外，只在每 54 小時一次的近地點掠過大氣邊緣——再入即發生在其中一次掠過。
+
+*（互動區塊：3D 即時位置）*
+- 資料：https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=ids&val=26410,26464
+- 互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango
+
+## ③ 先行者 Salsa（26411）：2024 年的首次目標式再入
+
+Salsa 的近地點自 2024-01 的 3,000 km 一路降到 8 月的 0 km，9 月 8 日再入。本系統 TLE 歷史止於 2024-09-08，時間軸播到最後即是衛星消失的那一天。SMA 圓形圖上半長軸幾乎不變（~72,500 km），變化全在偏心率與近地點幅角（ARGP）螺旋——高橢圓軌道的「衰減」不是大氣阻力造成，而是月球與太陽引力攝動逐月壓低近地點。
+
+*（互動區塊：逐日軌道要素時序（/orbit））*
+- NORAD 26411：https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=26411&start=2024-01-01
+- 互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango#salsa
+
+## ④ Samba（26410）：30 個月、近地點從 14,600 km 降到 0
+
+2024-01 近地點 14,597 km → 2025-01 7,661 km → 2026-01 2,022 km → 2026-07 70 km → 2026-08 已低於 0（TLE 平均要素之算法效應，實際近地點在 100 km 上下）。每月約降 500 km、均勻而單調，這條曲線就是「安全處置軌道」的設計：不必多耗燃料，讓天體力學把衛星送回大氣層。2026-01-16→01-20 之間 SMA 由 72,108 km 跳升至 72,154 km（+46 km），正是 ESA 所述把再入點「略向東移」的點火——週期加長，再入時刻延後、地面軌跡向東位移。
+
+*（互動區塊：逐日軌道要素時序（/orbit））*
+- NORAD 26410：https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=26410&start=2024-01-01
+- 互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango#samba
+
+## ⑤ Tango（26464）：同一條路，反向微調
+
+Tango 的近地點曲線與 Samba 幾乎重疊（2024-01 14,582 km → 2026-08 −101 km），畢竟兩顆是同一批、同一軌道面部署的孿生星。差別在 2026-01-19 的點火方向相反：SMA 由 72,557 km 降至 72,552 km（−5 km），週期略縮、再入時刻提前、地面軌跡向西——於是 Samba 向東、Tango 向西，兩者再入時間被拉開到相隔 24 小時，正好是飛機一趟往返加整補的時間。
+
+*（互動區塊：逐日軌道要素時序（/orbit））*
+- NORAD 26464：https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=26464&start=2024-01-01
+- 互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango#tango
+
+## ⑥ 2026-01-19／20 點火在 TLE 上的簽章
+
+| 衛星 | 點火前 TLE | SMA 前 (km) | 點火後 TLE | SMA 後 (km) | ΔSMA | 效果 |
+|---|---|---|---|---|---|---|
+| Samba 26410 | 2026-01-16 | 72,108.6 | 2026-01-20 | 72,154.1 | +45.5 km | 週期 +約 1 分鐘 → 再入延後、落點向東 |
+| Tango 26464 | 2026-01-15 | 72,556.8 | 2026-01-19 | 72,551.6 | −5.2 km | 週期 −約 6 秒 → 再入提前、落點向西 |
+
+> 本系統 Δa 機動偵測門檻（MEO/GEO 2 km）可清楚捕捉 Samba 的 +45 km；Tango 的 −5 km 亦超過門檻。兩者傾角同時期由 148.2° 緩升至 148.5°，為月日攝動之自然演化而非點火。ESA 未公開 Δv 數值，此處為 TLE 平均要素差分之推估。
+
+## ⑦ 再入時程與觀測任務
+
+| 項目 | Samba | Tango |
+|---|---|---|
+| 預報再入時刻（UTC） | 2026-08-31 21:41:54 ±10 min | 2026-09-01 21:33:20 ±10 min |
+| 預報再入時刻（台北 UTC+8） | 2026-09-01 05:42 | 2026-09-02 05:33 |
+| 再入區域 | 紐西蘭以北南太平洋無人海域 | 同一區域 |
+| 預報依據 | 最後地面過境資料 2026-08-24 | 同左 |
+| 觀測方式 | 飛機載科學儀器於禁航區邊緣觀測 | 同一架飛機 24 h 後再次出勤 |
+| 本庫最後 TLE | 2026-08-16 | 2026-08-26 |
+
+> 時刻取自 ESA Rocket Science blog（2026-08-24，CEST 換算 UTC）。2024 年 Salsa 再入即由同型飛機觀測成功，本次為第二、三次空中觀測。
+
+## 結語：TLE 能看見的，與看不見的
+
+從公開 TLE 就能還原這段旅程的骨架：30 個月單調下降的近地點、1 月那兩次方向相反的微幅點火、以及 8 月底戛然而止的資料。看不見的是再入時的解體序列、碎片存活率與熱流——那正是 ESA 要用飛機去現場量測的東西。對本系統而言，Cluster 也是一個提醒：高橢圓軌道的「衰減」由月日攝動主導，與低軌大氣阻力衰減的形狀完全不同，機動偵測的阻力排除旗標（da_monotonic_decay）不能直接套用在這類軌道上。
+
+---
+
+*本文件由 SatDashboard StoryMap 匯出（tools/export_story_md.py）；軌道數據來自本系統 TLE 資料庫，互動圖表請開啟線上版。*

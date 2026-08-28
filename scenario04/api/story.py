@@ -22,7 +22,28 @@ bp = Blueprint("story", __name__)
 logger = logging.getLogger(__name__)
 
 STORIES_DIR = settings.PACKAGE_DIR / "config" / "stories"
+SCHEMA_FILE = STORIES_DIR / "schema.json"
 _SID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+_schema_cache: dict | None = None
+
+
+def _validate(d: dict, name: str) -> bool:
+    """以 schema.json 驗證故事；不合者記 WARNING 並略過（避免壞檔拖垮整個清單）。"""
+    global _schema_cache
+    try:
+        import jsonschema
+    except ImportError:
+        return True
+    if _schema_cache is None:
+        _schema_cache = json.loads(SCHEMA_FILE.read_text(encoding="utf-8")) if SCHEMA_FILE.exists() else {}
+    if not _schema_cache:
+        return True
+    try:
+        jsonschema.validate(d, _schema_cache)
+        return True
+    except jsonschema.ValidationError as exc:
+        logger.warning("story %s 不符 schema：%s（路徑 %s）", name, exc.message, list(exc.absolute_path))
+        return False
 
 
 def _load_all() -> list[dict]:
@@ -30,9 +51,11 @@ def _load_all() -> list[dict]:
     if not STORIES_DIR.is_dir():
         return out
     for p in sorted(STORIES_DIR.glob("*.json")):
+        if p.name == "schema.json":
+            continue
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
-            if d.get("id"):
+            if d.get("id") and _validate(d, p.name):
                 out.append(d)
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("story 檔載入失敗 %s: %s", p.name, exc)
@@ -353,3 +376,60 @@ def api_story_positions():
     return json_response({"mode": mode, "val": val, "count": len(sats),
                           "sats": sats, "names": names,
                           "timestamp": datetime.now(timezone.utc).isoformat()})
+
+
+# ── 資料口徑（provenance）：供故事頁「口徑列」與 Markdown 匯出 ───────────────
+def provenance() -> dict:
+    """資料來源、TLE epoch 範圍／資料齡、傳播模型、座標系、不確定性假設。"""
+    from datetime import datetime, timezone
+    from ..ingestion.db import get_db_info
+    try:
+        import sgp4
+        sgp4_ver = getattr(sgp4, "__version__", "?")
+    except Exception:  # noqa: BLE001
+        sgp4_ver = "?"
+    info = get_db_info()
+    # 資料齡以「不晚於現在之最新 epoch」計（GEO 等常見未來 epoch，直接用 max 會得到負值）
+    age = None
+    latest_past = None
+    try:
+        from ..ingestion.db import resolve_db
+        import duckdb
+        db = resolve_db()
+        if db is not None:
+            with duckdb.connect(str(db), read_only=True) as con:
+                latest_past = con.execute(
+                    f"SELECT max(epoch_utc) FROM {settings.RAW_TABLE} WHERE epoch_utc <= now()").fetchone()[0]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("provenance latest_past 查詢失敗: %s", exc)
+    ref = latest_past or info.get("epoch_max")
+    if ref:
+        try:
+            em = ref if isinstance(ref, datetime) else datetime.fromisoformat(str(ref))
+            if em.tzinfo is None:
+                em = em.replace(tzinfo=timezone.utc)
+            age = round((datetime.now(timezone.utc) - em).total_seconds() / 86400.0, 1)
+            latest_past = em.isoformat(timespec="seconds")
+        except ValueError:
+            pass
+    return {
+        "source": "Space-Track GP（公開 TLE）；本系統 DuckDB 每日彙整",
+        "db_name": info.get("db_name"), "db_updated_at": info.get("db_updated_at"),
+        "tle_epoch_min": info.get("epoch_min"), "tle_epoch_max": info.get("epoch_max"),
+        "tle_epoch_latest_past": latest_past, "tle_age_days": age,
+        "valid_sat_count": info.get("valid_sat_count"),
+        "propagator": f"SGP4/SDP4（python-sgp4 {sgp4_ver}）",
+        "frame": "TEME → GMST 轉 ECEF → WGS-84 經緯高（無極移／章動修正）",
+        "accuracy": "公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據",
+        "pc_model": "Chan (2008) 2-D 近似；σ_R/T/N = "
+                    f"{settings.SIGMA_R_KM*1000:.0f}/{settings.SIGMA_T_KM*1000:.0f}/{settings.SIGMA_N_KM*1000:.0f} m "
+                    "為固定假設值（非 CDM 協方差），Pc 僅供排序",
+        "maneuver_method": "相鄰 TLE 半長軸跳變 |Δa| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；"
+                           "Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏",
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+
+@bp.get("/api/story/provenance")
+def api_story_provenance():
+    return json_response(provenance(), max_age=300)

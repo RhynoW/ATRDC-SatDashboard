@@ -65,6 +65,10 @@
   a.back{position:absolute;top:14px;right:14px;z-index:10;background:var(--panel);border:1px solid var(--line);
     border-radius:8px;padding:8px 12px;color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:12px}
   a.back:hover{color:var(--ink)}
+.charts{margin-top:8px}.charts h2{font-size:12px;color:#8b949e;margin:0 0 4px;font-weight:500}
+.charts .ch{background:#0a0f1a;border:1px solid #21262d;border-radius:6px;padding:4px 6px 2px;margin-bottom:6px}
+.charts .cl{font-size:10.5px;color:#8b949e;margin-bottom:2px}.charts canvas{width:100%;display:block}
+.charts .cstat{font-size:11px;color:#c9d1d9;font-family:monospace}
 </style>
 </head>
 <body>
@@ -102,6 +106,12 @@
     <div class="pcctl">
       <label><input type="checkbox" id="pcSphereChk" checked> 🔴 碰撞機率球（3σ R/T/N 橢球）</label>
       <span id="pcSphereInfo"></span>
+    </div>
+    <div class="charts">
+      <h2>相對運動（聚焦窗）</h2>
+      <div class="ch"><div class="cl">距離 |ρ| (km) — 時間</div><canvas id="ch_dist" height="90"></canvas></div>
+      <div class="ch"><div class="cl"><span style="color:#f0883e">R 徑向</span>・<span style="color:#58a6ff">T 沿軌</span>・<span style="color:#bc8cff">N 法向</span> (km) — 時間</div><canvas id="ch_rtn" height="110"></canvas></div>
+      <div class="cstat" id="ch_stat">—</div>
     </div>
     <div class="tl"><h2>事件時間軸</h2><div id="timeline"></div></div>
     <div class="note" id="note"></div>

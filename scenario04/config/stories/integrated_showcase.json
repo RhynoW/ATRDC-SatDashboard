@@ -8,27 +8,27 @@
     {"type": "toc", "title": "章節總覽", "dur": 4,
      "body": "四個子題各自獨立，點磚直達；全篇 3D 圖一律以顏色區分軌道域：LEO 青、MEO 綠、GEO／IGSO 琥珀，並繪出 MEO 與 GEO 參考環。",
      "items": [
-       {"icon": "🛰️", "label": "① 星系展示", "anchor": "part1", "sub": "GPS・北斗・Starlink・OneWeb・大陸 ISR・大陸通訊：3D 即時位置＋儀表板＋偵照解析度分類"},
+       {"icon": "🛰️", "label": "① 星系展示", "anchor": "part1", "sub": "GPS・北斗・Starlink・OneWeb・大陸 ISR・大陸通訊：3D TLE 傳播位置＋儀表板＋偵照解析度分類"},
        {"icon": "📈", "label": "② 2026 機動偵測", "anchor": "part2", "sub": "六星系年度機動候選事件：月分佈與活躍衛星"},
        {"icon": "📡", "label": "③ 台灣地基雷達站", "anchor": "part3", "sub": "建立前後追蹤效益評估＋即時過頂追蹤示範"},
        {"icon": "⚠️", "label": "④ 碰撞預警", "anchor": "part4", "sub": "即時 <10 km 接近配對與 3D 相對接近場景"}
      ]},
     {"type": "text", "anchor": "part1", "title": "第一部：星系展示", "dur": 3,
-     "body": "每個星系先以 3D 自動旋轉呈現即時軌道位置（純色底、實高度比例、軌道域配色、衛星名稱），接著是儀表板：數量、軌道域、高度／傾角分佈、歷年發射累積，以及可點入逐日軌道歷史（/orbit）的代表衛星。"},
+     "body": "每個星系先以 3D 自動旋轉呈現 TLE 傳播軌道位置（純色底、實高度比例、軌道域配色、衛星名稱），接著是儀表板：數量、軌道域、高度／傾角分佈、歷年發射累積，以及可點入逐日軌道歷史（/orbit）的代表衛星。"},
 
-    {"type": "positions", "title": "GPS（NAVSTAR）— 即時軌道位置", "mode": "group", "val": "gps", "globe": true, "dur": 6,
+    {"type": "positions", "title": "GPS（NAVSTAR）— TLE 傳播軌道位置", "mode": "group", "val": "gps", "globe": true, "dur": 6,
      "body": "美國全球定位系統，MEO 約 20,200 km、傾角 55°、六個軌道面。"},
     {"type": "groupstats", "group": "gps", "title": "GPS — 儀表板", "dur": 5},
 
-    {"type": "positions", "title": "北斗（BeiDou）— 即時軌道位置", "mode": "group", "val": "beidou", "globe": true, "dur": 6,
+    {"type": "positions", "title": "北斗（BeiDou）— TLE 傳播軌道位置", "mode": "group", "val": "beidou", "globe": true, "dur": 6,
      "body": "中國北斗導航系統：MEO＋IGSO＋GEO 三種軌道混合構型，是與 GPS 最大的結構差異。"},
     {"type": "groupstats", "group": "beidou", "title": "北斗 — 儀表板", "dur": 5},
 
-    {"type": "positions", "title": "Starlink — 即時軌道位置", "mode": "group", "val": "starlink", "globe": true, "dur": 6,
+    {"type": "positions", "title": "Starlink — TLE 傳播軌道位置", "mode": "group", "val": "starlink", "globe": true, "dur": 6,
      "body": "SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570 km）與 53°／70°／97.6° 傾角面。"},
     {"type": "groupstats", "group": "starlink", "title": "Starlink — 儀表板", "dur": 5},
 
-    {"type": "positions", "title": "OneWeb — 即時軌道位置", "mode": "group", "val": "oneweb", "globe": true, "dur": 5,
+    {"type": "positions", "title": "OneWeb — TLE 傳播軌道位置", "mode": "group", "val": "oneweb", "globe": true, "dur": 5,
      "body": "極軌 1,200 km、傾角 87.9° 的通訊星座，與 Starlink 的高度／傾角策略形成對照。"},
     {"type": "groupstats", "group": "oneweb", "title": "OneWeb — 儀表板", "dur": 4},
 

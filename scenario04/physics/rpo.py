@@ -401,8 +401,18 @@ def compute_rpo_scene(
     f0 = max(lo, focus_center - timedelta(hours=focus_hours))
     f1 = min(hi, focus_center + timedelta(hours=focus_hours))
     fine = _sample(Precs, Pep, Srecs, Sep, f0, f1, fine_step_s) or coarse
+    # RTN（LVLH）相對分量：以 primary 位置為 R 軸、有限差分速度求軌道面法向 N、T = N × R
+    rps = np.array([f[1] for f in fine], dtype=float)
+    rss = np.array([f[2] for f in fine], dtype=float)
+    vps = np.gradient(rps, axis=0) if len(fine) > 1 else np.ones_like(rps)
+    R = rps / np.linalg.norm(rps, axis=1, keepdims=True)
+    Nn = np.cross(rps, vps); Nn = Nn / np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
+    T = np.cross(Nn, R)
+    rel = rss - rps
+    rtn = np.stack([(rel * R).sum(1), (rel * T).sum(1), (rel * Nn).sum(1)], axis=1)
+
     orbit = []
-    for (t, rp, rs, d) in fine:
+    for k, (t, rp, rs, d) in enumerate(fine):
         llh = eci_to_llh_batch(np.vstack([rp, rs]), t)  # 每列 [lat, lon, alt_km]
         orbit.append({
             "t": _iso(t),
@@ -411,6 +421,7 @@ def compute_rpo_scene(
             "s": [round(float(llh[1, 1]), 4), round(float(llh[1, 0]), 4), round(float(llh[1, 2]) * 1000.0, 1)],
             "d": round(d, 4),
             "pc": compute_pc_chan(d),
+            "rtn": [round(float(x), 4) for x in rtn[k]],   # secondary 相對 primary 之 R/T/N (km)
         })
 
     imin = int(np.argmin([o["d"] for o in orbit]))
@@ -431,6 +442,8 @@ def compute_rpo_scene(
         "sigma_r": settings.SIGMA_R_KM, "sigma_t": settings.SIGMA_T_KM,
         "sigma_n": settings.SIGMA_N_KM,
         "sat_radius": settings.SAT_RADIUS_KM,
+        "frame_note": "相對分量為 secondary−primary 於 primary 之 RTN(LVLH)：R 徑向外、T 沿軌、N 軌道面法向；"
+                      "SGP4/TEME 幾何重建，公開 TLE 級精度",
     }
     summary = {
         "d_min": orbit[imin]["d"], "t_min": orbit[imin]["t"], "pc_max": orbit[imin]["pc"],

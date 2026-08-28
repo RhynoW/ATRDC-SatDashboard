@@ -15,6 +15,26 @@ function esc(s){
 }
 function $id(i){ return document.getElementById(i); }
 
+/* ── 資料口徑（provenance）：頁面載入時抓一次，供口徑列／各區塊註記 ── */
+let PROV = null;
+async function loadProv(){
+  try{ PROV = await (await fetch('/api/story/provenance')).json(); }catch(e){ PROV = null; }
+  return PROV;
+}
+function provHtml(){
+  if(!PROV) return '';
+  const age = PROV.tle_age_days == null ? '—' : PROV.tle_age_days + ' 天';
+  const stale = PROV.tle_age_days != null && PROV.tle_age_days > 3;
+  const row = (k, v) => '<div class="pv"><span class="k">' + k + '</span><span class="v">' + esc(v || '—') + '</span></div>';
+  return '<details class="prov"' + (stale ? ' open' : '') + '><summary>資料口徑' +
+    (stale ? '<b class="stale">⚠ TLE 資料齡 ' + age + '</b>' : '<span class="ok">TLE 最新 epoch ' + (PROV.tle_epoch_latest_past || PROV.tle_epoch_max || '').slice(0, 10) + '・資料齡 ' + age + '</span>') +
+    '</summary><div class="pgrid">' +
+    row('資料來源', PROV.source) + row('TLE epoch 範圍', (PROV.tle_epoch_min || '').slice(0, 10) + ' ～ ' + (PROV.tle_epoch_max || '').slice(0, 10) + '（' + fmtN(PROV.valid_sat_count) + ' 顆' + (PROV.tle_epoch_max > (PROV.tle_epoch_latest_past || '') ? '；含未來 epoch' : '') + '）') +
+    row('資料庫更新', (PROV.db_updated_at || '').slice(0, 16).replace('T', ' ') + ' UTC') + row('傳播模型', PROV.propagator) +
+    row('座標系', PROV.frame) + row('精度等級', PROV.accuracy) + row('碰撞機率', PROV.pc_model) + row('機動候選', PROV.maneuver_method) +
+    '</div></details>';
+}
+
 /* ── 故事清單 ── */
 async function renderList(){
   const wrap = $id('wrap');
@@ -122,8 +142,9 @@ async function initPosMap(box){
   box.innerHTML = '<canvas></canvas>';
   st.cv = box.querySelector('canvas');
   const capEl = box.parentElement.querySelector('.pm-cap');
-  if(capEl) capEl.textContent = '衛星數：' + d.count +
-    '（' + new Date(d.timestamp).toISOString().slice(0, 16).replace('T', ' ') + ' UTC）';
+  if(capEl) capEl.textContent = '衛星數：' + d.count + '｜TLE 傳播位置，計算時刻 ' +
+    new Date(d.timestamp).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' +
+    (PROV && PROV.tle_epoch_max ? '｜TLE 最新 epoch ' + (PROV.tle_epoch_latest_past || PROV.tle_epoch_max).slice(0, 10) + '（資料齡 ' + PROV.tle_age_days + ' 天）' : '');
 
   if(box.dataset.globe === '1'){ initGlobe3D(pmId); return; }
 
@@ -476,7 +497,17 @@ async function initManeuvers(el){
       '<div><div class="note" style="margin:0 0 4px">最活躍衛星（事件數）</div><div class="chips">' +
       g.top.slice(0, 8).map(t => '<a class="chip" href="/orbit?norad=' + t.norad + '" target="_blank">' +
         esc(t.name) + ' · ' + t.events + '</a>').join('') + '</div></div></div>';
+    if(g.events && g.events.length){
+      h += '<details class="evd"><summary>最大 |Δa| 事件（前 ' + g.events.length + '）：前後 TLE epoch、間隔、等效 Δv</summary>' +
+        '<table class="data"><tr><th>衛星</th><th>TLE 前</th><th>TLE 後</th><th>間隔 (h)</th><th>Δa (km)</th><th>等效 Δv (m/s)</th><th>軌道域</th></tr>' +
+        g.events.map(e => '<tr><td><a href="/orbit?norad=' + e.norad + '&start=' + e.epoch_before.slice(0, 10) + '" target="_blank">' + esc(e.name) + '</a><br><span style="color:#6e7681">' + e.norad + '</span></td>' +
+          '<td>' + e.epoch_before.slice(0, 16).replace('T', ' ') + '</td><td>' + e.epoch_after.slice(0, 16).replace('T', ' ') + '</td>' +
+          '<td>' + e.gap_h + '</td><td>' + (e.da_km > 0 ? '+' : '') + e.da_km + '</td><td>' + e.dv_ms + '</td><td>' + e.regime + '</td></tr>').join('') +
+        '</table></details>';
+    }
   });
+  h += '<div class="note">候選≠確認：Δv 為 Δa 以 Δv≈n·Δa/2 換算之等效值（假設切向脈衝）；替代解釋包括 TLE 品質波動／軌道決定更新、大氣阻力模型誤差（LEO）、資料缺漏造成之跳變。' +
+       '確認機動需精密星曆或多來源交叉驗證。</div>';
   el.innerHTML = h;
   keys.forEach((k, i) => {
     const g = d.groups[k];
@@ -603,7 +634,7 @@ async function initCdm(el){
   const pairs = (d.pairs || []).filter(p => p.miss_km > 0.05)   // 排除對接／共位（距離≈0）
     .sort((a, b) => (b.Pc || 0) - (a.Pc || 0) || a.miss_km - b.miss_km).slice(0, 10);
   const lv = l => l === 'RED' ? '#f85149' : (l === 'AMBER' ? '#d29922' : '#3fb950');
-  el.innerHTML = '<div class="kpis">' + kpi(fmtN(d.count), '<' + thr + ' km 接近配對（即時）') +
+  el.innerHTML = '<div class="kpis">' + kpi(fmtN(d.count), '<' + thr + ' km 幾何接近配對（TLE 傳播）') +
     kpi(fmtN(d.total_scanned), '掃描物體數') + kpi((d.elapsed_sec || 0) + ' s', '向量化 SGP4 掃描耗時') +
     kpi(pairs.filter(p => p.risk_level === 'RED').length + ' / ' + pairs.filter(p => p.risk_level === 'AMBER').length, 'RED / AMBER（前 10）') + '</div>' +
     '<table class="data"><tr><th>主體</th><th>次體</th><th>最接近距離</th><th>Pc（proxy）</th><th>等級</th><th></th></tr>' +
@@ -612,7 +643,7 @@ async function initCdm(el){
       '<td>' + p.miss_km.toFixed(2) + ' km</td><td>' + p.Pc_str + '</td>' +
       '<td><b style="color:' + lv(p.risk_level) + '">' + p.risk_level + '</b></td>' +
       '<td><button class="nbtn" data-p="' + p.primary_norad + '" data-s="' + p.secondary_norad + '">3D 展開</button></td></tr>').join('') +
-    '</table><div class="note">Pc 為 Chan 首階排序代理（σ R/T/N 300/1,500/300 m），非作業級；已排除距離≈0 之對接／共位配對。</div>' +
+    '</table><div class="note">幾何篩選（<' + thr + ' km）≠ 碰撞風險：Pc 為 Chan (2008) 2-D 近似，σ R/T/N 為固定假設值（' + (PROV ? PROV.pc_model.replace(/^.*σ/, 'σ') : '100/500/100 m') + '），非 CDM 協方差，僅供排序；已排除距離≈0 之對接／共位配對。</div>' +
     '<div class="frame" id="' + el.id + '-fr" style="display:none" data-h="820"></div>';
   el.querySelectorAll('button[data-p]').forEach(b => b.addEventListener('click', () => {
     const fr = $id(el.id + '-fr'); fr.style.display = ''; fr.querySelectorAll('iframe').forEach(f => f.remove());
@@ -638,6 +669,7 @@ async function renderStory(sid){
   const r = await fetch('/api/story/' + encodeURIComponent(sid));
   if(!r.ok){ wrap.innerHTML = '<div style="padding:60px 0">故事不存在。<a href="/story">回清單</a></div>'; return; }
   const st = await r.json();
+  await loadProv();
   document.title = st.title + ' — Story';
   $id('hdr-title').textContent = st.title;
   $id('lnk-list').style.display = '';
@@ -645,7 +677,7 @@ async function renderStory(sid){
   // 封面（標題／副標／說明）併入第一節上方，不再獨立佔一整頁（滿頁吸附下獨立封面會卡在第一頁）
   const heroHtml = '<div class="hero-in"><h2>' + esc(st.title) + '</h2>' +
           '<div class="sub">' + esc(st.subtitle || '') + '</div>' +
-          (st.hero_note ? '<div class="note">' + esc(st.hero_note) + '</div>' : '') + '</div>';
+          (st.hero_note ? '<div class="note">' + esc(st.hero_note) + '</div>' : '') + provHtml() + '</div>';
   let h = '';
 
   const SECS = st.sections || [];

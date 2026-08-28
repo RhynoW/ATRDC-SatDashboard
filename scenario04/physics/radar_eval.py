@@ -114,6 +114,8 @@ def evaluate(sats: list[tuple[int, str, str, str]], hours: float = 24.0,
             "track_min_before": round(mb, 1), "track_min_after": round(ma, 1),
             "track_min_taiwan_only": only_tw,
             "sigma_ratio": round(sigma_ratio, 3),
+            # 相對觀測資訊增益（概念指標）；precision_gain_pct 為舊名，保留相容
+            "info_gain_pct": round((1 - sigma_ratio) * 100, 1),
             "precision_gain_pct": round((1 - sigma_ratio) * 100, 1),
         })
     if not rows:
@@ -128,11 +130,26 @@ def evaluate(sats: list[tuple[int, str, str, str]], hours: float = 24.0,
             "gap_max_before_min": avg("gap_max_before_min"), "gap_max_after_min": avg("gap_max_after_min"),
             "track_min_before": avg("track_min_before"), "track_min_after": avg("track_min_after"),
             "taiwan_only_min": avg("track_min_taiwan_only"),
+            "info_gain_pct": avg("info_gain_pct"),
             "precision_gain_pct": avg("precision_gain_pct"),
             "sats_with_taiwan_arc": int(sum(1 for x in rows if x["arcs_taiwan"] > 0)),
         },
-        "sats": sorted(rows, key=lambda x: -x["precision_gain_pct"]),
-        "model_note": "精度代理 σ∝1/√(累計觀測量)，為均勻觀測假設之簡化模型；弧段以仰角 > mask 定義。",
+        "sats": sorted(rows, key=lambda x: -x["info_gain_pct"]),
+        "model_note": "「觀測資訊增益」為 σ∝1/√(累計可見分鐘) 之概念指標（均勻獨立觀測假設），非定軌協方差改善；"
+                      "弧段以仰角 > mask 之幾何可見性定義，不含偵測判定。",
+        "assumptions": {
+            "站址": f"{TAIWAN_STATION['name']} {TAIWAN_STATION['lat']}°N {TAIWAN_STATION['lon']}°E "
+                    f"h={TAIWAN_STATION['h_km']} km（WGS-84）",
+            "最低仰角": f"{mask_deg}°",
+            "可用觀測條件": "elevation ≥ 最低仰角之幾何可見（不含 SNR／雷達方程式／RCS）",
+            "傳播": f"SGP4，步長 {step_s:.0f} s，{hours:.0f} h，UTC",
+            "座標": "TEME → GMST → ECEF；站心 ENU 求仰角",
+            "地形遮蔽": "未納入",
+            "大氣折射": "未納入",
+            "觀測量": "弧段數、可見分鐘、最大／平均間隙",
+            "精度模型": "概念性資訊量指標 σ∝1/√N；不代表 batch LS／EKF 協方差傳播",
+            "既有站": f"SSN 站點圖層 {len(st_before)} 站（同一可見性模型）",
+        },
     }
 
 

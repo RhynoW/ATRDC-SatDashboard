@@ -99,11 +99,18 @@ def main() -> None:
                            "gap_h": round(float(r["dt_h"]), 1), "da_km": round(float(r["da_km"]), 2),
                            "dv_ms": round(dv, 3),
                            "regime": "LEO" if a - 6378.137 < 2000 else ("MEO" if a - 6378.137 < 30000 else "GEO/IGSO")})
-        n_tle_sats = con.execute(f"""select count(distinct norad_id) from raw_tle_archive r join ids using(norad_id)
-            where epoch_utc >= timestamp '{YEAR}-01-01'""").fetchone()[0]
+        n_tle_sats, n_tle_rows = con.execute(f"""select count(distinct norad_id), count(*) from raw_tle_archive r
+            join ids using(norad_id) where epoch_utc >= timestamp '{YEAR}-01-01'""").fetchone()
+        n_transitions = max(int(n_tle_rows) - int(n_tle_sats), 0)      # 相鄰 TLE 對數
+        rate_100 = round(100.0 * len(det) / len(ids), 2) if ids else None
+        rate_1000t = round(1000.0 * len(det) / n_transitions, 2) if n_transitions else None
+        med_da = round(float(det["da_km"].abs().median()), 3) if len(det) else None
         out["groups"][key] = {
             "label": g["label"], "n_sats": len(ids), "n_with_tle_2026": int(n_tle_sats),
             "n_events": int(len(det)), "n_sats_with_event": int(len(per_sat)),
+            "n_tle_transitions": int(n_transitions),
+            "rate_per_100_sats": rate_100, "rate_per_1000_transitions": rate_1000t,
+            "median_abs_da_km": med_da,
             "monthly": dict(sorted(monthly.items())),
             "top": top, "events": events, "source": src,
             "prc_pipeline": ({"n_events": int(len(prc_part)),

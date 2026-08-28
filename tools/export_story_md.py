@@ -60,6 +60,30 @@ def url(path: str, **params) -> str:
     return f"{BASE_URL}{path}" + (f"?{qs}" if qs else "")
 
 
+def link(label: str, path: str, **params) -> str:
+    """Markdown 連結；含查詢參數時附可讀條件（避免 percent-encoding 讓讀者看不懂）。"""
+    u = url(path, **params)
+    cond = ", ".join(f"{k}={v}" for k, v in params.items() if v not in (None, ""))
+    return f"[{label}]({u})" + (f"（{cond}）" if cond else "")
+
+
+LIMITS = [
+    ("公開 TLE + SGP4", "位置為近即時傳播估計，非精密星曆；不適合精密編隊或操作級決策"),
+    ("固定協方差 σ_R/T/N", "Pc 為 proxy／排序值，非 CDM 碰撞風險；3σ 橢球為示意"),
+    ("半長軸跳變門檻", "機動結果為「候選事件」，非確認機動；Δv 為近圓切向脈衝之等效估算"),
+    ("幾何可見性模型", "地面站評估為可見性／觀測覆蓋，不含雷達方程式，不代表偵測能力"),
+    ("公開解析度推估", "感測器／解析度分類為公開資料分類，不代表實際任務效能"),
+    ("名稱規則分類", "星系／國別／用途由目錄名稱與 metadata 規則判定，受資料完整性影響"),
+]
+
+
+def usage_limits_md() -> str:
+    rows = [[k, v] for k, v in LIMITS]
+    return ("### 使用限制\n\n本展示以最新可取得之公開 TLE 為基礎，使用 SGP4/SDP4 進行近即時軌道傳播，"
+            "整合星座態勢、軌道異常候選、地面站可見性與近距離幾何事件。結果屬公開資料與簡化模型的技術展示，"
+            "不代表精密星曆、實際雷達偵測能力、已確認機動或操作級碰撞機率。\n\n" + md_table(["限制", "影響"], rows))
+
+
 def md_table(cols: list[str], rows: list[list]) -> str:
     esc = lambda c: str(c).replace("|", "\\|")
     out = ["| " + " | ".join(esc(c) for c in cols) + " |",
@@ -83,21 +107,21 @@ def sec_extra(sec: dict, sid: str) -> str:
     parts = [f"*（互動區塊：{KIND_LABEL.get(t, t)}）*"]
     if t == "sat":
         for n in sec.get("norads", []):
-            parts.append(f"- NORAD {n}：{url('/orbit', norad=n, start=sec.get('start'))}")
+            parts.append(f"- NORAD {n}：{link('/orbit 軌道時序', '/orbit', norad=n, start=sec.get('start'))}")
     elif t == "positions":
         m = sec.get("mode", "all")
         val = ",".join(map(str, sec["ids"])) if m == "ids" else sec.get("val")
-        parts.append(f"- 資料：{url('/api/story/positions', mode=m, val=val)}")
+        parts.append(f"- 資料：{link('positions API', '/api/story/positions', mode=m, val=val)}")
     elif t == "embed":
-        parts.append(f"- 頁面：{BASE_URL}{sec.get('url', '')}")
+        parts.append(f"- 頁面：[{sec.get('url', '')}]({BASE_URL}{sec.get('url', '')})")
     elif t in API_OF:
-        parts.append(f"- 資料：{url('/api/story/' + API_OF[t], group=sec.get('group'))}")
+        parts.append(f"- 資料：{link(API_OF[t] + ' API', '/api/story/' + API_OF[t], group=sec.get('group'))}")
     elif t == "maneuvers":
-        parts.append(f"- 資料：{url('/api/story/maneuvers')}")
+        parts.append(f"- 資料：{link('maneuvers API', '/api/story/maneuvers')}")
     elif t == "cdm":
-        parts.append(f"- 資料：{url('/api/conjunctions', threshold_km=sec.get('threshold_km', 10))}")
+        parts.append(f"- 資料：{link('conjunctions API', '/api/conjunctions', threshold_km=sec.get('threshold_km', 10))}")
     anchor = f"#{sec['anchor']}" if sec.get("anchor") else ""
-    parts.append(f"- 互動版：{BASE_URL}/story/{sid}{anchor}")
+    parts.append(f"- 互動版：[開啟本節]({BASE_URL}/story/{sid}{anchor})")
     return "\n".join(parts)
 
 
@@ -108,18 +132,23 @@ def provenance_md() -> str:
         pv = provenance()
     except Exception as exc:  # noqa: BLE001
         return f"> 資料口徑：無法取得（{exc}）"
+    fmt = lambda k: str(pv.get(k)) if pv.get(k) is not None else "—"
     rows = [
         ["資料來源", pv.get("source")],
-        ["TLE epoch 範圍", f"{(pv.get('tle_epoch_min') or '')[:10]} ～ {(pv.get('tle_epoch_max') or '')[:10]}"
-                           f"（{pv.get('valid_sat_count') or '—'} 顆）"],
+        ["目錄衛星數", f"{fmt('catalog_sat_count')} 顆（去重 NORAD，含歷史）"],
+        ["TLE 記錄數", f"{fmt('tle_record_count')} 筆"],
+        ["歷史資料範圍", f"{(pv.get('tle_epoch_min') or '')[:10]} ～ {(pv.get('tle_epoch_max') or '')[:10]}（含少數未來 epoch）"],
+        ["可用於目前傳播", f"最新 TLE ≤ 7 天者 {fmt('fresh_sat_count_7d')} 顆"],
         ["TLE 最新 epoch（≤ 匯出時）", (pv.get("tle_epoch_latest_past") or "")[:16].replace("T", " ") + " UTC"],
         ["TLE 資料齡", f"{pv.get('tle_age_days')} 天（匯出時）" if pv.get("tle_age_days") is not None else "—"],
-        ["資料庫更新", (pv.get("db_updated_at") or "")[:16].replace("T", " ") + " UTC"],
+        ["資料快照（DB 更新）", (pv.get("db_updated_at") or "")[:16].replace("T", " ") + " UTC"],
         ["傳播模型", pv.get("propagator")],
         ["座標系", pv.get("frame")],
         ["精度等級", pv.get("accuracy")],
-        ["碰撞機率", pv.get("pc_model")],
+        ["Pc proxy", pv.get("pc_model")],
         ["機動候選", pv.get("maneuver_method")],
+        ["APP 版本", f"git commit {fmt('app_commit')}"],
+        ["文件狀態", pv.get("status") or "技術展示／非操作級"],
         ["匯出時間", pv.get("generated_at")],
     ]
     return "### 資料口徑\n\n" + md_table(["項目", "內容"], rows)
@@ -132,7 +161,17 @@ def export(sid: str, with_prov: bool = True) -> str:
         out += [f"**{st['subtitle']}**", ""]
     if st.get("hero_note"):
         out += [st["hero_note"], ""]
-    out += [f"> 更新：{st.get('updated', '')}　|　互動版：{BASE_URL}/story/{st['id']}", ""]
+    snap = ""
+    if with_prov:
+        try:
+            from scenario04.api.story import provenance
+            pv0 = provenance()
+            snap = (f"  \n> 資料快照：{(pv0.get('db_updated_at') or '')[:16].replace('T', ' ')} UTC"
+                    f"  \n> 文件匯出：{pv0.get('generated_at')}")
+        except Exception:  # noqa: BLE001
+            snap = ""
+    out += [f"> 故事內容更新：{st.get('updated', '')}{snap}  \n> 互動版：[{BASE_URL}/story/{st['id']}]({BASE_URL}/story/{st['id']})", ""]
+    out += [usage_limits_md(), ""]
     if with_prov:
         out += [provenance_md(), ""]
     for sec in st.get("sections", []):

@@ -20,7 +20,7 @@ def test_export_all_stories(sid):
     st = ex.load_story(sid)
     assert md.startswith("# " + st["title"])
     assert f"/story/{sid}" in md
-    assert f"更新：{st.get('updated', '')}" in md
+    assert st.get("updated", "") in md          # 更新日（欄名依語言本地化）
     for sec in st["sections"]:
         assert "## " + sec["title"] in md
 

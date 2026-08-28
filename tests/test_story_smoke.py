@@ -115,5 +115,6 @@ def test_story_track(client):
 
 def test_story_provenance(client):
     d = client.get("/api/story/provenance").get_json()
-    assert d["tle_epoch_max"] and d["propagator"].startswith("SGP4") and "TEME" in d["frame"]
+    assert d["tle_epoch_max"] and "SGP4" in d["propagator"] and "TEME" in d["frame"]
+    assert d["fresh_sat_count_7d"] and d["classification_version"] and "KD-tree" in d["screening"]
     assert "Chan" in d["pc_model"] and "Δa" in d["maneuver_method"]

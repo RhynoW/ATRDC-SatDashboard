@@ -1,13 +1,13 @@
 # 2026年6月至8月 日本衛星發射觀測誌
 
-**從全球星空到單一衛星 — 六個尺度的軌道觀測**
+**從全球衛星分布到單一衛星，再到雙星相對運動 — 五個觀測層級與一個發射事件索引**
 
-由全球衛星分布逐步聚焦：日本衛星 → QZSS 星羣 → 本季新發射衛星 → 單星軌道動態 → 近距離接近操作（RPO）。所有視圖皆為即時軌道資料。
+由全球衛星分布逐步聚焦：日本衛星 → QZSS 準天頂衛星系統星座 → 本季新發射衛星 → 單星軌道參數 → 雙星幾何接近。所有位置與軌道圖均以最新可取得的公開 TLE 進行近即時 SGP4/SDP4 傳播，不代表即時感測器追蹤、精密星曆或已確認的近接運用任務。
 
-> 故事內容更新：2026-08-26  
+> 故事內容更新：2026-08-28  
 > 資料快照：2026-08-28 11:14 UTC  
-> 文件匯出：2026-08-28T12:45:07+00:00  
-> 互動版：[https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
+> 文件匯出：2026-08-28T13:01:04+00:00  
+> 互動版：[開啟「2026年6月至8月 日本衛星發射觀測誌」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
 
 ### 使用限制
 
@@ -29,89 +29,92 @@
 | 資料來源 | Space-Track GP（公開 TLE）；本系統 DuckDB 每日彙整 |
 | 目錄衛星數 | 31707 顆（去重 NORAD，含歷史） |
 | TLE 記錄數 | 857961 筆 |
-| 歷史資料範圍 | 2021-12-23 ～ 2026-08-27（含少數未來 epoch） |
-| 可用於目前傳播 | 最新 TLE ≤ 7 天者 29339 顆 |
+| TLE epoch 範圍 | 2021-12-23 ～ 2026-08-27 |
+| epoch 品質註記 | 相對於文件匯出時間，資料庫含少數 epoch 較晚之紀錄（GEO 等常見）；此類紀錄不作為歷史回放或「目前」狀態值，計算最新 epoch 與資料齡時已排除 |
+| 通過資料齡篩選 | 29331 顆；最新 TLE 年齡 ≤ 7 天（資料齡篩選）；未逐一檢查 SGP4 誤差碼與衰減／再入狀態 |
 | TLE 最新 epoch（≤ 匯出時） | 2026-08-27 22:02 UTC |
-| TLE 資料齡 | 0.6 天（匯出時） |
+| TLE 資料齡 | 0.6 天（相對於文件匯出時間之最新 TLE epoch） |
 | 資料快照（DB 更新） | 2026-08-28 11:14 UTC |
-| 傳播模型 | SGP4/SDP4（python-sgp4 2.25） |
-| 座標系 | SGP4 輸出 TEME；以 UTC 近似 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級） |
+| 傳播模型 | python-sgp4 2.25，依軌道週期自動使用 SGP4（近地）或 SDP4（週期 ≥225 min 深空） |
+| 座標系 | SGP4 輸出 TEME；以 UTC 近似 UT1 計算 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級） |
 | 精度等級 | 公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據 |
-| Pc proxy | Chan (2008) 2-D 近似；σ_R/T/N = 100/500/100 m 為固定假設值（非 CDM 協方差），Pc 僅供排序 |
+| 幾何接近篩選 | 幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），非時間窗 TCA 搜尋；展開 3D 後才於重疊期間粗掃（≥30 min）＋聚焦窗細掃（60 s）求最接近時刻 |
+| Pc proxy（碰撞風險排序代理值） | Chan (2008) 2-D 近似；σ_R/T/N = 100/500/100 m 為固定假設值（非 CDM 協方差），Pc 僅供排序 |
 | 機動候選 | 相鄰 TLE 半長軸跳變 \|Δa\| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏 |
-| APP 版本 | git commit a26aca1 |
+| 分類規則版本 | ISR_RES_RULES v1.0（commit f58f10a） |
+| APP 版本 | git commit f58f10a |
 | 文件狀態 | 技術展示／非操作級 |
-| 匯出時間 | 2026-08-28T12:45:07+00:00 |
+| 匯出時間 | 2026-08-28T13:01:05+00:00 |
 
 ## 導言
 
-2026 年 6 月 12 日，H3-30S（F6）自種子島升空部署 6 顆衛星；8 月 10 日 H3-22S（F9）再送出準天頂衛星 QZS-7。本故事從全球視角開始，一路聚焦到單一衛星的逐日軌道動態。（編目註記：PETREL 為 NORAD 69503、STARS-X 母子星以單一物體 69502 編目；69501 實為前一日發射之 STARLINK-37843。）
+2026 年 6 月 12 日，H3-30S（F6）自種子島升空部署 6 顆衛星；8 月 10 日 H3-22S（F9）再送出準天頂衛星 QZS-7。本故事從全球視角開始，一路聚焦到單一衛星的逐日軌道參數趨勢。
 
 ## ① 全球現有衛星位置分布（3D）
 
-本系統目錄中全部可傳播物體的即時三維位置（SGP4 向量化傳播、自動旋轉視角、依實際高度立體呈現）。貼近地表的低軌殼層與遠處的地球同步環清晰可辨。
+本系統目錄中全部可傳播物體的近即時 TLE 傳播三維位置（SGP4 向量化傳播、自動旋轉視角、按實際高度比例呈現）。貼近地表的低軌殼層與遠處的地球同步環清晰可辨。
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=all)（mode=all）
-- 互動版：[開啟本節](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
+- 互動版：[開啟本節「① 全球現有衛星位置分布（3D）」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#global-positions)
 
 ## ② 日本全部衛星位置分布（3D）
 
-目錄中隸屬日本的全部衛星即時三維位置：低軌遙測／科學衛星群，以及外圈的通訊與導航衛星。
+目錄中隸屬日本的全部衛星之 TLE 傳播三維位置：低軌遙測／科學衛星群，以及外圈的通訊與導航衛星。
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=country&val=%E6%97%A5%E6%9C%AC)（mode=country, val=日本）
-- 互動版：[開啟本節](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
+- 互動版：[開啟本節「② 日本全部衛星位置分布（3D）」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#japan-positions)
 
-## ③ QZSS 準天頂星羣最新 TLE 傳播位置（3D）
+## ③ QZSS 準天頂衛星系統星座最新 TLE 傳播位置（3D）
 
-準天頂衛星系統（QZSS／引路）全星羣：QZS-1／1R／2／3／4／6 與本季新發射的 QZS-7，分布於約 6.6 倍地球半徑的傾斜地球同步軌道殼層。
+準天頂衛星系統（QZSS，みちびき）全星座：QZS-1／1R／2／4／6 為傾斜地球同步軌道（QZO），QZS-3 與新發射的 QZS-7 為近赤道地球同步軌道（GEO 型）；皆分布於約 6.6 倍地球半徑的殼層。
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=constellation&val=QZSS)（mode=constellation, val=QZSS）
-- 互動版：[開啟本節](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
+- 互動版：[開啟本節「③ QZSS 準天頂衛星系統星座最新 TLE 傳播位置（3D）」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#qzss-positions)
 
 ## ④ 2026 年 6–8 月發射清單
 
-| 發射日期 | 衛星名稱 | NORAD ID | 發射載具 | 發射地點 | 備註 |
-|---|---|---|---|---|---|
-| 2026-06-12 | PETREL | 69503 | H3-30S (F6) | 種子島 | 東京科學大學海洋與地球觀測衛星 |
-| 2026-06-12 | STARS-X | 69502 | H3-30S (F6) | 種子島 | 靜岡大學太空纜繩實驗衛星（母子星單一編目） |
-| 2026-06-12 | BRO-22 | 69504 | H3-30S (F6) | 種子島 | 法國 UnseenLabs 頻譜監測衛星 |
-| 2026-06-12 | VERTECS | 69506 | H3-30S (F6) | 種子島 | 九州工業大學宇宙背景輻射觀測衛星 |
-| 2026-06-12 | HORN-L | 69505 | H3-30S (F6) | 種子島 | Bull Space 太空碎片減緩技術驗證 |
-| 2026-06-12 | HORN-R | 69507 | H3-30S (F6) | 種子島 | Bull Space 太空碎片減緩技術驗證 |
-| 2026-08-10 | QZS-7（引路 7 號） | 100270 | H3-22S (F9) | 種子島 | 準天頂定位衛星，搭載美國太空軍 SĀCHI SDA 酬載 |
+| 發射日期 | 衛星名稱 | NORAD ID | 發射載具 | 發射地點 | 備註 | 資料狀態（TLE 08-27 盤點） |
+|---|---|---|---|---|---|---|
+| 2026-06-12 | PETREL | 69503 | H3-30S (F6) | 種子島 | 東京科學大學海洋與地球觀測衛星 | SSO 569 km、i 97.7°；有 TLE |
+| 2026-06-12 | STARS-X | 69502 | H3-30S (F6) | 種子島 | 靜岡大學繫繩（tether）實驗衛星（母子星單一編目） | SSO 569 km；有 TLE |
+| 2026-06-12 | BRO-22 | 69504 | H3-30S (F6) | 種子島 | 法國 UnseenLabs 頻譜監測衛星 | SSO 567 km；有 TLE |
+| 2026-06-12 | VERTECS | 69506 | H3-30S (F6) | 種子島 | 九州工業大學宇宙背景輻射觀測衛星 | SSO 563 km；有 TLE |
+| 2026-06-12 | HORN-L | 69505 | H3-30S (F6) | 種子島 | Bull Space 太空碎片減緩技術驗證 | 已降至 334 km（主動降軌實驗中） |
+| 2026-06-12 | HORN-R | 69507 | H3-30S (F6) | 種子島 | Bull Space 太空碎片減緩技術驗證 | 已降至 520 km（降軌中） |
+| 2026-08-10 | QZS-7（みちびき 7 號機） | 100270 | H3-22S (F9) | 種子島 | 準天頂定位衛星，搭載美國太空軍 SĀCHI SDA 酬載 | 08-18 起穩定於 SMA 42,175 km、e 0.007、i 3.0°（GEO 型） |
 
-> NORAD 對應依 Space-Track satcat（2026-08-26 查核）。
+> NORAD 對應依 Space-Track satcat（2026-08-26 查核）；編目註記：PETREL 為 69503、STARS-X 母子星以單一物體 69502 編目、69501 實為前一日發射之 STARLINK-37843。「資料狀態」欄為 2026-08-27 TLE 盤點：SSO 判定依傾角約 97.7°、近圓（e<0.002）。
 
 ## ⑤ 新發射衛星最新 TLE 傳播位置（依發射順序輪播）
 
-依發射順序逐顆聚焦：6 月批次的太陽同步軌道六星（約 530–570 km），以及 8 月的 QZS-7（約 32,800 km 準天頂部署軌道）。點按任一顆可手動切換。
+依發射順序逐顆聚焦：6 月批次的太陽同步軌道六星（依傾角約 97.7° 判定；現高 520–570 km，其中 HORN-L 已主動降至 334 km），以及 8 月的 QZS-7——依 TLE，發射後由 GTO（08-10 SMA 24,261 km、e 0.72）經軌道提升，08-18 起穩定於 SMA 42,175 km、e 0.007、傾角 3.0° 的近地球同步軌道（準天頂系統之 GEO 型衛星，非傾斜 QZO）。點按任一顆可手動切換。
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=ids&val=69503%2C69502%2C69504%2C69506%2C69505%2C69507%2C100270)（mode=ids, val=69503,69502,69504,69506,69505,69507,100270）
-- 互動版：[開啟本節](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
+- 互動版：[開啟本節「⑤ 新發射衛星最新 TLE 傳播位置（依發射順序輪播）」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#new-launches)
 
-## ⑥ PETREL 軌道時間動態（發射日起）
+## ⑥ PETREL：由每日 TLE 反算之軌道參數趨勢（發射日起）
 
-單星深入：PETREL（NORAD 69503）自 2026-06-12 發射以來的逐日軌道要素——SMA 圓形時間圖與傾角／RAAN／ARGP 三張 Spiral Polar 排成一列，載入後自動播放時間軸，白圈標記當日位置。
+單星深入：PETREL（NORAD 69503）自 2026-06-12 發射以來的逐日軌道參數——每日取最近 epoch 之 TLE 平均要素（SGP4/TLE 模型下的估計趨勢，非精密星曆的瞬時 Kepler 要素）。SMA 圓形時間圖與傾角／RAAN／ARGP 三張 Spiral Polar 排成一列，載入後自動播放時間軸，白圈標記當日位置。近圓軌道下 ARGP 的物理意義有限；SMA 約 6,947 km 對應高度約 569 km （近地 560／遠地 578 km）。
 
 *（互動區塊：逐日軌道要素時序（/orbit））*
-- NORAD 69503：[/orbit 軌道時序](https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=69503&start=2026-06-12)（norad=69503, start=2026-06-12）
-- 互動版：[開啟本節](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#sat-petrel)
+- NORAD 69503：[/orbit](https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=69503&start=2026-06-12)（norad=69503, start=2026-06-12）
+- 互動版：[開啟本節「⑥ PETREL：由每日 TLE 反算之軌道參數趨勢（發射日起）」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#sat-petrel)
 
-## ⑦ RPO 近距離接近操作展示
+## ⑦ 雙星幾何接近展示（/rpo）
 
-本系統的 RPO（Rendezvous and Proximity Operations）分析場景：實登錄案例之雙星相對接近 3D 視圖與最接近距離／碰撞機率（Chan Pc）計算。
+本系統的雙星相對接近場景：以公開目錄案例重建兩物體之相對幾何 3D 視圖、最接近距離、R/T/N 相對分量與 Pc proxy（碰撞風險排序代理值：Chan 2-D 近似、固定假設 σ，非操作級碰撞機率）。除非案例時間軸另附任務背景資料（如神龍、USA 270 案例），本場景為公開 TLE 推導的幾何接近展示，不應解讀為已確認的近接運用（RPO）行為。
 
 *（互動區塊：內嵌頁面）*
 - 頁面：[/rpo](https://rhynowu-atrdc-satdashboard.hf.space/rpo)
-- 互動版：[開啟本節](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026)
+- 互動版：[開啟本節「⑦ 雙星幾何接近展示（/rpo）」](https://rhynowu-atrdc-satdashboard.hf.space/story/japan-launches-2026#rpo)
 
 ## 結語
 
-從三萬顆物體的全球分布，到一顆衛星的逐日軌道，再到兩顆衛星的相對運動——同一份 TLE 資料，支撐六個尺度的太空態勢感知。
+從三萬顆物體的全球分布，到一顆衛星的逐日軌道參數，再到兩顆衛星的相對運動——同一份公開 TLE，支撐五個觀測層級的太空態勢感知。近即時，不是即時；幾何接近，不是碰撞風險；TLE 平均要素趨勢，不是精密星曆。
 
 ---
 

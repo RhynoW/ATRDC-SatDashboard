@@ -115,8 +115,13 @@ LIMITS = [
 ]
 
 
-def usage_limits_md(lang: str = "zh") -> str:
+def usage_limits_md(lang: str = "zh", custom: list | None = None) -> str:
     T = I18N.get(lang, I18N["zh"])
+    if custom:
+        rows = [[k, v] for k, v in custom]
+        intro = ("本故事以公開 TLE 歷史與 ESA／外部公開資訊撰寫；下表為本故事專用之使用限制。" if lang != "ja" else
+                 "本ストーリーは公開 TLE 履歴と外部公開情報に基づく。以下は本ストーリー固有の利用上の制限。")
+        return f"### {T['limits']}\n\n{intro}\n\n" + md_table([T["limit"], T["impact"]], rows)
     if lang == "ja":
         rows = [[k, v] for k, v in LIMITS_JA]
         return f"### {T['limits']}\n\n{LIMITS_INTRO_JA}\n\n" + md_table([T["limit"], T["impact"]], rows)
@@ -181,7 +186,21 @@ PROV_ROWS_JA = {
 }
 
 
-def provenance_md(lang: str = "zh") -> str:
+def sources_md(st: dict, lang: str = "zh") -> str:
+    src = st.get("sources") or []
+    if not src:
+        return ""
+    title = "### 歷史事件來源（claim-to-source）" if lang != "ja" else "### 出典（claim-to-source）"
+    cols = (["claim_id", "內容", "來源", "來源支持範圍"] if lang != "ja" else ["claim_id", "内容", "出典", "出典が裏付ける範囲"])
+    rows = [[c.get("id", ""), c.get("claim", ""),
+             (f"[{c.get('source', '')}]({c['url']})" if c.get("url") else c.get("source", "")), c.get("scope", "")] for c in src]
+    tag = ("標籤說明：[ESA-reported]＝外部公開資訊、[TLE-derived]＝本系統由 TLE 計算、[interpretation]＝作者解讀；"
+           "本系統 TLE 推導結果與外部來源之數字分層標示，不互相背書。" if lang != "ja" else
+           "タグ：[ESA-reported]＝外部公開情報、[TLE-derived]＝本システムの TLE 計算、[interpretation]＝著者の解釈。")
+    return f"{title}\n\n{md_table(cols, rows)}\n\n> {tag}"
+
+
+def provenance_md(lang: str = "zh", st: dict | None = None) -> str:
     """由本機 DB 取資料口徑（與 /api/story/provenance 同一函式）。內容為中文技術描述；日文版翻譯欄位名。"""
     T = I18N.get(lang, I18N["zh"])
     try:
@@ -212,11 +231,15 @@ def provenance_md(lang: str = "zh") -> str:
         ["幾何接近篩選", pv.get("screening")],
         ["Pc proxy（碰撞風險排序代理值）", pv.get("pc_model")],
         ["機動候選", pv.get("maneuver_method")],
-        ["分類規則版本", f"ISR_RES_RULES v{fmt('classification_version')}（commit {fmt('app_commit')}）"],
         ["APP 版本", f"git commit {fmt('app_commit')}"],
         ["文件狀態", pv.get("status") or "技術展示／非操作級"],
         ["匯出時間", pv.get("generated_at")],
     ]
+    uses_isr = bool(st and any(sec.get("type") == "isrres" for sec in st.get("sections", [])))
+    if uses_isr:
+        rows.insert(-3, ["分類規則版本", f"ISR_RES_RULES v{fmt('classification_version')}（commit {fmt('app_commit')}）"])
+    if st and st.get("tle_ranges"):
+        rows.insert(6, ["本故事案例可用 TLE 範圍", st["tle_ranges"]])
     if lang == "ja":
         ver = fmt("propagator").split("python-sgp4 ")[-1].split("，")[0] if "python-sgp4" in fmt("propagator") else "?"
         rows = [
@@ -243,11 +266,14 @@ def provenance_md(lang: str = "zh") -> str:
                                           "2衛星それぞれの CDM 共分散の合成ではなく、Pc proxy はイベントの順位付けのみに用いる"],
             ["マヌーバ候補", "隣接 TLE の軌道長半径ジャンプ |Δa| 閾値（LEO 0.5 km、MEO/GEO 2 km、間隔 ≤5 日）による候補イベント；"
                         "Δv は Δa から Δv≈n·Δa/2 で換算した等価値；代替説明：TLE 品質の変動、抗力モデル誤差、データ欠落"],
-            ["分類ルール版", f"ISR_RES_RULES v{fmt('classification_version')}（commit {fmt('app_commit')}）"],
             ["APP バージョン", f"git commit {fmt('app_commit')}"],
             ["ドキュメント状態", "技術デモ／運用レベルではない"],
             ["エクスポート時刻", pv.get("generated_at")],
         ]
+        if uses_isr:
+            rows.insert(-3, ["分類ルール版", f"ISR_RES_RULES v{fmt('classification_version')}（commit {fmt('app_commit')}）"])
+        if st and st.get("tle_ranges"):
+            rows.insert(6, ["本ストーリーの事例で利用可能な TLE 範囲", st["tle_ranges"]])
     return f"### {T['prov']}\n\n" + md_table([T["item"], T["content"]], rows)
 
 
@@ -275,9 +301,9 @@ def export(sid: str, with_prov: bool = True) -> str:
             snap = ""
     out += [f"> {T['updated']}：{st.get('updated', '')}{snap}  \n> {T['interactive']}："
             f"[{T['open'].format(t=st['title'])}]({BASE_URL}/story/{st['id']})", ""]
-    out += [usage_limits_md(lang), ""]
+    out += [usage_limits_md(lang, st.get("limits")), ""]
     if with_prov:
-        out += [provenance_md(lang), ""]
+        out += [provenance_md(lang, st), ""]
     for sec in st.get("sections", []):
         out += [f"## {sec.get('title', '')}", ""]
         if sec.get("body"):
@@ -285,6 +311,9 @@ def export(sid: str, with_prov: bool = True) -> str:
         extra = sec_extra(sec, st["id"], lang)
         if extra:
             out += [extra, ""]
+    src = sources_md(st, lang)
+    if src:
+        out += [src, ""]
     out += ["---", "", T["footer"], ""]
     return "\n".join(out)
 

@@ -38,6 +38,7 @@ KIND_LABEL = {
     "skyplot": "過頂 Skyplot（radar_eval 之視圖；API 名稱沿用既有實作，輸出為幾何可見性指標）",
     "cdm": "幾何接近事件（單一時刻距離篩選，非碰撞風險判定）",
     "embed": "內嵌頁面", "toc": "章節總覽",
+    "reentry": "再入估算（SGP4 近地點掠過 ＋ 數值 Monte Carlo；TLE-derived）",
 }
 API_OF = {"groupstats": "group_stats", "isrres": "isr_resolution", "radar": "radar_eval", "skyplot": "radar_eval"}
 
@@ -64,6 +65,7 @@ KIND_LABEL_JA = {
     "radar": "仮想地上追跡局の可視性・観測カバレッジ評価（API 名 radar_eval は既存実装を踏襲）",
     "skyplot": "パス Skyplot（radar_eval のビュー）", "cdm": "幾何学的接近イベント（単一時刻の距離スクリーニング、衝突リスク判定ではない）",
     "embed": "埋め込みページ", "toc": "章の概要",
+    "reentry": "再突入推定（SGP4 近地点通過＋数値 Monte Carlo；TLE-derived）",
 }
 LIMITS_JA = [
     ("公開 TLE + SGP4", "位置は準リアルタイム伝播の推定値であり精密暦ではない；精密編隊や運用レベルの判断には不適"),
@@ -169,6 +171,11 @@ def sec_extra(sec: dict, sid: str, lang: str = "zh") -> str:
         parts.append(f"- {T['data']}：{link('maneuvers API', '/api/story/maneuvers')}")
     elif t == "cdm":
         parts.append(f"- {T['data']}：{link('conjunctions API', '/api/conjunctions', threshold_km=sec.get('threshold_km', 10))}")
+    elif t == "reentry":
+        parts.append(f"- {T['data']}：{link('reentry API', '/api/story/reentry')}")
+        rp = reentry_md()
+        if rp:
+            parts.insert(0, rp)
     parts.append(f"- {T['live_note']}")
     if sec.get("anchor"):
         parts.append(f"- {T['interactive']}：[{T['open_sec'].format(t=sec.get('title', ''))}]({BASE_URL}/story/{sid}#{sec['anchor']})")
@@ -198,6 +205,46 @@ def sources_md(st: dict, lang: str = "zh") -> str:
            "本系統 TLE 推導結果與外部來源之數字分層標示，不互相背書。" if lang != "ja" else
            "タグ：[ESA-reported]＝外部公開情報、[TLE-derived]＝本システムの TLE 計算、[interpretation]＝著者の解釈。")
     return f"{title}\n\n{md_table(cols, rows)}\n\n> {tag}"
+
+
+def reentry_md() -> str:
+    """由 stories/data/reentry_cluster.json 產生估算摘要表（含與 ESA 預報比較、Salsa 回測）。"""
+    p = STORIES / "data" / "reentry_cluster.json"
+    if not p.exists():
+        return ""
+    d = json.loads(p.read_text(encoding="utf-8"))
+    rows = []
+    for t in d.get("targets", {}).values():
+        s1 = t.get("stage1", {}).get("reentry_pass") or {}
+        mc = t.get("stage2_mc") or {}
+        rows.append([t["name"], t.get("tle_epoch", "")[:10],
+                     f"{s1.get('t', '—')}（{s1.get('lat', '')}°, {s1.get('lon', '')}°）",
+                     f"{mc.get('t_median', '—')}（{mc.get('lat_median', '')}°, {mc.get('lon_median', '')}°；5–95% 跨度 {mc.get('spread_hours', '—')} h）",
+                     f"{t.get('esa_t', '')}（±{t.get('esa_unc_min', '')} min，{t.get('esa_region', '')}）",
+                     f"S1 {(t.get('stage1_vs_esa') or {}).get('dt_hours_vs_esa', '—')} h／S2 {(t.get('stage2_vs_esa') or {}).get('dt_hours_vs_esa', '—')} h"])
+    md = md_table(["衛星", "最後 TLE", "階段一：SGP4 近地點掠過 [TLE-derived]", "階段二：數值 MC 中位 [TLE-derived]",
+                   "ESA 預報 [ESA-reported]", "本系統 − ESA"], rows)
+    hc = d.get("hindcast") or {}
+    if hc.get("cases"):
+        hrows = [[f"{c['lead_days']} 天前 TLE（{c['tle_epoch'][:10]}）", f"{c.get('stage1_err_h', '—')} h", f"{c.get('stage2_err_h', '—')} h",
+                  f"{c.get('mc_err_h', '—')} h（跨度 {c.get('mc_spread_h', '—')} h）"] for c in hc["cases"]]
+        md += "\n\n**Salsa 2024-09-08 18:47Z 回測（誤差＝本系統 − ESA 實際）**\n\n" + md_table(["前置時間", "階段一誤差", "階段二誤差", "MC 中位誤差"], hrows)
+    cal = d.get("calibration") or {}
+    if cal.get("best_scale") is not None:
+        md += (f"\n\n> 密度尺度校準：以 Salsa 回測取 NRLMSIS 密度尺度 ×{cal['best_scale']}"
+               f"（掃描 {cal.get('scales')}，平均誤差 {cal.get('mean_err_h_by_scale')}），套用於 Samba／Tango。")
+    stf = d.get("spacetrack_forecast") or {}
+    if stf and "error" not in stf:
+        parts = []
+        for n, rows_ in stf.items():
+            if rows_:
+                r0 = rows_[0]
+                parts.append(f"{n}：{r0.get('_class')} {r0.get('DECAY_EPOCH') or ''}（{r0.get('SOURCE')}，訊息 {r0.get('MSG_EPOCH')}）")
+        if parts:
+            md += "\n\n> Space-Track 18 SDS 衰減預報（日級）：" + "；".join(parts)
+    m = d.get("method", {})
+    md += f"\n\n> 產生時間 {d.get('generated_at')}；方法：{m.get('stage1', '')}／{m.get('stage2', '')}。{m.get('caveat', '')}"
+    return md
 
 
 def provenance_md(lang: str = "zh", st: dict | None = None) -> str:

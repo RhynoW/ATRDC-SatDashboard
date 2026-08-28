@@ -663,8 +663,39 @@ async function initCdm(el){
   if(pairs.length && new URLSearchParams(location.search).get('autoplay')) el.querySelector('button[data-p]').click();
 }
 
+async function initReentry(el){
+  const d = await (await fetch('/api/story/reentry')).json();
+  if(d.error){ el.innerHTML = '<div class="ph">' + esc(d.error) + '</div>'; return; }
+  const f = t => (t || '—').replace('T', ' ').replace('Z', 'Z');
+  const T = Object.values(d.targets || {});
+  let h = '<div class="kpis">' + T.map(t => {
+    const mc = t.stage2_mc || {}, s1 = (t.stage1 || {}).reentry_pass || {};
+    return kpi(f(mc.t_median).slice(5, 16), t.name + '：數值 MC 中位再入時刻 [TLE-derived]') +
+           kpi((mc.lat_median != null ? mc.lat_median + '°, ' + mc.lon_median + '°' : '—'), t.name + '：MC 中位落點（5–95% 跨度 ' + (mc.spread_hours ?? '—') + ' h）') +
+           kpi(((t.stage2_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h', t.name + '：本系統 − ESA 預報');
+  }).join('') + '</div>';
+  h += '<table class="data"><tr><th>衛星</th><th>最後 TLE</th><th>階段一 SGP4 近地點掠過</th><th>階段二 數值 MC 中位</th><th>ESA 預報 [ESA-reported]</th><th>Δ（S1／S2）</th></tr>' +
+    T.map(t => { const s1 = (t.stage1 || {}).reentry_pass || {}, mc = t.stage2_mc || {};
+      return '<tr><td style="text-align:left">' + esc(t.name) + '<br><span style="color:#6e7681">' + t.norad + '</span></td><td>' + (t.tle_epoch || '').slice(0, 10) + '</td>' +
+        '<td style="text-align:left">' + f(s1.t) + '<br>' + (s1.lat ?? '') + '°, ' + (s1.lon ?? '') + '°（' + (s1.alt_km ?? '') + ' km）</td>' +
+        '<td style="text-align:left">' + f(mc.t_median) + '<br>' + (mc.lat_median ?? '') + '°, ' + (mc.lon_median ?? '') + '°（' + (mc.n_reentered ?? 0) + '/' + (mc.n ?? 0) + ' 次再入）</td>' +
+        '<td style="text-align:left">' + f(t.esa_t) + ' ±' + t.esa_unc_min + ' min<br>' + esc(t.esa_region || '') + '</td>' +
+        '<td>' + ((t.stage1_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h／' + ((t.stage2_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h</td></tr>'; }).join('') + '</table>';
+  const hc = d.hindcast || {};
+  if(hc.cases && hc.cases.length){
+    h += '<details class="evd" open><summary>Salsa 2024-09-08 18:47Z 回測（誤差＝本系統 − ESA 實際）與密度尺度校準</summary><table class="data"><tr><th>前置</th><th>TLE</th><th>S1 誤差</th><th>S2 誤差</th><th>MC 中位誤差</th><th>MC 跨度</th></tr>' +
+      hc.cases.map(c => '<tr><td>' + c.lead_days + ' 天</td><td>' + (c.tle_epoch || '').slice(0, 10) + '</td><td>' + (c.stage1_err_h ?? '—') + ' h</td><td>' + (c.stage2_err_h ?? '—') + ' h</td><td>' + (c.mc_err_h ?? '—') + ' h</td><td>' + (c.mc_spread_h ?? '—') + ' h</td></tr>').join('') + '</table>' +
+      (d.calibration ? '<div class="note">NRLMSIS 密度尺度校準值 ×' + d.calibration.best_scale + '（掃描 ' + (d.calibration.scales || []).join('/') + '，平均誤差 h：' + esc(JSON.stringify(d.calibration.mean_err_h_by_scale || {})) + '）</div>' : '') + '</details>';
+  }
+  const stf = d.spacetrack_forecast || {};
+  const stl = Object.entries(stf).filter(([k, v]) => Array.isArray(v) && v.length).map(([k, v]) => k + '：' + v[0]._class + ' ' + (v[0].DECAY_EPOCH || '') + '（' + v[0].SOURCE + '，訊息 ' + v[0].MSG_EPOCH + '）');
+  if(stl.length) h += '<div class="note">Space-Track 18 SDS 衰減預報（日級）：' + esc(stl.join('；')) + '</div>';
+  h += '<div class="note">' + esc((d.method || {}).stage1 || '') + '｜' + esc((d.method || {}).stage2 || '') + '｜' + esc((d.method || {}).caveat || '') + '｜產生 ' + f(d.generated_at) + '</div>';
+  el.innerHTML = h;
+}
+
 const LAZY_INIT = {groupstats: initGroupStats, maneuvers: initManeuvers, radar: initRadar,
-                   skyplot: initSkyplot, cdm: initCdm, isrres: initIsrRes};
+                   skyplot: initSkyplot, cdm: initCdm, isrres: initIsrRes, reentry: initReentry};
 function initLazy(el){
   if(el.classList.contains('inited')) return;
   el.classList.add('inited');

@@ -200,6 +200,20 @@ def api_story_maneuvers():
     return json_response(json.loads(p.read_text(encoding="utf-8")), max_age=3600)
 
 
+@bp.get("/api/story/reentry")
+def api_story_reentry():
+    """Cluster Samba／Tango 再入估算（tools/reentry_estimate.py 預算之靜態 JSON；含 Salsa 回測與校準）。"""
+    p = STORIES_DIR / "data" / "reentry_cluster.json"
+    if not p.exists():
+        return json_response({"error": "尚未預算（執行 tools/reentry_estimate.py）"}), 404
+    d = json.loads(p.read_text(encoding="utf-8"))
+    # 精簡：去掉 MC 逐次 runs 與逐圈 passes 以外之大欄位由前端自取
+    for t in d.get("targets", {}).values():
+        mc = t.get("stage2_mc") or {}
+        mc.pop("runs", None)
+    return json_response(d, max_age=600)
+
+
 # ── 偵照衛星感測器／光學解析度分類（型號級別、公開文獻推估；首個符合規則者為準）──
 # res: 光學最佳公開解析度級別；sensor: 光學/SAR/射頻訊號/氣象掩星/技術試驗/導航
 ISR_RES_RULES: list[tuple[str, str, str, str, str]] = [

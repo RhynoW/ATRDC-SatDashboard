@@ -56,8 +56,9 @@ SIGMA_N_KM        = float(os.getenv("SIGMA_N_KM", "0.1"))   # 法向（越軌）
 SAT_RADIUS_KM     = 0.005  # 衛星等效硬體半徑
 
 # ── Space-Track ───────────────────────────────────────────────────────────────
-SPACETRACK_USER     = os.getenv("SPACETRACK_USER", "")
-SPACETRACK_PASS     = os.getenv("SPACETRACK_PASS", "")
+# 相容父專案 .env 之 SPACE_TRACK_IDENTITY / SPACE_TRACK_PASSWORD 命名
+SPACETRACK_USER     = os.getenv("SPACETRACK_USER") or os.getenv("SPACE_TRACK_IDENTITY", "")
+SPACETRACK_PASS     = os.getenv("SPACETRACK_PASS") or os.getenv("SPACE_TRACK_PASSWORD", "")
 CDM_CACHE_TTL       = int(os.getenv("CDM_CACHE_TTL", "3600"))
 CDM_HIGH_RISK_LIMIT = int(os.getenv("CDM_HIGH_RISK_LIMIT", "100"))
 

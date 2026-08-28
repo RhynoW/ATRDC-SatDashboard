@@ -25,6 +25,8 @@ body{padding-right:56px}
 #hdr .nav button:disabled{opacity:.35;cursor:default}
 /* 投影片式：每節正好一個視窗高度、逐頁吸附 */
 html{scroll-snap-type:y mandatory}
+html.nosnap{scroll-snap-type:none}
+.hero.list{height:auto;min-height:0;padding:80px 10px 30px;border-bottom:0;scroll-snap-align:none}
 #wrap{max-width:1180px;margin:0 auto;padding:0 20px 0}
 /* hero */
 .hero{height:100vh;box-sizing:border-box;padding:0 10px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-bottom:1px solid #21262d;scroll-snap-align:start}

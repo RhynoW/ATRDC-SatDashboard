@@ -94,6 +94,67 @@ _PRESETS: dict[tuple[int, int], dict] = {
             {"d": "07-14 起", "t": "<b>共位</b>：H 與太空梭維持近乎相同軌道（≈ 0 km）。"},
         ],
     },
+    # ── 2022-01/02 USA 270（GSSAP）接近中國實驗十二號 01/02 星（GEO）──
+    # 註：USA 270 公開 elset 極稀疏（窗內僅 5 筆），距離為 SGP4 近似；時間軸事件由 TLE
+    #     SMA 跳變與距離序列導出（analyze 2026-08-27），與公開報導之敘事一致。
+    (41744, 50321): {
+        "title": "USA 270 接近實驗十二號 01 星 — 一月偵察與中方規避（41744 × 50321）",
+        "subtitle": (
+            "美國 GSSAP 衛星 USA 270 於 2022 年 1 月初逼近 2021-12-23 發射、12-30 抵達 GEO 的中國實驗十二號 01/02 星："
+            "反向重建顯示 1/8 04:30 距 01 星約 60 km，而兩星於 1/7 19:30 與 1/8 14:30 各做一次 SMA +20 km 級機動規避"
+            "——反應在最接近後數小時內（COMSPOC 報導之「一月初雙星機動迴避」的量化重現）。"
+            "USA 270 隨後 1/20 降軌東漂、2/3 升軌停漂再度接近，2/14 最近約 37 km，01 星數小時內再機動。"
+            "資料來源：Space-Track gp_history（USA 270 僅 2021-10-22、2022-01-11/20、02-03/08/18 六筆 elset；"
+            "業餘 classfd.tle 不含 GSSAP）；1/11 前之幾何以 1/11 elset 反向傳播（無機動假設），"
+            "距離為近似值；Pc 為 Chan 首階排序代理，非作業級。"
+        ),
+        "window": ["2021-12-30", "2022-02-20"],
+        "span": ["2021-12-31", "2022-02-18"],
+        "events": [
+            {"t": "2022-01-08T04:30Z", "label": "TCA ~60 km（反向重建）"},
+            {"t": "2022-01-08T14:58Z", "label": "01 星規避機動 +21 km"},
+            {"t": "2022-02-14T15:17Z", "label": "二月再接近 ~37 km"},
+        ],
+        "timeline": [
+            {"d": "2021-12-23", "t": "<b>發射</b>：實驗十二號 01/02 星（CZ-7A）；12-30 抵達 GEO（SMA 42,164 km）。"},
+            {"d": "12-31 ~ 01-07", "t": "<b>一月逼近（反向重建）</b>：USA 270 自約 1,000 km 以每日約 120 km 接近。"},
+            {"d": "2022-01-08", "t": "<b>最接近（重建）</b>：約 60 km（04:30 UTC）；與 02 星最近約 107 km（1/7 16:30）。"},
+            {"d": "01-07 ~ 01-08", "t": "<b>雙星規避機動</b>：01/02 星於 1/7 19:30 各 SMA +22/+21 km、1/8 14:30 再 +21/+18 km——最接近後數小時內反應。"},
+            {"d": "01-09 ~ 01-11", "t": "<b>離去</b>：距離回升至約 1,700 km（1/11 為 USA 270 首筆公開 elset）。"},
+            {"d": "01-13 ~ 01-14", "t": "<b>01 星再機動 ×3</b>：SMA −31 / +75 / −45 km（12 h 內）重新定位。"},
+            {"d": "2022-01-20", "t": "<b>USA 270 降軌</b>：SMA −39 km，向東漂移（GEO 帶下方）。"},
+            {"d": "2022-02-03", "t": "<b>USA 270 升軌</b>：SMA +134 km，停漂定位；02-05 起每日約 400 km 再接近。"},
+            {"d": "2022-02-14", "t": "<b>二月最接近</b>：約 37 km（15:17 UTC）；01 星 03:38 已先 +11 km 機動。"},
+        ],
+    },
+    (41744, 50322): {
+        "title": "USA 270 接近實驗十二號 02 星 — 二月再接近與即時反制（41744 × 50322）",
+        "subtitle": (
+            "同一事件對 02 星之幾何：一月初 USA 270 逼近（反向重建 1/7 最近約 107 km），02 星於 1/7–1/8 兩次機動規避；"
+            "USA 270 二月再接近時 2/13 15:25 最近約 126 km，02 星於約 2 小時後（17:28 UTC）SMA −26 km 機動離開，"
+            "並依 COMSPOC 分析定位於太陽與 USA 270 之間反向觀測——反應時間以小時計，"
+            "顯示中國具備高精度、及時且反應迅速的 SSA／反太空能力（另見實踐二十一號案例）。"
+            "USA 270 公開 elset 稀疏（Space-Track 六筆；業餘 classfd.tle 無 GSSAP），1/11 前以 1/11 elset 反向傳播，"
+            "距離為近似值；Pc 為 Chan 首階排序代理，非作業級。"
+        ),
+        "window": ["2021-12-30", "2022-02-20"],
+        "span": ["2021-12-31", "2022-02-18"],
+        "events": [
+            {"t": "2022-01-07T16:30Z", "label": "一月最近 ~107 km（反向重建）"},
+            {"t": "2022-02-13T15:25Z", "label": "TCA ~126 km"},
+            {"t": "2022-02-13T17:28Z", "label": "02 星機動 −26 km"},
+        ],
+        "timeline": [
+            {"d": "2021-12-23", "t": "<b>發射</b>：實驗十二號 01/02 星；12-30 抵達 GEO。"},
+            {"d": "12-31 ~ 01-07", "t": "<b>一月逼近（反向重建）</b>：USA 270 自約 950 km 每日約 120 km 接近，1/7 16:30 最近約 107 km。"},
+            {"d": "01-07 ~ 01-08", "t": "<b>02 星規避機動</b>：1/7 19:30 SMA +21 km、1/8 14:23 +18 km（與 01 星同步）。"},
+            {"d": "01-09 ~ 01-11", "t": "<b>離去</b>：距離回升至約 1,760 km。"},
+            {"d": "2022-01-20", "t": "<b>USA 270 降軌</b>：SMA −39 km，向東漂移。"},
+            {"d": "2022-02-03", "t": "<b>USA 270 升軌</b>：SMA +134 km，停漂；02-05 起每日約 400 km 再接近。"},
+            {"d": "2022-02-13", "t": "<b>二月最接近</b>：約 126 km（15:25 UTC）。"},
+            {"d": "2022-02-13", "t": "<b>02 星反制機動</b>：17:28 UTC SMA −26 km，約 2 小時內反應離開並取得順光觀測位置。"},
+        ],
+    },
 }
 
 # 靜態歷史資料 → 模組級快取（key: (primary, secondary)）
@@ -144,9 +205,11 @@ def _satrec_from_elements(nid, epoch_dt: datetime, ecc, incl_deg, raan_deg,
     return sat
 
 
-def _load_recs(con: duckdb.DuckDBPyConnection, nid: int):
+def _load_recs(con: duckdb.DuckDBPyConnection, nid: int, window=None):
     """回傳 (recs, ep_ts, name, df) 或 (None, ...)。
 
+    window=(t0, t1)（ISO 字串）時僅載入該 epoch 區間之 TLE——供長壽命衛星
+    （如 GEO 偵察星）之歷史案例，避免全歷史載入使粗取樣序列跨越無關年份。
     相容兩種 raw_tle_archive schema：
       (a) 含 line1/line2（完整 archive）→ Satrec.twoline2rv；
       (b) 僅存平均根數（精簡 DB，如 scenario-advanced01/DB/*slim*）→ sgp4init。
@@ -169,9 +232,13 @@ def _load_recs(con: duckdb.DuckDBPyConnection, nid: int):
         if "bstar" in cols:
             sel.append("bstar")
 
+    where, params = "norad_id=?", [int(nid)]
+    if window:
+        where += " AND epoch_utc >= ? AND epoch_utc <= ?"
+        params += [str(window[0]), str(window[1])]
     df = con.execute(
-        f"SELECT {', '.join(sel)} FROM raw_tle_archive WHERE norad_id=? ORDER BY epoch_utc",
-        [int(nid)],
+        f"SELECT {', '.join(sel)} FROM raw_tle_archive WHERE {where} ORDER BY epoch_utc",
+        params,
     ).fetchdf()
     if df.empty:
         return None, None, None, None
@@ -237,6 +304,15 @@ def _sample(Precs, Pep, Srecs, Sep, t0: datetime, t1: datetime, step_s: float):
     return out
 
 
+def _index_name(nid: int):
+    """自衛星索引取名（延遲匯入避免循環相依）；查無則 None。"""
+    try:
+        from ..ingestion.index import get_sat_index
+        return (get_sat_index().get(int(nid)) or {}).get("name")
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _pick_focus_center(preset: dict, coarse: list, lo: datetime, hi: datetime) -> datetime:
     """挑選 3D 聚焦窗中心。優先採預設事件中標註 TCA 者（落於重疊窗內），
     否則採全窗最小距離之時刻。"""
@@ -275,10 +351,12 @@ def compute_rpo_scene(
     if path is None:
         raise RuntimeError("找不到資料庫（resolve_db 回傳 None）")
 
+    preset = _PRESETS.get((int(primary), int(secondary)), {})
+    window = preset.get("window")   # 已知案例可限定 TLE 載入區間
     con = _connect_ro(path)
     try:
-        Precs, Pep, pname, Pdf = _load_recs(con, primary)
-        Srecs, Sep, sname, Sdf = _load_recs(con, secondary)
+        Precs, Pep, pname, Pdf = _load_recs(con, primary, window)
+        Srecs, Sep, sname, Sdf = _load_recs(con, secondary, window)
     finally:
         con.close()
 
@@ -286,9 +364,20 @@ def compute_rpo_scene(
         raise ValueError(f"raw_tle_archive 無 NORAD {primary} 的 TLE（可先回補歷史 TLE）")
     if not Srecs:
         raise ValueError(f"raw_tle_archive 無 NORAD {secondary} 的 TLE（可先回補歷史 TLE）")
+    # slim DB 無 object_name 欄 → 退回衛星索引（metadata/目錄）取名
+    if not pname or pname.startswith("NORAD "):
+        pname = _index_name(primary) or pname
+    if not sname or sname.startswith("NORAD "):
+        sname = _index_name(secondary) or sname
 
     lo = max(Pdf.epoch_utc.min(), Sdf.epoch_utc.min()).to_pydatetime()
     hi = min(Pdf.epoch_utc.max(), Sdf.epoch_utc.max()).to_pydatetime()
+    span = preset.get("span")
+    if span:
+        # 已知案例可指定序列區間（可早於首筆 elset：_prop 取最近 elset 即為反向傳播，
+        # 用於公開 elset 稀疏之衛星的事件前段重建；假設該段無機動）
+        lo = datetime.fromisoformat(str(span[0])).replace(tzinfo=timezone.utc)
+        hi = datetime.fromisoformat(str(span[1])).replace(tzinfo=timezone.utc)
     if hi <= lo:
         raise ValueError(
             f"兩顆 TLE 無時間重疊（{primary}:{Pdf.epoch_utc.min()}~{Pdf.epoch_utc.max()} "
@@ -306,7 +395,6 @@ def compute_rpo_scene(
 
     # 聚焦中心：優先採已知案例之標註 TCA 事件（如神龍 6/14 再接近 ~1.4 km，對應影片
     # 「約 1 公里量級」之機動再接近），而非釋放瞬間之近乎共位；未知案例退回全窗最小距離。
-    preset = _PRESETS.get((int(primary), int(secondary)), {})
     focus_center = _pick_focus_center(preset, coarse, lo, hi)
 
     # 聚焦窗：中心 ± focus_hours、細掃 → 3D 動畫 orbit（兩者測地座標 + range + Pc）

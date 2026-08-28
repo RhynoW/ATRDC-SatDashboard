@@ -171,8 +171,10 @@ class TestUserDataApi:
         assert by_id[99001]["source_file"] == "user_tle01.tle"
 
     def test_user_catalogue_endpoint(self, client):
+        # 目錄為使用者資料檔，筆數會隨新增 CSV 成長（如 user_catalogue02_japan2026），
+        # 僅驗證載入機制與既有基準筆數
         d = client.get("/api/user/catalogue").get_json()
-        assert d["count"] == 3
+        assert d["count"] >= 3
 
     def test_globe_page_has_track_button(self, client):
         html = client.get("/").get_data(as_text=True)

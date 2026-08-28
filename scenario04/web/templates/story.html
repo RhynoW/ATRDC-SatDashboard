@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<title>Story — 太空態勢敘事</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft JhengHei',sans-serif;min-height:100vh}
+a{color:#58a6ff}
+/* 頁首：固定於右側、垂直直書（不遮擋各節抬頭） */
+#hdr{position:fixed;top:0;right:0;bottom:0;width:56px;display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 6px;background:rgba(22,27,34,.95);border-left:1px solid #21262d;z-index:20;backdrop-filter:blur(4px)}
+#hdr h1{writing-mode:vertical-rl;font-size:13.5px;color:#e6edf3;font-weight:600;letter-spacing:2px;max-height:62vh;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hdr .sp{flex:1}
+#hdr a{writing-mode:vertical-rl;font-size:12px;text-decoration:none;border:1px solid #30363d;border-radius:5px;padding:10px 4px;background:#21262d;letter-spacing:2px}
+#hdr a:hover{background:#30363d}
+body{padding-right:56px}
+#hdr .nav{display:flex;flex-direction:column;gap:8px;align-items:center}
+#hdr .nav button{width:40px;background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:8px 0 6px;cursor:pointer;font-size:12px;line-height:1.25;display:flex;flex-direction:column;align-items:center;gap:3px}
+#hdr .nav button:hover{background:#30363d;color:#fff}
+#hdr .nav button b{font-size:14px}
+#hdr .nav button span{writing-mode:vertical-rl;letter-spacing:2px}
+#hdr .nav button:disabled{opacity:.35;cursor:default}
+/* 投影片式：每節正好一個視窗高度、逐頁吸附 */
+html{scroll-snap-type:y mandatory}
+#wrap{max-width:1180px;margin:0 auto;padding:0 20px 0}
+/* hero */
+.hero{height:100vh;box-sizing:border-box;padding:0 10px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-bottom:1px solid #21262d;scroll-snap-align:start}
+.hero h2{font-size:34px;color:#e6edf3;font-weight:700;letter-spacing:1px}
+.hero .sub{font-size:16px;color:#8b949e;margin-top:12px}
+.hero .note{font-size:13px;color:#6e7681;margin-top:20px;max-width:680px;margin-left:auto;margin-right:auto;line-height:1.7}
+.hero .scroll{margin-top:36px;font-size:22px;color:#30363d;animation:bob 1.6s infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+/* sections */
+.sec{height:100vh;box-sizing:border-box;padding:22px 6px 12px;display:flex;flex-direction:column;scroll-snap-align:start;opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
+.sec.vis{opacity:1;transform:none}
+.sec h3{font-size:21px;color:#e6edf3;font-weight:650;margin-bottom:8px;border-left:4px solid #1f6feb;padding-left:12px;flex:none}
+.sec .body{font-size:13.5px;line-height:1.75;color:#c9d1d9;max-width:960px;flex:none;max-height:22vh;overflow:auto;margin-bottom:6px}
+.sec-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}
+/* 純文字節 → 標題投影片：垂直置中、放大 */
+.sec[data-type="text"]{justify-content:center;padding-bottom:12vh}
+.sec[data-type="text"] h3{font-size:34px;margin-bottom:18px}
+.sec[data-type="text"] .body{font-size:18px;line-height:1.9;max-height:none;max-width:1000px}
+.sec[data-type="text"] .sec-body{flex:none}
+.sec-body>.pm-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.sec-body>.pm-wrap>.posmap{flex:1;min-height:240px}
+.sec-body>.frame{flex:1;min-height:0}
+.sec-body>.frame iframe{height:100%}
+/* table */
+table.launch{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+table.launch th,table.launch td{padding:9px 12px;text-align:left;border-bottom:1px solid #21262d}
+table.launch th{color:#8b949e;font-weight:500;background:#161b22}
+table.launch tr.rw{cursor:pointer}
+table.launch tr.rw:hover{background:#161b22}
+table.launch td:nth-child(3){font-family:Consolas,monospace}
+.tbl-note{font-size:12px;color:#6e7681;margin-top:8px}
+/* sat section */
+.sat-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 8px}
+.sat-head .nbtn{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:5px;padding:5px 14px;font-size:12.5px;cursor:pointer}
+.sat-head .nbtn.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
+.sat-head .open{margin-left:auto;font-size:12px}
+.frame{position:relative;border:1px solid #21262d;border-radius:10px;overflow:hidden;background:#0d1117;margin-top:6px}
+.frame iframe{width:100%;height:1250px;border:0;display:block}
+.frame .ph{height:420px;display:flex;align-items:center;justify-content:center;color:#484f58;font-size:13px}
+/* positions world map */
+.pm-wrap{margin-top:10px}
+.posmap{position:relative;border:1px solid #21262d;border-radius:10px;overflow:hidden;background:#0a0f1a}
+.posmap canvas{width:100%;display:block}
+.pm-cap{font-size:12px;color:#6e7681;margin-top:6px}
+.pm-seq{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.pm-seq .nbtn{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:5px;padding:4px 12px;font-size:12px;cursor:pointer}
+.pm-seq .nbtn.on{background:#9e6a03;color:#fff;border-color:#9e6a03}
+/* 整合展示：KPI 磚、長條圖、表格 */
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.kpi{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 14px;min-width:120px}
+.kpi .v{font-size:22px;font-weight:600;color:#e6edf3}
+.kpi .l{font-size:11.5px;color:#8b949e;margin-top:2px}
+.kpi.gain .v{color:#3fb950}
+.bars{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:8px 10px;margin-top:8px}
+.bars h5{font-size:12px;color:#8b949e;font-weight:500;margin-bottom:4px}
+.bars canvas{width:100%;display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+table.data{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+table.data th,table.data td{padding:6px 9px;border-bottom:1px solid #21262d;text-align:right}
+table.data th{color:#8b949e;font-weight:500}
+table.data td:first-child,table.data th:first-child{text-align:left}
+table.data a{color:#58a6ff;text-decoration:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font-size:11.5px;background:#21262d;border:1px solid #30363d;border-radius:12px;padding:3px 10px;color:#c9d1d9;text-decoration:none}
+.chip:hover{background:#30363d}
+.note{font-size:11.5px;color:#6e7681;margin-top:6px}
+.skywrap{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:14px;align-items:start}
+@media(max-width:800px){.skywrap{grid-template-columns:1fr}}
+.skywrap canvas{width:100%;display:block;background:#0a0f1a;border:1px solid #21262d;border-radius:10px}
+/* 章節總覽磚 */
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px}
+.toc .tile{display:block;background:#161b22;border:1px solid #21262d;border-radius:10px;padding:16px 16px 14px;text-decoration:none;transition:border-color .15s,transform .15s}
+.toc .tile:hover{border-color:#58a6ff;transform:translateY(-2px)}
+.toc .ic{font-size:26px;margin-bottom:6px}
+.toc .t{font-size:14.5px;font-weight:600;color:#e6edf3}
+.toc .s{font-size:12px;color:#8b949e;margin-top:4px;line-height:1.5}
+/* dots nav */
+#dots{position:fixed;right:70px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:30}
+#dots a{width:10px;height:10px;border-radius:50%;background:#30363d;display:block}
+#dots a.on{background:#58a6ff}
+#dots a:hover{background:#8b949e}
+/* story list (index) */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;padding:50px 0}
+.card{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:20px;text-decoration:none;display:block}
+.card:hover{border-color:#58a6ff}
+.card h4{color:#e6edf3;font-size:16.5px;margin-bottom:8px}
+.card p{color:#8b949e;font-size:13px;line-height:1.6}
+.card .up{color:#6e7681;font-size:11.5px;margin-top:10px}
+@media(max-width:760px){.hero h2{font-size:24px}#dots{display:none}.frame iframe{height:1500px}}
+</style>
+<script>window.STORY_ID = "{{ story_id }}";</script>
+<script src="{{ url_for('static', filename='js/story.js') }}" defer></script>
+</head>
+<body>
+<div id="hdr">
+  <h1>&#128214; <span id="hdr-title">太空態勢敘事</span></h1>
+  <span class="sp"></span>
+  <div class="nav" id="stepnav" style="display:none">
+    <button id="nav-prev" title="上一步（↑ / PageUp）"><b>&#9650;</b><span>上一步</span></button>
+    <button id="nav-next" title="下一步（↓ / PageDown）"><b>&#9660;</b><span>下一步</span></button>
+  </div>
+  <span class="sp"></span>
+  <a href="/story" id="lnk-list" style="display:none">故事清單</a>
+  <a href="/">返回主頁</a>
+</div>
+<div id="dots"></div>
+<div id="wrap"><div style="padding:60px 0;color:#8b949e">載入中…</div></div>
+</body>
+</html>

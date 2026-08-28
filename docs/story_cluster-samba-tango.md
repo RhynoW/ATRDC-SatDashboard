@@ -6,7 +6,7 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 
 > 故事內容更新：2026-08-28  
 > 資料快照：2026-08-28 11:14 UTC  
-> 文件匯出：2026-08-28T13:01:07+00:00  
+> 文件匯出：2026-08-28T13:10:42+00:00  
 > 互動版：[開啟「Samba 與 Tango 的一生：ESA Cluster 雙星受控再入」](https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango)
 
 ### 使用限制
@@ -31,20 +31,20 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 | TLE 記錄數 | 857961 筆 |
 | TLE epoch 範圍 | 2021-12-23 ～ 2026-08-27 |
 | epoch 品質註記 | 相對於文件匯出時間，資料庫含少數 epoch 較晚之紀錄（GEO 等常見）；此類紀錄不作為歷史回放或「目前」狀態值，計算最新 epoch 與資料齡時已排除 |
-| 通過資料齡篩選 | 29331 顆；最新 TLE 年齡 ≤ 7 天（資料齡篩選）；未逐一檢查 SGP4 誤差碼與衰減／再入狀態 |
+| 資料齡篩選通過（不代表全部傳播成功） | 29330 顆；最新 TLE 年齡 ≤ 7 天（資料齡篩選）；未逐一檢查 SGP4 誤差碼與衰減／再入狀態 |
 | TLE 最新 epoch（≤ 匯出時） | 2026-08-27 22:02 UTC |
 | TLE 資料齡 | 0.6 天（相對於文件匯出時間之最新 TLE epoch） |
 | 資料快照（DB 更新） | 2026-08-28 11:14 UTC |
 | 傳播模型 | python-sgp4 2.25，依軌道週期自動使用 SGP4（近地）或 SDP4（週期 ≥225 min 深空） |
 | 座標系 | SGP4 輸出 TEME；以 UTC 近似 UT1 計算 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級） |
 | 精度等級 | 公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據 |
-| 幾何接近篩選 | 幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），非時間窗 TCA 搜尋；展開 3D 後才於重疊期間粗掃（≥30 min）＋聚焦窗細掃（60 s）求最接近時刻 |
-| Pc proxy（碰撞風險排序代理值） | Chan (2008) 2-D 近似；σ_R/T/N = 100/500/100 m 為固定假設值（非 CDM 協方差），Pc 僅供排序 |
+| 幾何接近篩選 | 幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），非時間窗 TCA 搜尋；展開 3D 後才於兩星 TLE 重疊期間以 30 分鐘取樣間隔粗掃（區間過長時放大至總點數 ≤1,500）求全域最小距離，再於最接近時刻 ±12 h 聚焦窗以 60 秒取樣細掃；距離門檻僅用於初始篩選 |
+| Pc proxy（碰撞風險排序代理值） | Chan (2008) 2-D 簡化式：以相對 RTN 框架之固定示意標準差 σ_R/σ_T 合成單一相對協方差（σ_R/T/N = 100/500/100 m；σ_N 僅用於 3D 橢球繪製），等效碰撞半徑 5 m，最接近點 B-plane 假設；非兩星各自 CDM 協方差相加，Pc proxy 僅供事件排序 |
 | 機動候選 | 相鄰 TLE 半長軸跳變 \|Δa\| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏 |
-| 分類規則版本 | ISR_RES_RULES v1.0（commit 11e5603） |
-| APP 版本 | git commit 11e5603 |
+| 分類規則版本 | ISR_RES_RULES v1.0（commit 6ed982d） |
+| APP 版本 | git commit 6ed982d |
 | 文件狀態 | 技術展示／非操作級 |
-| 匯出時間 | 2026-08-28T13:01:07+00:00 |
+| 匯出時間 | 2026-08-28T13:10:42+00:00 |
 
 ## 導言：為什麼要讓兩顆衛星「約好」再入
 
@@ -67,6 +67,7 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 
 *（互動區塊：TLE 傳播位置（3D，近即時））*
 - 資料：[positions API](https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=ids&val=26410%2C26464)（mode=ids, val=26410,26464）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟故事首頁](https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango)
 
 ## ③ 先行者 Salsa（26411）：2024 年的首次目標式再入
@@ -75,6 +76,7 @@ Salsa 的近地點自 2024-01 的 3,000 km 一路降到 8 月的 0 km，9 月 8 
 
 *（互動區塊：逐日軌道要素時序（/orbit））*
 - NORAD 26411：[/orbit](https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=26411&start=2024-01-01)（norad=26411, start=2024-01-01）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「③ 先行者 Salsa（26411）：2024 年的首次目標式再入」](https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango#salsa)
 
 ## ④ Samba（26410）：30 個月、近地點從 14,600 km 降到 0
@@ -83,6 +85,7 @@ Salsa 的近地點自 2024-01 的 3,000 km 一路降到 8 月的 0 km，9 月 8 
 
 *（互動區塊：逐日軌道要素時序（/orbit））*
 - NORAD 26410：[/orbit](https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=26410&start=2024-01-01)（norad=26410, start=2024-01-01）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「④ Samba（26410）：30 個月、近地點從 14,600 km 降到 0」](https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango#samba)
 
 ## ⑤ Tango（26464）：同一條路，反向微調
@@ -91,6 +94,7 @@ Tango 的近地點曲線與 Samba 幾乎重疊（2024-01 14,582 km → 2026-08 �
 
 *（互動區塊：逐日軌道要素時序（/orbit））*
 - NORAD 26464：[/orbit](https://rhynowu-atrdc-satdashboard.hf.space/orbit?norad=26464&start=2024-01-01)（norad=26464, start=2024-01-01）
+- 註：API 與互動頁為即時查詢（每次請求以當時資料庫與 UTC 時刻計算），不綁定本文件之資料快照；本文所引數值以口徑表之快照時刻為準
 - 互動版：[開啟本節「⑤ Tango（26464）：同一條路，反向微調」](https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango#tango)
 
 ## ⑥ 2026-01-19／20 點火在 TLE 上的簽章

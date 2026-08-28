@@ -451,13 +451,15 @@ def provenance() -> dict:
         "frame": "SGP4 輸出 TEME；以 UTC 近似 UT1 計算 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；"
                  "未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級）",
         "screening": "幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），"
-                     "非時間窗 TCA 搜尋；展開 3D 後才於重疊期間粗掃（≥30 min）＋聚焦窗細掃（60 s）求最接近時刻",
+                     "非時間窗 TCA 搜尋；展開 3D 後才於兩星 TLE 重疊期間以 30 分鐘取樣間隔粗掃（區間過長時放大至總點數 ≤1,500）"
+                     "求全域最小距離，再於最接近時刻 ±12 h 聚焦窗以 60 秒取樣細掃；距離門檻僅用於初始篩選",
         "age_basis": "資料齡以文件／頁面產生時間為基準（非資料庫快照時間）",
         "accuracy": "公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據",
         "status": "技術展示／非操作級",
-        "pc_model": "Chan (2008) 2-D 近似；σ_R/T/N = "
-                    f"{settings.SIGMA_R_KM*1000:.0f}/{settings.SIGMA_T_KM*1000:.0f}/{settings.SIGMA_N_KM*1000:.0f} m "
-                    "為固定假設值（非 CDM 協方差），Pc 僅供排序",
+        "pc_model": ("Chan (2008) 2-D 簡化式：以相對 RTN 框架之固定示意標準差 σ_R/σ_T 合成單一相對協方差（σ_R/T/N = "
+                     f"{settings.SIGMA_R_KM*1000:.0f}/{settings.SIGMA_T_KM*1000:.0f}/{settings.SIGMA_N_KM*1000:.0f} m；"
+                     f"σ_N 僅用於 3D 橢球繪製），等效碰撞半徑 {settings.SAT_RADIUS_KM*1000:.0f} m，最接近點 B-plane 假設；"
+                     "非兩星各自 CDM 協方差相加，Pc proxy 僅供事件排序"),
         "maneuver_method": "相鄰 TLE 半長軸跳變 |Δa| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；"
                            "Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏",
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),

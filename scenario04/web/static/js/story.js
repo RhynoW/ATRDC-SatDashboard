@@ -59,8 +59,8 @@ function satFrame(sec, idx){
     '" data-h="' + hgt + '"><div class="ph">捲動至此載入軌道視圖…</div></div>';
 }
 
-/* 上一步／下一步：以視窗高度為一步（每節恰為 100vh） */
-function stepTargets(){ return [document.getElementById('hero'), ...document.querySelectorAll('.sec')].filter(Boolean); }
+/* 上一步／下一步：以視窗高度為一步（每節恰為 100vh；封面已併入第一節） */
+function stepTargets(){ return [...document.querySelectorAll('.sec')]; }
 function currentStep(){
   const ts = stepTargets(), y = window.scrollY + window.innerHeight * 0.3;
   let cur = 0;
@@ -640,17 +640,19 @@ async function renderStory(sid){
   $id('hdr-title').textContent = st.title;
   $id('lnk-list').style.display = '';
 
-  let h = '<div class="hero" id="hero"><h2>' + esc(st.title) + '</h2>' +
+  // 封面（標題／副標／說明）併入第一節上方，不再獨立佔一整頁（滿頁吸附下獨立封面會卡在第一頁）
+  const heroHtml = '<div class="hero-in"><h2>' + esc(st.title) + '</h2>' +
           '<div class="sub">' + esc(st.subtitle || '') + '</div>' +
-          (st.hero_note ? '<div class="note">' + esc(st.hero_note) + '</div>' : '') +
-          '<div class="scroll">&#8595;</div></div>';
+          (st.hero_note ? '<div class="note">' + esc(st.hero_note) + '</div>' : '') + '</div>';
+  let h = '';
 
   const SECS = st.sections || [];
   const dotIds = [];
   SECS.forEach((sec, i) => {
     const aid = sec.anchor || ('sec' + i);
     dotIds.push({id: aid, title: sec.title || ''});
-    h += '<div class="sec" id="' + esc(aid) + '" data-dur="' + (sec.dur || 1) + '" data-type="' + esc(sec.type || 'text') + '">' +
+    h += '<div class="sec' + (i === 0 ? ' first vis' : '') + '" id="' + esc(aid) + '" data-dur="' + (sec.dur || 1) + '" data-type="' + esc(sec.type || 'text') + '">' +
+         (i === 0 ? heroHtml : '') +
          '<h3>' + esc(sec.title || '') + '</h3>';
     if(sec.body) h += '<div class="body">' + esc(sec.body) + '</div>';
     h += '<div class="sec-body">';
@@ -744,7 +746,7 @@ async function renderStory(sid){
 function startTour(totalSec){
   const secs = [...document.querySelectorAll('.sec')];
   if(!secs.length) return;
-  const heroDur = Math.min(6, totalSec * 0.08);
+  const heroDur = 0;   // 封面已併入第一節
   const weights = secs.map(s => parseFloat(s.dataset.dur) || 1);
   const wsum = weights.reduce((a, b) => a + b, 0);
   const durs = weights.map(w => (totalSec - heroDur) * w / wsum);

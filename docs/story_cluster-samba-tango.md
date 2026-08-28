@@ -6,6 +6,22 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 
 > 更新：2026-08-28　|　互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango
 
+### 資料口徑
+
+| 項目 | 內容 |
+|---|---|
+| 資料來源 | Space-Track GP（公開 TLE）；本系統 DuckDB 每日彙整 |
+| TLE epoch 範圍 | 2021-12-23 ～ 2026-08-27（31707 顆） |
+| TLE 最新 epoch（≤ 匯出時） | 2026-08-27 22:02 UTC |
+| TLE 資料齡 | 0.6 天（匯出時） |
+| 資料庫更新 | 2026-08-28 11:14 UTC |
+| 傳播模型 | SGP4/SDP4（python-sgp4 2.25） |
+| 座標系 | TEME → GMST 轉 ECEF → WGS-84 經緯高（無極移／章動修正） |
+| 精度等級 | 公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據 |
+| 碰撞機率 | Chan (2008) 2-D 近似；σ_R/T/N = 100/500/100 m 為固定假設值（非 CDM 協方差），Pc 僅供排序 |
+| 機動候選 | 相鄰 TLE 半長軸跳變 \|Δa\| 門檻（LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）之候選事件；Δv 由 Δa 以 Δv≈n·Δa/2 換算之等效值；替代解釋：TLE 品質波動、阻力模型誤差、資料缺漏 |
+| 匯出時間 | 2026-08-28T12:03:24+00:00 |
+
 ## 導言：為什麼要讓兩顆衛星「約好」再入
 
 衛星再入解體的實測資料極為稀少——事件轉瞬即逝、地點多在無人海域，儀器只能靠飛機帶到現場。Cluster 四顆衛星完全相同，於不同軌跡與氣象條件下觀測多次再入，等於一組可重複的解體物理實驗，有助設計下一代「零碎片」（zero-debris、design-for-demise）衛星。Samba 與 Tango 原已處於安全處置軌道、會自然再入南太平洋，但兩者再入的時間與地點相距太遠，單一飛機任務無法兼顧。ESA 飛行動力團隊在 2026 年 1 月 19～20 日各執行一次小幅點火：Samba 再入點略向東、Tango 略向西，讓兩次再入相隔約 24 小時，飛機得以返回基地加油、輪休後再次出勤。（資料來源：ESA〈Moving satellites to meet a plane for rare reentry data〉、ESA Rocket Science blog 2026-08-24）
@@ -21,12 +37,12 @@ ESA Cluster 四顆結構相同的磁層科學衛星（各約 550 kg）於 2000 �
 
 > Cluster 軌道為高橢圓極軌（原始約 19,000 × 119,000 km，本庫 TLE 顯示遠地點 ~131,000 km、傾角 ~150°）。再入預報取自 ESA 2026-08-24 以最後地面過境資料所作之預測。NORAD 與暱稱對應依 CelesTrak／Space-Track（26410=Samba、26464=Tango）。
 
-## ② Samba 與 Tango 現在在哪（3D 即時位置）
+## ② Samba 與 Tango 現在在哪（3D，TLE 傳播位置）
 
-兩顆衛星的即時位置（以最後一筆 TLE 傳播；Samba 最後 TLE 2026-08-16、Tango 2026-08-26）。遠地點 13 萬公里、近地點已低於 100 km 的極端橢圓軌道，讓它們大部分時間遠在月球軌道三分之一的距離外，只在每 54 小時一次的近地點掠過大氣邊緣——再入即發生在其中一次掠過。
+兩顆衛星的 TLE 傳播位置（近即時；以最後一筆 TLE 傳播；Samba 最後 TLE 2026-08-16、Tango 2026-08-26）。遠地點 13 萬公里、近地點已低於 100 km 的極端橢圓軌道，讓它們大部分時間遠在月球軌道三分之一的距離外，只在每 54 小時一次的近地點掠過大氣邊緣——再入即發生在其中一次掠過。
 
-*（互動區塊：3D 即時位置）*
-- 資料：https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=ids&val=26410,26464
+*（互動區塊：TLE 傳播位置（3D，近即時））*
+- 資料：https://rhynowu-atrdc-satdashboard.hf.space/api/story/positions?mode=ids&val=26410%2C26464
 - 互動版：https://rhynowu-atrdc-satdashboard.hf.space/story/cluster-samba-tango
 
 ## ③ 先行者 Salsa（26411）：2024 年的首次目標式再入
@@ -81,4 +97,4 @@ Tango 的近地點曲線與 Samba 幾乎重疊（2024-01 14,582 km → 2026-08 �
 
 ---
 
-*本文件由 SatDashboard StoryMap 匯出（tools/export_story_md.py）；軌道數據來自本系統 TLE 資料庫，互動圖表請開啟線上版。*
+*本文件由 SatDashboard StoryMap 匯出（tools/export_story_md.py）。軌道數據為公開 TLE 以 SGP4 傳播之結果，屬態勢展示等級；互動圖表請開啟線上版。*

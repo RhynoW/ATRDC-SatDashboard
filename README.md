@@ -171,11 +171,16 @@ python run.py
 | `GET /api/story/isr_resolution?group=prc_isr` | 感測器類型與光學解析度級別（型號級公開推估） |
 | `GET /api/story/maneuvers` | 2026 機動候選事件（`tools/build_maneuvers_2026.py` 預算） |
 | `GET /api/story/radar_eval?group=prc_isr&n=30` / `GET /api/story/track?norad=` | 台灣假想雷達站效益評估／單星過頂 az/el |
+| `GET /api/story/provenance` | 資料口徑：資料來源、TLE epoch 範圍／資料齡、SGP4 版本、座標系、Pc σ 假設、機動候選方法（故事頁「資料口徑」列與 Markdown 匯出共用） |
 
 StoryMap 所需 TLE（六群組 + 故事明列 NORAD + 使用者目錄）以
 `python tools/merge_storymap_tle.py [--target scenario04/DB/space_db_slim.duckdb]`
 自父專案全量 `space_db.duckdb` 差異併入打包 DB（預設目標 `scenario-advanced01/DB/`，
 每日管線重建 slim DB 後重跑即可）。
+
+故事 JSON 以 `config/stories/schema.json` 驗證（載入時不合者略過並記 WARNING；`tests/test_story_schema.py` 全檢）。
+`python tools/export_story_md.py <story-id>|--all` 匯出 Markdown 至 `docs/`（含資料口徑段、互動區塊連結）。
+`/rpo` 另提供距離–時間與 R/T/N 分量–時間圖（`orbit[].rtn`，secondary 相對 primary 之 LVLH 分量）。
 
 ### 系統
 

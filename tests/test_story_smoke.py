@@ -111,3 +111,9 @@ def test_story_track(client):
     d = client.get(f"/api/story/track?norad={leo[0]}").get_json()
     assert d["norad"] == leo[0] and "name" in d
     assert client.get("/api/story/track?norad=abc").status_code == 400
+
+
+def test_story_provenance(client):
+    d = client.get("/api/story/provenance").get_json()
+    assert d["tle_epoch_max"] and d["propagator"].startswith("SGP4") and "TEME" in d["frame"]
+    assert "Chan" in d["pc_model"] and "Δa" in d["maneuver_method"]

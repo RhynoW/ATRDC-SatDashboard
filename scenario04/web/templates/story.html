@@ -53,6 +53,14 @@ html.nosnap{scroll-snap-type:none}
 .sec.first[data-type="text"] .body{font-size:15.5px}
 .sec.first .sec-body{flex:1;min-height:0}
 @media(max-width:760px){.hero-in h2{font-size:22px}}
+/* 資料口徑列 */
+.prov{margin:10px auto 0;max-width:1000px;text-align:left;font-size:12px;border:1px solid #30363d;border-radius:8px;background:#161b22}
+.prov summary{cursor:pointer;padding:6px 12px;color:#8b949e;display:flex;gap:12px;align-items:center}
+.prov summary .ok{color:#3fb950}.prov summary .stale{color:#f0883e}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;padding:6px 12px 10px}
+@media(max-width:800px){.pgrid{grid-template-columns:1fr}}
+.pv{display:flex;gap:8px;line-height:1.5}.pv .k{flex:none;width:92px;color:#6e7681}.pv .v{color:#c9d1d9}
+.evd{margin-top:8px;font-size:12.5px}.evd summary{cursor:pointer;color:#8b949e}
 /* sections */
 .sec{height:100vh;box-sizing:border-box;padding:22px 6px 12px;display:flex;flex-direction:column;scroll-snap-align:start;opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
 .sec.vis{opacity:1;transform:none}

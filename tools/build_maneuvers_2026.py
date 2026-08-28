@@ -47,7 +47,7 @@ def detect_group(con, ids: list[int]) -> pd.DataFrame:
             from raw_tle_archive r join ids using (norad_id)
             where r.epoch_utc >= timestamp '{YEAR}-01-01' and r.epoch_utc < timestamp '{YEAR+1}-01-01'
         )
-        select norad_id, epoch_utc, sma_km, sma_km - a0 as da_km,
+        select norad_id, epoch_utc, ep0 as epoch_before, sma_km, sma_km - a0 as da_km,
                date_diff('hour', ep0, epoch_utc) as dt_h
         from t
         where ep0 is not null and date_diff('hour', ep0, epoch_utc) <= 120
@@ -65,7 +65,9 @@ def main() -> None:
 
     out = {"year": YEAR, "method": {
         "stat": "相鄰 TLE 半長軸跳變 |Δa| 超過門檻（LEO 0.5 km、MEO/GEO 2 km；間隔 ≤5 天）之候選事件",
-        "prc": "prc_maneuver 管線 2026-01~05 旗標事件（da/di/de/dΩ 複合評分）"},
+        "prc": "prc_maneuver 管線 2026-01~05 旗標事件（da/di/de/dΩ 複合評分）",
+        "dv": "等效 Δv = n·Δa/2（切向脈衝假設，n 為平均運動），非量測值",
+        "caveat": "候選≠確認；替代解釋：TLE 品質波動／軌道決定更新、阻力模型誤差（LEO）、資料缺漏"},
         "groups": {}}
     for key, g in GROUPS.items():
         ids = group_members(idx, key)
@@ -81,13 +83,29 @@ def main() -> None:
                 src = "prc+stat"
         top = [{"norad": int(n), "name": idx[n]["name"], "events": int(c)}
                for n, c in per_sat.most_common(12) if n in idx]
+        # 事件明細（|Δa| 最大前 10）：前後 TLE epoch、間隔、等效 Δv = n·Δa/2（切向脈衝假設）
+        ev = det.reindex(det["da_km"].abs().sort_values(ascending=False).index).head(10)
+        events = []
+        for _, r in ev.iterrows():
+            n = int(r["norad_id"])
+            if n not in idx:
+                continue
+            mu, a = 398600.4418, float(r["sma_km"])
+            n_rad = (mu / a ** 3) ** 0.5                 # rad/s
+            dv = n_rad * float(r["da_km"]) / 2.0 * 1000.0  # m/s
+            events.append({"norad": n, "name": idx[n]["name"],
+                           "epoch_before": pd.Timestamp(r["epoch_before"]).strftime("%Y-%m-%dT%H:%M"),
+                           "epoch_after": pd.Timestamp(r["epoch_utc"]).strftime("%Y-%m-%dT%H:%M"),
+                           "gap_h": round(float(r["dt_h"]), 1), "da_km": round(float(r["da_km"]), 2),
+                           "dv_ms": round(dv, 3),
+                           "regime": "LEO" if a - 6378.137 < 2000 else ("MEO" if a - 6378.137 < 30000 else "GEO/IGSO")})
         n_tle_sats = con.execute(f"""select count(distinct norad_id) from raw_tle_archive r join ids using(norad_id)
             where epoch_utc >= timestamp '{YEAR}-01-01'""").fetchone()[0]
         out["groups"][key] = {
             "label": g["label"], "n_sats": len(ids), "n_with_tle_2026": int(n_tle_sats),
             "n_events": int(len(det)), "n_sats_with_event": int(len(per_sat)),
             "monthly": dict(sorted(monthly.items())),
-            "top": top, "source": src,
+            "top": top, "events": events, "source": src,
             "prc_pipeline": ({"n_events": int(len(prc_part)),
                               "n_sats": int(prc_part["norad_id"].nunique()),
                               "monthly": dict(sorted(Counter(prc_part["month"]).items())),

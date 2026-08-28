@@ -30,7 +30,7 @@
     },
     {
       "type": "positions",
-      "title": "③ QZSS 準天頂星羣最新軌道位置（3D）",
+      "title": "③ QZSS 準天頂星羣最新 TLE 傳播位置（3D）",
       "dur": 9,
       "mode": "constellation",
       "val": "QZSS",
@@ -55,7 +55,7 @@
     },
     {
       "type": "positions",
-      "title": "⑤ 新發射衛星最新軌道位置（依發射順序輪播）",
+      "title": "⑤ 新發射衛星最新 TLE 傳播位置（依發射順序輪播）",
       "dur": 12,
       "mode": "ids",
       "ids": [69503, 69502, 69504, 69506, 69505, 69507, 100270],

@@ -116,11 +116,82 @@
     if (btn) btn.textContent = "🎥 切換到 " + otherName + " 視角";
   }
 
+  // ── 相對運動圖：距離–時間、RTN 分量–時間（純 canvas），游標隨 Cesium 時鐘同步 ──
+  var _charts = null;
+  function drawLine(ctx, W, H, xs, ys, ymin, ymax, color, pad) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.beginPath();
+    for (var i = 0; i < xs.length; i++) {
+      var x = pad.l + (W - pad.l - pad.r) * xs[i], y = pad.t + (H - pad.t - pad.b) * (1 - (ys[i] - ymin) / (ymax - ymin || 1));
+      if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    }
+    ctx.stroke();
+  }
+  function setupCharts(orbit, meta) {
+    var cd = document.getElementById("ch_dist"), cr = document.getElementById("ch_rtn");
+    if (!cd || !cr || !orbit.length) return;
+    var hasRtn = !!orbit[0].rtn;
+    var t0 = Date.parse(orbit[0].t), t1 = Date.parse(orbit[orbit.length - 1].t) || t0 + 1;
+    var xs = orbit.map(function (o) { return (Date.parse(o.t) - t0) / (t1 - t0); });
+    var pad = { l: 44, r: 6, t: 4, b: 14 };
+    function frame(cv) {
+      var dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 300, H = +cv.getAttribute("height");
+      cv.width = W * dpr; cv.height = H * dpr; var ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, W, H); ctx.font = "9px monospace"; ctx.fillStyle = "#6e7681"; ctx.strokeStyle = "#21262d";
+      return { ctx: ctx, W: W, H: H };
+    }
+    function axes(f, ymin, ymax) {
+      var c = f.ctx; c.beginPath(); c.moveTo(pad.l, pad.t); c.lineTo(pad.l, f.H - pad.b); c.lineTo(f.W - pad.r, f.H - pad.b); c.stroke();
+      c.fillText(ymax.toFixed(Math.abs(ymax) < 10 ? 2 : 0), 2, pad.t + 8);
+      c.fillText(ymin.toFixed(Math.abs(ymin) < 10 ? 2 : 0), 2, f.H - pad.b);
+      if (ymin < 0 && ymax > 0) {
+        var y0 = pad.t + (f.H - pad.t - pad.b) * (1 - (0 - ymin) / (ymax - ymin));
+        c.strokeStyle = "#30363d"; c.beginPath(); c.moveTo(pad.l, y0); c.lineTo(f.W - pad.r, y0); c.stroke();
+      }
+      c.fillText(orbit[0].t.slice(5, 16).replace("T", " "), pad.l, f.H - 3);
+      var e = orbit[orbit.length - 1].t.slice(5, 16).replace("T", " ");
+      c.fillText(e, f.W - pad.r - c.measureText(e).width, f.H - 3);
+    }
+    var ds = orbit.map(function (o) { return o.d; }), dmax = Math.max.apply(null, ds);
+    var dpos = ds.filter(function (v) { return v > 0; });
+    var logD = dpos.length && dmax / Math.min.apply(null, dpos) > 200;
+    var dy = logD ? ds.map(function (v) { return Math.log10(Math.max(v, 1e-3)); }) : ds;
+    var dyMin = logD ? Math.min.apply(null, dy) : 0, dyMax = Math.max.apply(null, dy);
+    var rtnArr = hasRtn ? [0, 1, 2].map(function (k) { return orbit.map(function (o) { return o.rtn[k]; }); }) : null;
+    var rMax = hasRtn ? Math.max.apply(null, rtnArr.map(function (a) { return Math.max.apply(null, a.map(Math.abs)); })) || 1 : 1;
+    function draw(curMs) {
+      var f = frame(cd);
+      axes(f, logD ? Math.pow(10, dyMin) : 0, logD ? Math.pow(10, dyMax) : dmax);
+      if (logD) f.ctx.fillText("log", pad.l + 3, pad.t + 8);
+      drawLine(f.ctx, f.W, f.H, xs, dy, dyMin, dyMax, "#f85149", pad);
+      var g = frame(cr);
+      if (hasRtn) {
+        axes(g, -rMax, rMax);
+        ["#f0883e", "#58a6ff", "#bc8cff"].forEach(function (col, k) { drawLine(g.ctx, g.W, g.H, xs, rtnArr[k], -rMax, rMax, col, pad); });
+      } else {
+        g.ctx.fillText("此場景快取無 RTN 分量（重新計算後可得）", pad.l + 4, g.H / 2);
+      }
+      if (curMs != null) {
+        var x = (curMs - t0) / (t1 - t0);
+        if (x >= 0 && x <= 1) {
+          [f, g].forEach(function (q) {
+            var px = pad.l + (q.W - pad.l - pad.r) * x;
+            q.ctx.strokeStyle = "#e6edf3"; q.ctx.lineWidth = 1; q.ctx.beginPath(); q.ctx.moveTo(px, pad.t); q.ctx.lineTo(px, q.H - pad.b); q.ctx.stroke();
+          });
+        }
+      }
+    }
+    draw(null);
+    _charts = { draw: draw, hasRtn: hasRtn };
+    var fn = document.getElementById("note");
+    if (fn && meta.frame_note && fn.textContent.indexOf("RTN") < 0) fn.textContent += (fn.textContent ? " " : "") + meta.frame_note;
+  }
+
   function buildScene(data) {
     clearScene();
     var meta = data.meta, orbit = data.orbit, summary = data.summary;
     _meta = meta;
     buildHUD(meta);
+    setupCharts(orbit, meta);
 
     var t0 = C.JulianDate.fromIso8601(orbit[0].t);
     var t1 = C.JulianDate.fromIso8601(orbit[orbit.length - 1].t);
@@ -235,6 +306,12 @@
       document.getElementById("k_pc").innerHTML = fmtPc(s.pc);
       document.getElementById("k_palt").textContent = (s.p[2] / 1000).toFixed(1);
       document.getElementById("k_salt").textContent = (s.s[2] / 1000).toFixed(1);
+      if (_charts) {
+        _charts.draw(C.JulianDate.toDate(clock.currentTime).getTime());
+        var cs = document.getElementById("ch_stat");
+        if (cs) cs.textContent = s.t.slice(0, 16).replace("T", " ") + "Z  |\u03c1| " + fmtRange(s.d) + " km" +
+          (s.rtn ? "  R " + s.rtn[0].toFixed(2) + "  T " + s.rtn[1].toFixed(2) + "  N " + s.rtn[2].toFixed(2) + " km" : "");
+      }
     };
     viewer.clock.onTick.addEventListener(_tick);
 

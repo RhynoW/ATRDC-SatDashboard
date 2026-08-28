@@ -235,6 +235,8 @@ ISR_RES_RULES: list[tuple[str, str, str, str, str]] = [
     ("北斗（導航）", r"^BEIDOU", "導航", "—", "無成像感測器"),
 ]
 _RES_ORDER = ["≤0.5 m", "≤0.5 m（推估）", "0.5–1 m", "1–5 m", "5–30 m", ">30 m"]
+# 分類規則版本：規則清單／優先順序變更時遞增（供文件與 API 標示可重現性）
+ISR_RES_RULES_VERSION = "1.0"
 
 
 @bp.get("/api/story/isr_resolution")
@@ -269,7 +271,10 @@ def api_story_isr_resolution():
         "group": key, "label": GROUPS[key]["label"],
         "sensor": dict(sensor_c.most_common()), "resolution": dict(res_sorted),
         "series": sorted(series, key=lambda x: -x["n"]), "unknown": unknown,
-        "note": "分類為型號級別之公開文獻推估（Gunter's Space Page、公開分析），非官方規格；軍用遙感系列之解析度為推估。",
+        "classification_version": ISR_RES_RULES_VERSION,
+        "rule_order": [s for s, *_ in ISR_RES_RULES],
+        "note": "分類為型號級別之公開文獻推估（Gunter's Space Page、公開分析），非官方規格；軍用遙感系列之解析度為推估。"
+                "單一主分類、NORAD 去重、規則依序先到先得（rule_order）。",
     })
 
 
@@ -440,9 +445,14 @@ def provenance() -> dict:
         "fresh_sat_count_7d": n_fresh7,                         # ≤7 天內有 TLE，可用於目前傳播
         "valid_sat_count": info.get("valid_sat_count"),         # 舊欄位（相容）
         "app_commit": commit,
-        "propagator": f"SGP4/SDP4（python-sgp4 {sgp4_ver}）",
-        "frame": "SGP4 輸出 TEME；以 UTC 近似 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；"
+        "classification_version": ISR_RES_RULES_VERSION,
+        "fresh_criteria": "最新 TLE 年齡 ≤ 7 天（資料齡篩選）；未逐一檢查 SGP4 誤差碼與衰減／再入狀態",
+        "propagator": f"python-sgp4 {sgp4_ver}，依軌道週期自動使用 SGP4（近地）或 SDP4（週期 ≥225 min 深空）",
+        "frame": "SGP4 輸出 TEME；以 UTC 近似 UT1 計算 GMST 作 TEME→ECEF 旋轉，再依 WGS-84 橢球求地理經緯度與大地高；"
                  "未納入極移、章動、UT1−UTC 與完整 ITRF 地球定向參數（地面位置屬態勢展示等級）",
+        "screening": "幾何接近篩選為單一傳播時刻（請求當下 UTC）之全目錄 pairwise 距離篩選（KD-tree），"
+                     "非時間窗 TCA 搜尋；展開 3D 後才於重疊期間粗掃（≥30 min）＋聚焦窗細掃（60 s）求最接近時刻",
+        "age_basis": "資料齡以文件／頁面產生時間為基準（非資料庫快照時間）",
         "accuracy": "公開 TLE 級（LEO 沿軌 1–3 km/日量級增長），非精密星曆；不宜作為操作級決策依據",
         "status": "技術展示／非操作級",
         "pc_model": "Chan (2008) 2-D 近似；σ_R/T/N = "

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<title>軌道要素歷史 — Spiral Polar</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft JhengHei',sans-serif;min-height:100vh}
+#hdr{display:flex;align-items:center;gap:14px;padding:14px 22px;background:#161b22;border-bottom:1px solid #21262d;flex-wrap:wrap}
+#hdr h1{font-size:17px;color:#e6edf3;font-weight:600}
+#hdr .sub{font-size:12px;color:#8b949e}
+#hdr .sp{flex:1}
+#hdr a{color:#58a6ff;font-size:12.5px;text-decoration:none;border:1px solid #30363d;border-radius:5px;padding:5px 11px;background:#21262d}
+#hdr a:hover{background:#30363d}
+#ctrl{padding:12px 22px;display:flex;gap:14px;align-items:center;font-size:12.5px;color:#8b949e;flex-wrap:wrap;position:relative}
+#ctrl input{background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:5px 9px;font-size:12.5px}
+#q{width:240px}
+#ctrl button{background:#1f6feb;color:#fff;border:0;border-radius:5px;padding:6px 16px;font-size:12.5px;cursor:pointer}
+#ctrl button:hover{background:#388bfd}
+#sug{position:absolute;top:44px;left:22px;width:340px;background:#161b22;border:1px solid #30363d;border-radius:6px;z-index:9;max-height:280px;overflow-y:auto;display:none}
+#sug .it{padding:7px 11px;font-size:12.5px;cursor:pointer;border-bottom:1px solid #21262d}
+#sug .it:hover{background:#21262d}
+#sug .it b{color:#e6edf3}
+#sug .it span{color:#8b949e;margin-left:8px}
+#status{padding:0 22px 6px;font-size:12.5px;color:#8b949e}
+#status b{color:#e6edf3}
+#grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;padding:8px 22px 10px;max-width:1560px}
+.card{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 12px}
+.card h3{font-size:13.5px;color:#e6edf3;font-weight:600;margin-bottom:2px}
+.card .hint{font-size:11px;color:#8b949e;margin-bottom:4px}
+.card canvas{width:100%;display:block;cursor:crosshair}
+.card .cap{font-size:11.5px;color:#8b949e;min-height:16px;margin-top:3px}
+#stats{padding:4px 22px 30px;max-width:1000px}
+#stats table{width:100%;border-collapse:collapse;font-size:12.5px}
+#stats th,#stats td{padding:6px 10px;text-align:right;border-bottom:1px solid #21262d}
+#stats th{color:#8b949e;font-weight:500}
+#stats td:first-child,#stats th:first-child{text-align:left;color:#e6edf3}
+</style>
+<script src="{{ url_for('static', filename='js/orbit.js') }}" defer></script>
+</head>
+<body>
+<div id="hdr">
+  <h1>&#128992; 軌道要素歷史</h1>
+  <span class="sub">Spiral Polar（傾角／升交點赤經／近地點幅角）＋ SMA 圓形圖</span>
+  <span class="sp"></span>
+  <a href="/">&#8592; 返回主頁</a>
+</div>
+<div id="ctrl">
+  <input id="q" placeholder="衛星名稱或 NORAD ID（至少 2 字元）" autocomplete="off"/>
+  <label>起 <input type="date" id="d0"/></label>
+  <label>迄 <input type="date" id="d1"/></label>
+  <button id="go">載入</button>
+  <span id="sel-info"></span>
+  <div id="sug"></div>
+</div>
+<div id="status">請先搜尋並選取衛星（預設日期範圍：最近 1 年）</div>
+<div id="satinfo" style="display:none"></div>
+<style>
+#satinfo{margin:6px 22px 2px;background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 14px;max-width:1516px}
+#satinfo .ttl{font-size:14.5px;color:#e6edf3;font-weight:600;margin-bottom:6px}
+#satinfo .ttl span{font-size:12px;color:#8b949e;font-weight:400;margin-left:10px}
+#satinfo .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:4px 18px;font-size:12.5px}
+#satinfo .grid div{color:#c9d1d9}
+#satinfo .grid b{color:#8b949e;font-weight:500;margin-right:6px}
+#satinfo .notes{margin-top:6px;font-size:12px;color:#8b949e;border-top:1px solid #21262d;padding-top:6px}
+</style>
+<div id="player" style="display:none;padding:4px 22px 6px;align-items:center;gap:12px">
+  <button id="play" title="播放/暫停">&#9654;</button>
+  <input type="range" id="tl" min="0" max="0" value="0" step="1"/>
+  <select id="spd">
+    <option value="5">5 天/秒</option>
+    <option value="10" selected>10 天/秒</option>
+    <option value="20">20 天/秒</option>
+    <option value="40">40 天/秒</option>
+  </select>
+  <span id="cur"></span>
+</div>
+<style>
+#player{display:flex}
+#player button{background:#238636;color:#fff;border:0;border-radius:5px;width:34px;height:28px;font-size:13px;cursor:pointer}
+#player button:hover{background:#2ea043}
+#player input[type=range]{flex:1;max-width:620px;accent-color:#58a6ff}
+#player select{background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:3px 8px;font-size:12px}
+#player #cur{font-size:12.5px;color:#e6edf3;white-space:nowrap}
+</style>
+<div id="grid">
+  <div class="card">
+    <h3>半長軸變化（圓形時間圖）</h3>
+    <div class="hint">0°=起始時間、順時針演進至 360°=結束；半徑 r =（當日 SMA − 全期最小值）正規化</div>
+    <canvas id="cv-sma"></canvas><div class="cap" id="cap-sma"></div>
+  </div>
+  <div class="card">
+    <h3>傾角 inclination（Spiral Polar）</h3>
+    <div class="hint">角度=傾角值、半徑=時間螺旋（內→外）、顏色=時間</div>
+    <canvas id="cv-inc"></canvas><div class="cap" id="cap-inc"></div>
+  </div>
+  <div class="card">
+    <h3>升交點赤經 RAAN（Spiral Polar）</h3>
+    <div class="hint">角度=RAAN 值、半徑=時間螺旋（內→外）、顏色=時間</div>
+    <canvas id="cv-raan"></canvas><div class="cap" id="cap-raan"></div>
+  </div>
+  <div class="card">
+    <h3>近地點幅角 ARGP（Spiral Polar）</h3>
+    <div class="hint">角度=ARGP 值、半徑=時間螺旋（內→外）、顏色=時間</div>
+    <canvas id="cv-argp"></canvas><div class="cap" id="cap-argp"></div>
+  </div>
+</div>
+<div id="stats"></div>
+</body>
+</html>

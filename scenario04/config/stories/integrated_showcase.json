@@ -1,0 +1,64 @@
+{
+  "id": "integrated-showcase",
+  "title": "太空態勢整合展示：星系・機動・地基追蹤・碰撞預警",
+  "subtitle": "從八大星系到一座假想的台灣雷達站——同一套軌道資料的四種能力",
+  "hero_note": "① 星系展示（GPS／北斗／Starlink／OneWeb／大陸 ISR 遙感／大陸通訊）② 2026 年度機動偵測成果 ③ 台灣假想地基雷達站建立前後之追蹤效益評估與即時追蹤 ④ 碰撞預警示範。全部以即時 TLE 與本系統偵測成果計算。",
+  "updated": "2026-08-27",
+  "sections": [
+    {"type": "toc", "title": "章節總覽", "dur": 4,
+     "body": "四個子題各自獨立，點磚直達；全篇 3D 圖一律以顏色區分軌道域：LEO 青、MEO 綠、GEO／IGSO 琥珀，並繪出 MEO 與 GEO 參考環。",
+     "items": [
+       {"icon": "🛰️", "label": "① 星系展示", "anchor": "part1", "sub": "GPS・北斗・Starlink・OneWeb・大陸 ISR・大陸通訊：3D 即時位置＋儀表板＋偵照解析度分類"},
+       {"icon": "📈", "label": "② 2026 機動偵測", "anchor": "part2", "sub": "六星系年度機動候選事件：月分佈與活躍衛星"},
+       {"icon": "📡", "label": "③ 台灣地基雷達站", "anchor": "part3", "sub": "建立前後追蹤效益評估＋即時過頂追蹤示範"},
+       {"icon": "⚠️", "label": "④ 碰撞預警", "anchor": "part4", "sub": "即時 <10 km 接近配對與 3D 相對接近場景"}
+     ]},
+    {"type": "text", "anchor": "part1", "title": "第一部：星系展示", "dur": 3,
+     "body": "每個星系先以 3D 自動旋轉呈現即時軌道位置（純色底、實高度比例、軌道域配色、衛星名稱），接著是儀表板：數量、軌道域、高度／傾角分佈、歷年發射累積，以及可點入逐日軌道歷史（/orbit）的代表衛星。"},
+
+    {"type": "positions", "title": "GPS（NAVSTAR）— 即時軌道位置", "mode": "group", "val": "gps", "globe": true, "dur": 6,
+     "body": "美國全球定位系統，MEO 約 20,200 km、傾角 55°、六個軌道面。"},
+    {"type": "groupstats", "group": "gps", "title": "GPS — 儀表板", "dur": 5},
+
+    {"type": "positions", "title": "北斗（BeiDou）— 即時軌道位置", "mode": "group", "val": "beidou", "globe": true, "dur": 6,
+     "body": "中國北斗導航系統：MEO＋IGSO＋GEO 三種軌道混合構型，是與 GPS 最大的結構差異。"},
+    {"type": "groupstats", "group": "beidou", "title": "北斗 — 儀表板", "dur": 5},
+
+    {"type": "positions", "title": "Starlink — 即時軌道位置", "mode": "group", "val": "starlink", "globe": true, "dur": 6,
+     "body": "SpaceX 巨型星座，目錄中逾萬顆；多殼層（約 340／530／550／570 km）與 53°／70°／97.6° 傾角面。"},
+    {"type": "groupstats", "group": "starlink", "title": "Starlink — 儀表板", "dur": 5},
+
+    {"type": "positions", "title": "OneWeb — 即時軌道位置", "mode": "group", "val": "oneweb", "globe": true, "dur": 5,
+     "body": "極軌 1,200 km、傾角 87.9° 的通訊星座，與 Starlink 的高度／傾角策略形成對照。"},
+    {"type": "groupstats", "group": "oneweb", "title": "OneWeb — 儀表板", "dur": 4},
+
+    {"type": "positions", "title": "大陸 ISR／遙感衛星（遙感／尖兵、高分、吉林、天繪、海洋、TJS…，含北斗）", "mode": "group", "val": "prc_isr", "globe": true, "dur": 6,
+     "body": "依美國太空軍《Space Threat Fact Sheet》口徑——解放軍可取用之具光學、多光譜、雷達、射頻感測器衛星（不分軍用、國家民用、商業）——本目錄可辨識 581 顆：軍用遙感（尖兵）160、天繪 14、雲海 18、寧夏一號 10、TJS 訊號 26、實驗／實踐 73、高分 34、海洋 10、資源／環境 23、吉林一號 30、四維／珠海等商業 EO／SAR 61、風雲／天目／雲遙氣象 60，合計 519；加北斗導航 62 即 581，對應 USSF「510+ ISR」與 UPI「成像＋導航＋SIGINT 595 顆」之量級。"},
+    {"type": "groupstats", "group": "prc_isr", "title": "大陸 ISR／遙感（含北斗）— 儀表板", "dur": 5},
+    {"type": "isrres", "group": "prc_isr", "title": "偵照衛星感測器類型與光學解析度分類統計", "dur": 8,
+     "body": "把 581 顆依型號級別的公開文獻分為光學／SAR／射頻訊號／氣象掩星／技術試驗／導航，光學再依最佳公開解析度分級（≤0.5 m、0.5–1 m、1–5 m、5–30 m、>30 m）。軍用遙感系列官方未公開，解析度為推估並標註。"},
+
+    {"type": "positions", "title": "大陸通訊星系（千帆、國網、中星、亞太、天鏈、天通）", "mode": "group", "val": "prc_comm", "globe": true, "dur": 6,
+     "body": "低軌巨型星座千帆（Qianfan／SpaceSail）與國網（Guowang／衛星互聯網），加上 GEO 的中星、亞太、天鏈中繼與天通移動通訊。"},
+    {"type": "groupstats", "group": "prc_comm", "title": "大陸通訊星系 — 儀表板", "dur": 5},
+
+    {"type": "text", "anchor": "part2", "title": "第二部：2026 年度機動偵測成果", "dur": 3,
+     "body": "對上述六個星系，以本系統的統計級偵測（相鄰 TLE 半長軸跳變超過門檻：LEO 0.5 km、MEO/GEO 2 km，間隔 ≤5 天）掃描 2026 年 1 月至今的全部 TLE；大陸群組另併入 prc_maneuver 管線（da／di／de／dΩ 複合評分）之 1–5 月旗標事件。數字為「候選事件」，Starlink 的高計數反映其連續電推進站位保持。"},
+    {"type": "maneuvers", "title": "各星系 2026 年機動候選事件：月分佈與活躍衛星", "groups": ["gps", "beidou", "starlink", "oneweb", "prc_isr", "prc_comm"], "dur": 12},
+
+    {"type": "text", "anchor": "part3", "title": "第三部：台灣假想地基雷達站", "dur": 3,
+     "body": "假設台灣建立一座地基雷達追蹤站（以新竹樂山為址），並與全球已知地面追蹤站（本系統 SSN 站點圖層）合作交換觀測資料。以大陸 ISR 低軌衛星為樣本，比較「建立前（僅全球既有站）」與「建立後（＋台灣站）」24 小時內的追蹤弧段數、最大無觀測間隙、累計追蹤時間，並以 σ∝1/√(觀測量) 之簡化模型估算定軌精度提升。"},
+    {"type": "radar", "group": "prc_isr", "n": 30, "title": "建立前 vs 建立後：追蹤效益評估（大陸 ISR 低軌樣本 30 顆）", "dur": 10},
+    {"type": "skyplot", "group": "prc_isr", "title": "即時追蹤示範：台灣站對大陸遙感衛星之未來過頂（方位／仰角天空圖）", "dur": 9,
+     "body": "由台灣站視角預報未來 24 小時過頂：AOS／LOS、最大仰角與航跡；播放時標記沿航跡移動，模擬雷達／地面站的即時追蹤與連線視窗。"},
+    {"type": "embed", "title": "3D 即時追蹤（Cesium）：台北站覆蓋與時間軸", "url": "/taipei", "height": 820, "dur": 7,
+     "body": "本系統既有的台北站即時覆蓋與過頂時間軸（Cesium 3D）——地面站視角的即時追蹤／連線示範。"},
+
+    {"type": "text", "anchor": "part4", "title": "第四部：碰撞預警示範", "dur": 3,
+     "body": "以全目錄向量化 SGP4 掃描目前 10 km 內的接近配對，列出最接近距離、TCA 與碰撞機率（Chan 首階排序代理），任一配對可展開 3D 相對接近場景與 3σ 誤差橢球。"},
+    {"type": "cdm", "threshold_km": 10, "title": "即時接近配對（<10 km）與 3D 展開", "dur": 10},
+
+    {"type": "text", "title": "結語", "dur": 2,
+     "body": "星系全景、機動偵測、地基追蹤效益、碰撞預警——四種能力共用同一份 TLE 資料與同一套傳播／偵測引擎。"}
+  ]
+}

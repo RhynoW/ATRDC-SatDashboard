@@ -21,6 +21,7 @@ pinned: false
 | 台北覆蓋分析 | `/taipei` | 各類別衛星過頂時間軸、仰角分布、SSN 站點覆蓋 |
 | **Starlink 分析** | `/starlink` | 幾何可用性時間軸、RTT 下限估算、天空密度圖、遮蔽模擬 |
 | **RPO 相對接近** | `/rpo` | 近距離配對兩衛星 3D 相對接近、碰撞機率球（3σ R/T/N 橢球）、衛星視角切換 |
+| **StoryMap 敘事頁** | `/story` | StoryMaps 式整合展示：GPS／北斗／Starlink／OneWeb／大陸 ISR・通訊星系即時位置、2026 機動候選事件、台灣假想雷達站效益、日本 2026 發射誌 |
 
 ### 衛星類別（overpass_cats.yaml）
 
@@ -158,6 +159,23 @@ python run.py
 | Method | Endpoint | 說明 |
 |--------|----------|------|
 | GET | `/api/rpo/<primary>/<secondary>` | 兩衛星相對接近場景（orbit/series/meta/summary + Chan Pc） |
+
+### StoryMap 敘事頁
+
+| 端點 | 說明 |
+|------|------|
+| `GET /api/story/list` / `GET /api/story/<sid>` | 故事清單／單一故事 JSON（`scenario04/config/stories/*.json`） |
+| `GET /api/story/groups` | 六個展示群組（gps／beidou／starlink／oneweb／prc_isr／prc_comm）數量 |
+| `GET /api/story/positions?mode=group&val=prc_isr` | 群組即時位置（亦支援 all／country／constellation／purpose／ids） |
+| `GET /api/story/group_stats?group=gps` | 高度／傾角分佈、發射年份、代表衛星 |
+| `GET /api/story/isr_resolution?group=prc_isr` | 感測器類型與光學解析度級別（型號級公開推估） |
+| `GET /api/story/maneuvers` | 2026 機動候選事件（`tools/build_maneuvers_2026.py` 預算） |
+| `GET /api/story/radar_eval?group=prc_isr&n=30` / `GET /api/story/track?norad=` | 台灣假想雷達站效益評估／單星過頂 az/el |
+
+StoryMap 所需 TLE（六群組 + 故事明列 NORAD + 使用者目錄）以
+`python tools/merge_storymap_tle.py [--target scenario04/DB/space_db_slim.duckdb]`
+自父專案全量 `space_db.duckdb` 差異併入打包 DB（預設目標 `scenario-advanced01/DB/`，
+每日管線重建 slim DB 後重跑即可）。
 
 ### 系統
 

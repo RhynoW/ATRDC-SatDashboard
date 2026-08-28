@@ -33,6 +33,12 @@ def constellations_page():
     return render_template("constellations.html")
 
 
+@bp.get("/orbit")
+def orbit_page():
+    """軌道要素歷史（Spiral Polar + SMA 圓形圖）；資料源 /api/orbit/history。"""
+    return render_template("orbit.html")
+
+
 @bp.get("/cesium/<path:filename>")
 def cesium_static(filename: str):
     safe = (settings.CESIUM_LOCAL_DIR / filename).resolve()

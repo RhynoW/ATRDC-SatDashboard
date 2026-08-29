@@ -13,6 +13,8 @@
   var _eP = null, _eS = null;  // 兩顆衛星 entity（視角追蹤用）
   var _meta = null, _vp = "p"; // 目前視角：'p'=primary / 's'=secondary
   var _pcSpheres = [], _pcSphereOn = true;   // 碰撞機率球 entities（兩顆衛星各一）+ 開關
+  // COMSPOC 模式：全期地固座標系（ECEF）長軌跡（GEO 定點保持迴圈／東西換位）+ 外側定鏡頭 + Ranges 讀數
+  var _comspocOn = false, _trailEnts = [], _trailData = null, _rangeLabel = null;
 
   function warn(m) {
     var w = document.getElementById("warn");
@@ -66,7 +68,7 @@
     return p;
   }
 
-  function addSat(name, pos, hex, t0, t1) {
+  function addSat(name, pos, hex, t0, t1, trailS) {
     return viewer.entities.add({
       name: name,
       availability: new C.TimeIntervalCollection([new C.TimeInterval({ start: t0, stop: t1 })]),
@@ -75,7 +77,8 @@
       label: { text: name, font: "12px monospace", fillColor: C.Color.fromCssColorString(hex),
         style: C.LabelStyle.FILL, pixelOffset: new C.Cartesian2(0, -18),
         showBackground: true, backgroundColor: C.Color.fromCssColorString("#0A0D13").withAlpha(0.6) },
-      path: { leadTime: 0, trailTime: 5400, width: 2, resolution: 60,
+      // 位置為地固座標系（ECEF）取樣：GEO 物體長拖尾即呈現定點保持迴圈（COMSPOC 式）
+      path: { leadTime: 0, trailTime: trailS || 5400, width: 2, resolution: 60,
         material: C.Color.fromCssColorString(hex).withAlpha(0.85) },
     });
   }
@@ -100,7 +103,120 @@
   function clearScene() {
     if (_tick) { try { viewer.clock.onTick.removeEventListener(_tick); } catch (e) {} _tick = null; }
     if (viewer) { try { viewer.trackedEntity = undefined; } catch (e) {} viewer.entities.removeAll(); }
-    _eP = _eS = null; _pcSpheres = [];
+    _eP = _eS = null; _pcSpheres = []; _trailEnts = []; _trailData = null; _rangeLabel = null;
+  }
+
+  // ── COMSPOC 模式 ──
+  // 位置以 fromDegrees 建立即為地固座標系：GEO 物體之傾角／偏心在此系呈每日迴圈、漂移呈螺旋，
+  // 長時間累積即 COMSPOC「on-orbit behavior」影片中的兩色迴圈。軌跡隨時鐘漸進繪出（≤ 當前時刻）。
+  function buildTrails(trail, meta) {
+    if (!trail || !trail.t || !trail.t.length) return;
+    var ms = trail.t.map(function (t) { return Date.parse(t); });
+    var P = trail.p.map(function (a) { return C.Cartesian3.fromDegrees(a[0], a[1], a[2]); });
+    var S = trail.s.map(function (a) { return C.Cartesian3.fromDegrees(a[0], a[1], a[2]); });
+    _trailData = { ms: ms, P: P, S: S, d: trail.d };
+    function upto(arr) {
+      return new C.CallbackProperty(function (time) {
+        var now = C.JulianDate.toDate(time).getTime();
+        var n = ms.length;                      // 二分搜尋：≤ now 之樣本數
+        var lo = 0, hi = n;
+        while (lo < hi) { var mid = (lo + hi) >> 1; if (ms[mid] <= now) lo = mid + 1; else hi = mid; }
+        return arr.slice(0, Math.max(2, lo));
+      }, false);
+    }
+    _trailEnts = [
+      viewer.entities.add({ show: _comspocOn, polyline: { positions: upto(P), width: 1.6,
+        material: C.Color.fromCssColorString(PRIM).withAlpha(0.85), arcType: C.ArcType.NONE } }),
+      viewer.entities.add({ show: _comspocOn, polyline: { positions: upto(S), width: 1.6,
+        material: C.Color.fromCssColorString(SEC).withAlpha(0.85), arcType: C.ArcType.NONE } }),
+    ];
+    var info = document.getElementById("comspocInfo");
+    if (info) info.textContent = "全期 " + trail.t[0].slice(0, 10) + " ~ " + trail.t[trail.t.length - 1].slice(0, 10)
+      + " · " + ms.length + " 點 @ " + trail.step_min + " min · 地固座標系（ECEF）";
+  }
+
+  // Ranges 讀數：仿 COMSPOC「Ranges ⊗  A (SSN) … B (SSN) = xx km」，掛在連線中點
+  function buildRangeLabel(pPos, sPos, meta, sampleAt) {
+    _rangeLabel = viewer.entities.add({
+      show: _comspocOn,
+      position: new C.CallbackProperty(function (time) {
+        var a = pPos.getValue(time), b = sPos.getValue(time);
+        return (a && b) ? C.Cartesian3.midpoint(a, b, new C.Cartesian3()) : undefined;
+      }, false),
+      label: {
+        text: new C.CallbackProperty(function (time) {
+          var s = sampleAt(C.JulianDate.toDate(time).getTime());
+          return "Ranges ⊗  " + meta.primName + " (SSN " + meta.primId + ") … "
+               + meta.secName + " (SSN " + meta.secId + ") = " + fmtRange(s.d) + " km";
+        }, false),
+        font: "12px monospace", fillColor: C.Color.WHITE, style: C.LabelStyle.FILL,
+        pixelOffset: new C.Cartesian2(0, -26), showBackground: true,
+        backgroundColor: C.Color.fromCssColorString("#0A0D13").withAlpha(0.7),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+    });
+  }
+
+  // COMSPOC 鏡頭（兩段）：
+  //  wide  ─ 經度偏西 12°、距地心 60,000 km，視線為地心／物體方向平分線：地球在左、兩物體在右（仿 COMSPOC 構圖）。
+  //  close ─ 於兩物體中點沿軌（−T）1,400 km 外、以軌道面法向 N 為上方望向 +T：
+  //          地固座標系日迴圈（振幅≈傾角×42,164 km，TJS-10/3 僅 ~250 km）在此距離清楚可見。
+  var _camMode = "close";
+  function rtnBasis(time) {
+    var a = _eP.position.getValue(time), b = _eS.position.getValue(time);
+    if (!a || !b) return null;
+    var mid = C.Cartesian3.midpoint(a, b, new C.Cartesian3());
+    var a2 = _eP.position.getValue(C.JulianDate.addSeconds(time, 60, new C.JulianDate())) || a;
+    var v = C.Cartesian3.subtract(a2, a, new C.Cartesian3());
+    var R = C.Cartesian3.normalize(mid, new C.Cartesian3());
+    var N = C.Cartesian3.cross(mid, v, new C.Cartesian3());
+    if (C.Cartesian3.magnitude(N) < 1e-6) N = C.Cartesian3.clone(C.Cartesian3.UNIT_Z);
+    N = C.Cartesian3.normalize(N, N);
+    var T = C.Cartesian3.normalize(C.Cartesian3.cross(N, R, new C.Cartesian3()), new C.Cartesian3());
+    return { mid: mid, R: R, T: T, N: N };
+  }
+  function comspocCamera(mode) {
+    if (!_eP || !_eS || !viewer) return;
+    if (mode) _camMode = mode;
+    try { viewer.trackedEntity = undefined; } catch (e) {}
+    var time = viewer.clock.currentTime;
+    var basis = rtnBasis(time);
+    if (!basis) return;
+    var dest, dir, up;
+    if (_camMode === "wide") {
+      // 眼點：與兩物體同經度偏西 12°、距地心 60,000 km（GEO）；視線取「地心方向」與「物體方向」
+      // 之平分線 → 地球（角徑約 12°）在左、兩物體在右，各離軸約 ±12°，仿 COMSPOC 構圖。
+      var c = C.Cartographic.fromCartesian(basis.mid);
+      var lon = C.Math.toDegrees(c.longitude), rMid = C.Cartesian3.magnitude(basis.mid);
+      var distC = Math.max(1.6e7, rMid * 1.42);
+      dest = C.Cartesian3.fromDegrees(lon - 12, 6, distC - 6378137);
+      var toC = C.Cartesian3.normalize(C.Cartesian3.negate(dest, new C.Cartesian3()), new C.Cartesian3());
+      var toS = C.Cartesian3.normalize(C.Cartesian3.subtract(basis.mid, dest, new C.Cartesian3()), new C.Cartesian3());
+      dir = C.Cartesian3.normalize(C.Cartesian3.add(toC, toS, new C.Cartesian3()), new C.Cartesian3());
+      up = C.Cartesian3.UNIT_Z;
+    } else {
+      var back = C.Cartesian3.multiplyByScalar(basis.T, -1.4e6, new C.Cartesian3());
+      var out = C.Cartesian3.multiplyByScalar(basis.R, 2.5e5, new C.Cartesian3());
+      dest = C.Cartesian3.add(C.Cartesian3.add(basis.mid, back, new C.Cartesian3()), out, new C.Cartesian3());
+      dir = C.Cartesian3.normalize(C.Cartesian3.subtract(basis.mid, dest, new C.Cartesian3()), new C.Cartesian3());
+      up = basis.N;
+    }
+    viewer.camera.flyTo({ destination: dest, orientation: { direction: dir, up: up }, duration: 1.0 });
+    var b = document.getElementById("camToggle");
+    if (b) b.textContent = "📷 鏡頭：" + (_camMode === "wide" ? "全景（地球＋軌跡）" : "近景（迴圈）") + " ⇄";
+  }
+  window.__rpoCam = comspocCamera;   // 測試／除錯用
+
+  function setComspoc(on) {
+    _comspocOn = on;
+    _trailEnts.forEach(function (e) { e.show = on; });
+    if (_rangeLabel) _rangeLabel.show = on;
+    // 模式下碰撞球與短拖尾會遮住迴圈 → 隱藏；關閉時還原
+    _pcSpheres.forEach(function (e) { e.show = on ? false : _pcSphereOn; });
+    [_eP, _eS].forEach(function (e) { if (e && e.path) e.path.show = !on; });
+    var cb = document.getElementById("camToggle");
+    if (cb) cb.style.display = on ? "" : "none";
+    if (on) comspocCamera(); else setViewpoint(_vp);
   }
 
   // 切換至指定衛星視角（相機跟隨該顆），並更新按鈕/標籤
@@ -205,8 +321,9 @@
     window.__rpoSampleAt = sampleAt;
 
     var pPos = sampledPos(orbit, "p"), sPos = sampledPos(orbit, "s");
-    var eP = addSat(meta.primName, pPos, PRIM, t0, t1);
-    var eS = addSat(meta.secName, sPos, SEC, t0, t1);
+    var trailS = +meta.trail_s || 5400;
+    var eP = addSat(meta.primName, pPos, PRIM, t0, t1, trailS);
+    var eS = addSat(meta.secName, sPos, SEC, t0, t1, trailS);
     _eP = eP; _eS = eS;
 
     // ── 碰撞機率球：兩顆衛星各畫一個 3σ 不確定「橢球」，三軸獨立（徑向 R / 沿軌 T / 越軌 N），
@@ -260,6 +377,10 @@
     }
 
     _pcSpheres = [makePcEllipsoid(pPos), makePcEllipsoid(sPos)];   // 兩顆衛星各一
+    buildTrails(data.trail, meta);
+    buildRangeLabel(pPos, sPos, meta, sampleAt);
+    var ccInfo = document.getElementById("comspocInfo");
+    if (!data.trail && ccInfo) ccInfo.textContent = "此案例未產生全期軌跡（preset 需設 trail_step_min）；模式僅套用鏡頭與 Ranges。";
     var info = document.getElementById("pcSphereInfo");
     if (info) info.textContent = "3σ 橢球（三軸）· R " + rR.toFixed(0) + " / T " + rT.toFixed(0)
       + " / N " + rN.toFixed(0) + " m　（σ R " + sr + " / T " + st + " / N " + sn
@@ -318,6 +439,7 @@
     document.getElementById("loading").style.display = "none";
     // 自動切換為其中一顆衛星視角（預設 primary）；相機跟隨該顆，可用按鈕來回切換
     setViewpoint("p");
+    if (_comspocOn) setComspoc(true);
 
     stat("TCA " + fmtRange(summary.d_min) + " km · Pc(proxy) " + fmtPc(summary.pc_max).replace("&lt;", "<")
       + " · " + summary.n_orbit + " 點");
@@ -403,6 +525,16 @@
     if (pcChk) pcChk.addEventListener("change", function () {
       _pcSphereOn = this.checked;
       _pcSpheres.forEach(function (e) { e.show = _pcSphereOn; });
+    });
+
+    var ccChk = document.getElementById("comspocChk");
+    if (ccChk) {
+      _comspocOn = ccChk.checked;
+      ccChk.addEventListener("change", function () { setComspoc(this.checked); });
+    }
+    var camBtn = document.getElementById("camToggle");
+    if (camBtn) camBtn.addEventListener("click", function () {
+      comspocCamera(_camMode === "wide" ? "close" : "wide");
     });
 
     populatePairs(parseFloat((document.getElementById("thr") || {}).value) || 10);

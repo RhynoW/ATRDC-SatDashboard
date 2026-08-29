@@ -94,6 +94,43 @@ _PRESETS: dict[tuple[int, int], dict] = {
             {"d": "07-14 起", "t": "<b>共位</b>：H 與太空梭維持近乎相同軌道（≈ 0 km）。"},
         ],
     },
+    # ── 2024-05 TJS-10 東西換位越過 TJS-3（GEO，COMSPOC「TJS-10 on-orbit behavior」案例）──
+    # 註：以 Space-Track gp_history 重建（analyze 2026-08-29，verify_tjs10_2024_rpo.csv）；
+    #     事件由 TLE SMA 跳變與距離序列導出，與 COMSPOC 影片敘事（5 月西移、由東側 200–400 km
+    #     改至西側約 100 km、同軌道面）一致。GEO 案例：拖尾 48 h 於地固座標系可見定點保持迴圈。
+    (58204, 43874): {
+        "title": "TJS-10 越過 TJS-3 東西換位 — GEO 在軌測試（58204 × 43874）",
+        "subtitle": (
+            "通信技術試驗衛星 TJS-10（2023-11-03 發射、任務未公開）2024 年 3–5 月位於姊妹星 TJS-3（2018-12）"
+            "東側約 170–360 km（東經 173.3°，同軌道面）；5/15 13:56 與 5/16 13:43 各升軌 SMA +11 km 啟動西漂，"
+            "5/16–17 夜間以最近約 15 km 越過 TJS-3，5/18–19 兩次 −11 km 剎車、超越至西側約 320 km，"
+            "再緩漂回東、5/27 微調停漂，6 月起定位於 TJS-3 西側約 65–85 km。"
+            "COMSPOC 判讀：類似 TJS-3 2019 年之發射後在軌測試（checkout），但 TJS-10 在 TJS-3 東西兩側皆有活動。"
+            "距離為 SGP4 近似（GEO TLE 級精度 km 級）；每日約 40 km 之週期擺動為相對偏心／傾角所致，非機動。"
+            "Pc 為 Chan 首階排序代理，非作業級。"
+        ),
+        "window": ["2024-03-01", "2024-08-01"],
+        "span": ["2024-03-01", "2024-07-31"],
+        "focus_hours": 96.0,       # TCA ± 4 天：涵蓋 5/15 升軌 → 5/19 剎車
+        "fine_step_s": 600.0,
+        "trail_hours": 48.0,       # 地固座標系兩日拖尾 → 顯示 GEO 定點保持迴圈
+        "trail_step_min": 30.0,    # 全期地固軌跡（COMSPOC 模式）取樣步長；GEO 日迴圈需 ≤ 30 min
+        "events": [
+            {"t": "2024-05-15T13:56Z", "label": "TJS-10 升軌 +11 km（西漂啟動）"},
+            {"t": "2024-05-16T20:10Z", "label": "TCA ~15 km（越過 TJS-3）"},
+            {"t": "2024-05-18T14:13Z", "label": "TJS-10 剎車 −11 km"},
+            {"t": "2024-05-27T15:31Z", "label": "停漂微調 +10 km"},
+        ],
+        "timeline": [
+            {"d": "2023-11-03", "t": "<b>發射</b>：TJS-10（CZ-7A），任務未公開；定點東經約 173°，與 TJS-3 同軌道面。"},
+            {"d": "2024-03 ~ 05-14", "t": "<b>東側伴飛</b>：位於 TJS-3 東側 170→360 km（Δ經度 +0.2°→+0.5°），4/9 一度收至 150 km。"},
+            {"d": "05-15 ~ 05-16", "t": "<b>西漂啟動</b>：兩次升軌 SMA +11.4 / +11.8 km（42,163→42,187 km），開始向西漂移。"},
+            {"d": "2024-05-16/17", "t": "<b>越過 TJS-3</b>：5/16 18:00–5/17 00:00 最近約 15 km（20:10 UTC），由東側換至西側。"},
+            {"d": "05-18 ~ 05-19", "t": "<b>剎車</b>：兩次降軌 −11.1 / −11.8 km 回到 GEO 同步高度；慣性超越至西側約 320 km。"},
+            {"d": "05-20 ~ 05-27", "t": "<b>回漂</b>：緩慢向東漂回（320→110 km）；5/27 −4.9 / +10.5 km 微調停漂。"},
+            {"d": "2024-06 ~ 07", "t": "<b>西側定位</b>：維持 TJS-3 西側約 65–85 km，同軌道面——COMSPOC 判為在軌測試。"},
+        ],
+    },
     # ── 2022-01/02 USA 270（GSSAP）接近中國實驗十二號 01/02 星（GEO）──
     # 註：USA 270 公開 elset 極稀疏（窗內僅 5 筆），距離為 SGP4 近似；時間軸事件由 TLE
     #     SMA 跳變與距離序列導出（analyze 2026-08-27），與公開報導之敘事一致。
@@ -353,6 +390,10 @@ def compute_rpo_scene(
 
     preset = _PRESETS.get((int(primary), int(secondary)), {})
     window = preset.get("window")   # 已知案例可限定 TLE 載入區間
+    # 已知案例可覆寫聚焦窗／步長：GEO 定點保持迴圈（地固座標系）需數日拖尾才看得出
+    # 「同向操作」與東西換位，LEO 預設 ±12 h / 60 s 對 GEO 太短。
+    focus_hours = float(preset.get("focus_hours", focus_hours))
+    fine_step_s = float(preset.get("fine_step_s", fine_step_s))
     con = _connect_ro(path)
     try:
         Precs, Pep, pname, Pdf = _load_recs(con, primary, window)
@@ -424,6 +465,24 @@ def compute_rpo_scene(
             "rtn": [round(float(x), 4) for x in rtn[k]],   # secondary 相對 primary 之 R/T/N (km)
         })
 
+    # COMSPOC 式「全期地固軌跡」：整個 span 以 trail_step_min 取樣兩物體之測地座標（ECEF），
+    # 前端以長 polyline 畫出 GEO 定點保持迴圈與東西換位；未設定之案例不產生（省 payload）。
+    trail = None
+    tsm = preset.get("trail_step_min")
+    if tsm:
+        tr = _sample(Precs, Pep, Srecs, Sep, lo, hi, float(tsm) * 60.0)
+        if tr:
+            rp_all = np.array([x[1] for x in tr]); rs_all = np.array([x[2] for x in tr])
+            lp = np.array([eci_to_llh_batch(rp_all[i:i + 1], tr[i][0])[0] for i in range(len(tr))])
+            ls = np.array([eci_to_llh_batch(rs_all[i:i + 1], tr[i][0])[0] for i in range(len(tr))])
+            trail = {
+                "step_min": float(tsm),
+                "t": [_iso(x[0]) for x in tr],
+                "p": [[round(float(a[1]), 3), round(float(a[0]), 3), round(float(a[2]) * 1000.0)] for a in lp],
+                "s": [[round(float(a[1]), 3), round(float(a[0]), 3), round(float(a[2]) * 1000.0)] for a in ls],
+                "d": [round(float(x[3]), 2) for x in tr],
+            }
+
     imin = int(np.argmin([o["d"] for o in orbit]))
     # 全窗最小（可能為釋放瞬間之近乎共位）另記於 summary，供對照
     g_i = int(np.argmin([c[3] for c in coarse]))
@@ -442,6 +501,8 @@ def compute_rpo_scene(
         "sigma_r": settings.SIGMA_R_KM, "sigma_t": settings.SIGMA_T_KM,
         "sigma_n": settings.SIGMA_N_KM,
         "sat_radius": settings.SAT_RADIUS_KM,
+        # Cesium path.trailTime（秒）：地固座標系拖尾；GEO 案例用多日以顯示定點保持迴圈
+        "trail_s": float(preset.get("trail_hours", 1.5)) * 3600.0,
         "frame_note": "相對分量為 secondary−primary 於 primary 之 RTN(LVLH)：R 徑向外、T 沿軌、N 軌道面法向；"
                       "SGP4/TEME 幾何重建，公開 TLE 級精度",
     }
@@ -454,7 +515,11 @@ def compute_rpo_scene(
     logger.info("RPO 場景 %s×%s：TCA %s d_min=%.3f km Pc(proxy)=%.2e（orbit %d 點、series %d 點）",
                 primary, secondary, summary["t_min"], summary["d_min"], summary["pc_max"],
                 summary["n_orbit"], summary["n_series"])
-    return {"orbit": orbit, "series": series, "meta": meta, "summary": summary}
+    out = {"orbit": orbit, "series": series, "meta": meta, "summary": summary}
+    if trail:
+        out["trail"] = trail
+        summary["n_trail"] = len(trail["t"])
+    return out
 
 
 def _cache_file(primary: int, secondary: int):

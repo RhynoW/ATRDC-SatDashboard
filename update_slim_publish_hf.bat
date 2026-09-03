@@ -1,81 +1,80 @@
 @echo off
-rem ============================================================
-rem  update_slim_publish_hf.bat â€” æ›´æ–° space_db_slim.duckdb ä¸¦ç™¼å¸ƒè‡³ HF Space
-rem
-rem  æµç¨‹ï¼ˆ2026-09-02 å¯¦è­‰ï¼‰ï¼š
-rem    1) çˆ¶å°ˆæ¡ˆ build_slim_db.pyï¼šå…¨è¡›æ˜Ÿè¿‘ 14 å¤© + ç™½åå–®å…¨æ­·å²ï¼ˆå« TJS-10/TJS-3ï¼‰
-rem    2) è¤‡è£½åˆ° scenario-advanced01\DB\ï¼ˆrun.py æœ¬æ©Ÿå„ªå…ˆï¼‰
-rem    3) merge_storymap_tle.py ä½µå…¥ StoryMap æ‰€éœ€ ~1.3 è¬é¡†æ­·å²
-rem    4) è¤‡è£½åˆ° scenario04\DB\ï¼ˆéƒ¨ç½²å‰¯æœ¬ï¼‰â†’ commit â†’ push hf master:main
-rem
-rem  ç”¨æ³•ï¼šupdate_slim_publish_hf.bat [prune]
-rem    prune = æ¨é€å‰å…ˆæ°¸ä¹…åˆªé™¤ HF ä¸ŠèˆŠç‰ˆ slim DB çš„ LFS blobï¼ˆä¿ç•™æœ€æ–°ä¸€ç‰ˆï¼‰ã€‚
-rem            HF Space å„²å­˜ä¸Šé™ 1 GBï¼Œæ¯ç‰ˆ ~150 MBï¼Œç´„æ¯ 5 ç‰ˆéœ€æ¸…ä¸€æ¬¡ã€‚
-rem            æ³¨æ„ï¼šåˆªé™¤æœƒä½¿ HF ç«¯æ­·å²è¢«é‡å¯«ï¼ˆSHA è®Šå‹•ï¼‰ï¼Œè©³è¦‹ READMEã€‚
-rem ============================================================
 setlocal
-chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
+rem ============================================================
+rem  update_slim_publish_hf.bat ¡X §ó·s space_db_slim.duckdb ¨Ãµo¥¬¦Ü HF Space
+rem
+rem  ¬yµ{¡]2026-09-02 ¹êÃÒ¡^¡G
+rem    1) ¤÷±M®× build_slim_db.py¡G¥ş½Ã¬Pªñ 14 ¤Ñ + ¥Õ¦W³æ¥ş¾ú¥v¡]§t TJS-10/TJS-3¡^
+rem    2) ½Æ»s¨ì scenario-advanced01\DB\¡]run.py ¥»¾÷Àu¥ı¡^
+rem    3) merge_storymap_tle.py ¨Ö¤J StoryMap ©Ò»İ ~1.3 ¸UÁû¾ú¥v
+rem    4) ½Æ»s¨ì scenario04\DB\¡]³¡¸p°Æ¥»¡^-> commit -> push hf master:main
+rem
+rem  ¥Îªk¡Gupdate_slim_publish_hf.bat [prune]
+rem    prune = ±À°e«e¥ı¥Ã¤[§R°£ HF ¤WÂÂª© slim DB ªº LFS blob¡]«O¯d³Ì·s¤@ª©¡^¡C
+rem            HF Space Àx¦s¤W­­ 1 GB¡A¨Cª© ~150 MB¡A¬ù¨C 5 ª©»İ²M¤@¦¸¡C
+rem            ª`·N¡G§R°£·|¨Ï HF ºİ¾ú¥v³Q­«¼g¡]SHA ÅÜ°Ê¡^¡A¸Ô¨£ README¡C
+rem ============================================================
 set APP=F:\GitHub\Sat_TraingDataExtension\scenario-advanced01
 set PARENT=F:\GitHub\Sat_TraingDataExtension
 
-echo [1/5] é‡å»ºé ‚å±¤ slim DBï¼ˆè¿‘ 14 å¤© + ç™½åå–®å…¨æ­·å²ï¼‰...
+echo [1/5] ­««Ø³»¼h slim DB¡]ªñ 14 ¤Ñ + ¥Õ¦W³æ¥ş¾ú¥v¡^...
 cd /d %PARENT%
 python prc_maneuver\build_slim_db.py --slim-only --keep-lines --recent-days 14
 if errorlevel 1 goto :fail
 
-echo [2/5] è¤‡è£½åˆ° app æœ¬æ©Ÿ DB ä¸¦ä½µå…¥ StoryMap TLE ...
+echo [2/5] ½Æ»s¨ì app ¥»¾÷ DB ¨Ã¨Ö¤J StoryMap TLE ...
 copy /y %PARENT%\space_db_slim.duckdb %APP%\DB\space_db_slim.duckdb >nul
 if errorlevel 1 goto :fail
 cd /d %APP%
 python tools\merge_storymap_tle.py
 if errorlevel 1 goto :fail
 
-echo [3/5] è¤‡è£½åˆ°éƒ¨ç½²å‰¯æœ¬ scenario04\DB ...
+echo [3/5] ½Æ»s¨ì³¡¸p°Æ¥» scenario04\DB ...
 copy /y %APP%\DB\space_db_slim.duckdb %APP%\scenario04\DB\space_db_slim.duckdb >nul
 if errorlevel 1 goto :fail
 
 if /i "%~1"=="prune" (
-  echo [4/5] æ¸…ç† HF èˆŠç‰ˆ slim DB LFS blobï¼ˆä¿ç•™æœ€æ–°ä¸€ç‰ˆï¼‰...
+  echo [4/5] ²M²z HF ÂÂª© slim DB LFS blob¡]«O¯d³Ì·s¤@ª©¡^...
   python tools\prune_hf_slim_lfs.py
   if errorlevel 1 goto :fail
 ) else (
-  echo [4/5] ç•¥é LFS æ¸…ç†ï¼ˆéœ€è¦æ™‚ï¼šupdate_slim_publish_hf.bat pruneï¼‰
+  echo [4/5] ²¤¹L LFS ²M²z¡]»İ­n®É¡Gupdate_slim_publish_hf.bat prune¡^
 )
 
-echo [5/5] commit ä¸¦æ¨é€ HF ...
+echo [5/5] commit ¨Ã±À°e HF ...
 git add -f scenario04\DB\space_db_slim.duckdb
-git diff --cached --quiet && echo   DB ç„¡è®Šæ›´ï¼Œè·³é commit/pushã€‚ && goto :ok
-for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString(\"yyyy-MM-dd\")"') do set TODAY=%%d
-git commit -m "data: slim DB æ¯æ—¥æ›´æ–°ï¼ˆ%TODAY%ï¼Œbuild_slim+merge_storymap ç®¡ç·šï¼‰"
+git diff --cached --quiet && echo   DB µLÅÜ§ó¡A¸õ¹L commit/push¡C && goto :ok
+for /f %%d in ('python -c "import datetime;print(datetime.date.today())"') do set TODAY=%%d
+git commit -m "data: daily slim DB update (%TODAY%, build_slim+merge_storymap pipeline)"
 if errorlevel 1 goto :fail
 git push hf master:main
 if errorlevel 1 (
   echo.
-  echo   push å¤±æ•—ï¼›å˜—è©¦è‡ªå‹•å¾©åŸï¼ˆLFS æ¸…ç†æœƒé‡å¯« HF ç«¯æ­·å² â†’ fetch-first ç‚ºé æœŸç¾è±¡ï¼‰...
+  echo   push ¥¢±Ñ¡F¹Á¸Õ¦Û°Ê´_­ì¡]LFS ²M²z·|­«¼g HF ºİ¾ú¥v -> fetch-first ¬°¹w´Á²{¶H¡^...
   git fetch hf main
   if errorlevel 1 goto :fail
   git branch -f backup_%TODAY% master
   git reset --hard hf/main
   copy /y %APP%\DB\space_db_slim.duckdb %APP%\scenario04\DB\space_db_slim.duckdb >nul
   git add -f scenario04\DB\space_db_slim.duckdb
-  git diff --cached --quiet && echo   å¾©åŸå¾Œ DB ç„¡è®Šæ›´ã€‚ && goto :origin
-  git commit -m "data: slim DB æ¯æ—¥æ›´æ–°ï¼ˆ%TODAY%ï¼Œbuild_slim+merge_storymap ç®¡ç·šï¼‰"
+  git diff --cached --quiet && echo   ´_­ì«á DB µLÅÜ§ó¡C && goto :origin
+  git commit -m "data: daily slim DB update (%TODAY%, build_slim+merge_storymap pipeline)"
   git push hf master:main
   if errorlevel 1 goto :fail
 )
 :origin
 git push origin master
 if errorlevel 1 (
-  echo   origin éå¿«è½‰ï¼ˆHF æ­·å²é‡å¯«æ‰€è‡´ï¼‰ï¼Œä»¥ force-with-lease å°é½Š ...
+  echo   origin «D§ÖÂà¡]HF ¾ú¥v­«¼g©Ò­P¡^¡A¥H force-with-lease ¹ï»ô ...
   git push --force-with-lease origin master
-  if errorlevel 1 echo   âš  origin æ¨é€å¤±æ•—ï¼ˆä¸å½±éŸ¿ HF éƒ¨ç½²ï¼‰ï¼Œè«‹æ‰‹å‹•æª¢æŸ¥ã€‚
+  if errorlevel 1 echo   [!] origin ±À°e¥¢±Ñ¡]¤£¼vÅT HF ³¡¸p¡^¡A½Ğ¤â°ÊÀË¬d¡C
 )
 
 :ok
 curl -s https://huggingface.co/api/spaces/RhynoWu/ATRDC-SatDashboard | python -c "import sys,json;d=json.load(sys.stdin);print('HF sha',(d.get('sha') or '')[:8],'stage',d.get('runtime',{}).get('stage'))"
-echo âœ… å®Œæˆ
+echo [OK] §¹¦¨
 exit /b 0
 :fail
-echo âŒ å¤±æ•—ï¼ˆerrorlevel %errorlevel%ï¼‰ï¼Œæµç¨‹ä¸­æ­¢
+echo [FAIL] ¥¢±Ñ¡]errorlevel %errorlevel%¡^¡A¬yµ{¤¤¤î
 exit /b 1

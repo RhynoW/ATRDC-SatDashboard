@@ -52,15 +52,25 @@ if errorlevel 1 goto :fail
 git push hf master:main
 if errorlevel 1 (
   echo.
-  echo   push 失敗。常見原因與處置：
-  echo   a) 儲存超限 Max 1 GB → 執行 update_slim_publish_hf.bat prune 後重試
-  echo   b) fetch first（HF 端歷史被 LFS 清理重寫）→
-  echo      git fetch hf main ^&^& git branch backup_%TODAY% master ^&^& git reset --hard hf/main
-  echo      然後重跑本批次檔（會重放 DB 更新 commit）
-  goto :fail
+  echo   push 失敗；嘗試自動復原（LFS 清理會重寫 HF 端歷史 → fetch-first 為預期現象）...
+  git fetch hf main
+  if errorlevel 1 goto :fail
+  git branch -f backup_%TODAY% master
+  git reset --hard hf/main
+  copy /y %APP%\DB\space_db_slim.duckdb %APP%\scenario04\DB\space_db_slim.duckdb >nul
+  git add -f scenario04\DB\space_db_slim.duckdb
+  git diff --cached --quiet && echo   復原後 DB 無變更。 && goto :origin
+  git commit -m "data: slim DB 每日更新（%TODAY%，build_slim+merge_storymap 管線）"
+  git push hf master:main
+  if errorlevel 1 goto :fail
 )
+:origin
 git push origin master
-if errorlevel 1 echo   ⚠ origin 推送失敗（不影響 HF 部署）；若因 SHA 分歧，需手動決定是否 force push 對齊。
+if errorlevel 1 (
+  echo   origin 非快轉（HF 歷史重寫所致），以 force-with-lease 對齊 ...
+  git push --force-with-lease origin master
+  if errorlevel 1 echo   ⚠ origin 推送失敗（不影響 HF 部署），請手動檢查。
+)
 
 :ok
 curl -s https://huggingface.co/api/spaces/RhynoWu/ATRDC-SatDashboard | python -c "import sys,json;d=json.load(sys.stdin);print('HF sha',(d.get('sha') or '')[:8],'stage',d.get('runtime',{}).get('stage'))"

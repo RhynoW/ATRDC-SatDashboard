@@ -52,6 +52,16 @@
   .pcctl label{display:flex;align-items:center;gap:7px;cursor:pointer}
   .pcctl input{accent-color:var(--crit)}
   .pcctl #pcSphereInfo{display:block;color:var(--muted);font-size:10px;margin:5px 0 0 22px}
+  /* 浮動相對軌跡投影視窗（可拖曳；與 Cesium 時鐘同步） */
+  #relwin{position:absolute;right:16px;top:64px;width:400px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;z-index:11;box-shadow:0 8px 30px rgba(0,0,0,.5);
+    backdrop-filter:blur(6px)}
+  #relwin .hd{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:move;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--ink)}
+  #relwin .hd .x{margin-left:auto;cursor:pointer;color:var(--muted);font-size:14px;padding:0 4px}
+  #relwin .hd .x:hover{color:var(--crit)}
+  #relwin canvas{display:block;width:100%;height:300px}
+  #relwin .ft{padding:6px 12px 9px;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.5}
   .tl{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
   .tl h2{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
   .tlrow{display:grid;grid-template-columns:82px 1fr;gap:9px;padding:6px 0;border-top:1px solid rgba(255,255,255,.05);font-size:12px}
@@ -108,6 +118,7 @@
     <div class="pcctl">
       <label><input type="checkbox" id="pcSphereChk" checked> 🔴 碰撞機率球（3σ R/T/N 橢球）</label>
       <span id="pcSphereInfo"></span>
+      <label style="margin-top:6px"><input type="checkbox" id="relwinChk" checked> 🧭 相對軌跡投影浮動視窗（以對方為中心之 LVLH T–R 平面）</label>
       <label style="margin-top:6px"><input type="checkbox" id="comspocChk"> 🛰 COMSPOC 模式（全期地固軌跡迴圈 + 外側定鏡頭 + Ranges）</label>
       <span id="comspocInfo" style="display:block;color:var(--muted);font-size:10px;margin:5px 0 0 22px"></span>
       <button id="camToggle" class="vpctl-btn" style="display:none;margin:6px 0 0 22px;background:var(--sec);color:#03202b;border:0;border-radius:7px;padding:6px 10px;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer">📷 鏡頭 ⇄</button>

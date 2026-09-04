@@ -104,6 +104,7 @@
     if (_tick) { try { viewer.clock.onTick.removeEventListener(_tick); } catch (e) {} _tick = null; }
     if (viewer) { try { viewer.trackedEntity = undefined; } catch (e) {} viewer.entities.removeAll(); }
     _eP = _eS = null; _pcSpheres = []; _trailEnts = []; _trailData = null; _rangeLabel = null;
+    destroyRelWindow();
   }
 
   // ── COMSPOC 模式 ──
@@ -249,6 +250,137 @@
       } catch (e) {}
     });
     try { viewer.timeline.resize(); } catch (e) {}
+  }
+
+  // ── 浮動視窗：相對軌跡投影（LVLH T–R 平面，與 Cesium 時鐘同步） ──
+  // 衛星繞地球「一直繞圈圈」時，慣性/地圖視角看不出軌道升降；在對方 LVLH 座標中，
+  // 徑向 R（縱軸，正=軌道較高）與沿軌 T（橫軸）的投影軌跡才能直接呈現接近/抬升/降軌。
+  // 資料：orbit[].rtn = secondary−primary 於 primary LVLH；取負向即 primary 相對 secondary
+  //（以 secondary 為中心；兩 LVLH 軸向於 km 級間距下近乎平行，投影用途足夠）。
+  var _relwin = null, _relOn = true, _relCenterSec = true;   // 預設以 secondary（如 67689 太空飛機）為中心
+  function destroyRelWindow() {
+    if (_relwin && _relwin.el) { try { _relwin.el.remove(); } catch (e) {} }
+    _relwin = null;
+  }
+  function buildRelWindow(orbit, meta, stepS0) {
+    destroyRelWindow();
+    if (!orbit.length || !orbit[0].rtn) return;
+    var el = document.createElement("div");
+    el.id = "relwin";
+    el.innerHTML = '<div class="hd">\ud83e\udded <span id="relTitle"></span>'
+      + '<span class="x" id="relSwap" title="切換中心物體">\u21c4 中心</span>'
+      + '<span class="x" id="relClose" title="關閉">\u2715</span></div>'
+      + '<canvas id="relCanvas"></canvas>'
+      + '<div class="ft" id="relFoot"></div>';
+    document.body.appendChild(el);
+    el.style.display = _relOn ? "" : "none";
+    var hd = el.querySelector(".hd"), drag = null;
+    hd.addEventListener("mousedown", function (e) {
+      if (e.target.classList.contains("x")) return;
+      drag = { x: e.clientX, y: e.clientY, l: el.offsetLeft, t: el.offsetTop };
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", function (e) {
+      if (!drag) return;
+      el.style.left = (drag.l + e.clientX - drag.x) + "px";
+      el.style.top = (drag.t + e.clientY - drag.y) + "px";
+      el.style.right = "auto";
+    });
+    window.addEventListener("mouseup", function () { drag = null; });
+    el.querySelector("#relClose").addEventListener("click", function () {
+      _relOn = false; el.style.display = "none";
+      var c = document.getElementById("relwinChk"); if (c) c.checked = false;
+    });
+    el.querySelector("#relSwap").addEventListener("click", function () {
+      _relCenterSec = !_relCenterSec;
+    });
+    var stepS = stepS0 || 600;   // 由 summary.fine_step_s 覆寫（見下）
+    var pts = orbit.map(function (o) {
+      // 縱軸用「Δ高度」（測地高度差）而非直線 LVLH 的 R：大沿軌間距時 R 被軌道
+      // 曲率項（~T²/2r，1,000 km 時約 71 km）淹沒，Δ高度才如實呈現軌道升降。
+      return { ms: Date.parse(o.t), T: o.rtn[1], dh: (o.p[2] - o.s[2]) / 1000.0 };
+    });
+    // 單圈（~96 min）移動平均：把相對偏心造成的每圈擺動平掉，露出升降趨勢
+    var per = Math.max(3, Math.round(96 * 60 / stepS)), half = per >> 1;
+    var sm = pts.map(function (p, i) {
+      var a = Math.max(0, i - half), b = Math.min(pts.length, i + half + 1), T = 0, dh = 0;
+      for (var j = a; j < b; j++) { T += pts[j].T; dh += pts[j].dh; }
+      return { ms: p.ms, T: T / (b - a), dh: dh / (b - a) };
+    });
+    _relwin = { el: el, cv: el.querySelector("#relCanvas"), pts: pts, sm: sm, meta: meta };
+  }
+
+  function drawRelWindow(nowMs) {
+    if (!_relwin || !_relOn) return;
+    var w = _relwin, cv = w.cv, meta = w.meta, dpr = window.devicePixelRatio || 1;
+    var CW = cv.clientWidth || 400, CH = 300;
+    if (cv.width !== CW * dpr || cv.height !== CH * dpr) { cv.width = CW * dpr; cv.height = CH * dpr; }
+    var g = cv.getContext("2d");
+    var sgn = _relCenterSec ? -1 : 1;   // 沿軌符號
+    var hsgn = _relCenterSec ? 1 : -1;  // Δ高度：dh = primary−secondary，中心=secondary 時同號   // 中心=secondary → 畫 primary 相對位置（取負）
+    var cName = _relCenterSec ? meta.secName : meta.primName;
+    var mName = _relCenterSec ? meta.primName : meta.secName;
+    document.getElementById("relTitle").textContent = "相對軌跡投影 — 中心：" + cName;
+    var Ts = w.pts.map(function (p) { return sgn * p.T; });
+    var Rs = w.pts.map(function (p) { return hsgn * p.dh; });
+    var tmin = Math.min.apply(null, Ts), tmax = Math.max.apply(null, Ts);
+    var rmin = Math.min.apply(null, Rs), rmax = Math.max.apply(null, Rs);
+    function pad(lo, hi, minSpan) {
+      var c = (lo + hi) / 2, sp = Math.max(hi - lo, minSpan) * 1.16 / 2;
+      return [c - sp, c + sp];
+    }
+    var tr = pad(tmin, tmax, 10), rr = pad(rmin, rmax, 4);
+    var padL = 46, padR = 12, padT = 10, padB = 30;
+    g.save(); g.scale(dpr, dpr);
+    g.clearRect(0, 0, CW, CH);
+    function X(t) { return padL + (t - tr[0]) / (tr[1] - tr[0]) * (CW - padL - padR); }
+    function Y(r) { return CH - padB - (r - rr[0]) / (rr[1] - rr[0]) * (CH - padT - padB); }
+    g.strokeStyle = "rgba(255,255,255,.07)"; g.lineWidth = 1; g.beginPath();
+    [0.25, 0.5, 0.75].forEach(function (f) {
+      var x = padL + f * (CW - padL - padR), y = padT + f * (CH - padT - padB);
+      g.moveTo(x, padT); g.lineTo(x, CH - padB); g.moveTo(padL, y); g.lineTo(CW - padR, y);
+    }); g.stroke();
+    g.strokeStyle = "rgba(255,255,255,.25)"; g.beginPath();
+    g.moveTo(X(0), padT); g.lineTo(X(0), CH - padB);
+    g.moveTo(padL, Y(0)); g.lineTo(CW - padR, Y(0)); g.stroke();
+    g.fillStyle = _relCenterSec ? SEC : PRIM;
+    g.beginPath(); g.arc(X(0), Y(0), 4.5, 0, 6.283); g.fill();
+    g.fillStyle = "#dfe6f0"; g.font = "10px monospace";
+    g.fillText(cName, Math.min(X(0) + 7, CW - 96), Y(0) - 6);
+    g.fillStyle = "#8b96a8";
+    g.fillText("沿軌 T (km) \u2192", CW - 104, CH - 8);
+    g.save(); g.translate(11, 190); g.rotate(-Math.PI / 2);
+    g.fillText("\u0394高度 (km) \u2191=軌道較高", 0, 0); g.restore();
+    g.fillText(tr[0].toFixed(0), padL, CH - 18);
+    g.fillText(tr[1].toFixed(0), CW - padR - 34, CH - 18);
+    g.fillText(rr[1].toFixed(1), 22, padT + 10);
+    g.fillText(rr[0].toFixed(1), 22, CH - padB - 2);
+    var n = w.pts.length, k = 0;
+    while (k < n && w.pts[k].ms <= nowMs) k++;
+    function path(arr, from, to, style, width) {
+      g.strokeStyle = style; g.lineWidth = width; g.beginPath();
+      for (var i = from; i < to; i++) {
+        var x = X(sgn * arr[i].T), y = Y(hsgn * arr[i].dh);
+        if (i === from) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    var bright = _relCenterSec ? PRIM : SEC;
+    if (n > 1) path(w.pts, 0, n, "rgba(139,150,168,.22)", 1);          // 全程逐點（淡細）
+    if (k > 1) path(w.pts, 0, k, "rgba(242,167,59,.45)", 1);           // 已播放逐點（半亮細）
+    if (k > 1) path(w.sm, 0, k, bright, 2.4);                           // 已播放單圈平均（亮粗＝趨勢）
+    if (k > 0) {
+      var cur = w.pts[Math.min(k - 1, n - 1)];
+      var cx = X(sgn * cur.T), cy = Y(hsgn * cur.dh);
+      g.fillStyle = CRIT; g.beginPath(); g.arc(cx, cy, 5, 0, 6.283); g.fill();
+      g.strokeStyle = "rgba(255,92,78,.5)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(cx, cy); g.stroke();
+      var ft = document.getElementById("relFoot");
+      if (ft) ft.textContent = mName + "\uff1a沿軌 T " + (sgn * cur.T).toFixed(1) + " km\u3001\u0394高度 "
+        + (hsgn * cur.dh).toFixed(2) + " km\uff08>0\uff1d軌道較高\uff09"
+        + " \u00b7 粗線\uff1d單圈平均趨勢\u3001細線\uff1d逐點 \u00b7 拖曳標題移動\u3001\u21c4 換中心";
+    }
+    g.restore();
   }
 
   // ── 相對運動圖：距離–時間、RTN 分量–時間（純 canvas），游標隨 Cesium 時鐘同步 ──
@@ -397,6 +529,7 @@
 
     _pcSpheres = [makePcEllipsoid(pPos), makePcEllipsoid(sPos)];   // 兩顆衛星各一
     buildTrails(data.trail, meta);
+    buildRelWindow(orbit, meta, summary.fine_step_s || 600);
     buildRangeLabel(pPos, sPos, meta, sampleAt);
     var ccInfo = document.getElementById("comspocInfo");
     if (!data.trail && ccInfo) ccInfo.textContent = "此案例未產生全期軌跡（preset 需設 trail_step_min）；模式僅套用鏡頭與 Ranges。";
@@ -443,7 +576,9 @@
     if (viewer.timeline) viewer.timeline.zoomTo(t0, t1);
 
     _tick = function (clock) {
-      var s = sampleAt(C.JulianDate.toDate(clock.currentTime).getTime());
+      var nowMs = C.JulianDate.toDate(clock.currentTime).getTime();
+      drawRelWindow(nowMs);
+      var s = sampleAt(nowMs);
       document.getElementById("k_range").textContent = fmtRange(s.d);
       document.getElementById("k_pc").innerHTML = fmtPc(s.pc);
       document.getElementById("k_palt").textContent = (s.p[2] / 1000).toFixed(1);
@@ -547,6 +682,15 @@
       _pcSphereOn = this.checked;
       _pcSpheres.forEach(function (e) { e.show = _pcSphereOn; });
     });
+
+    var rwChk = document.getElementById("relwinChk");
+    if (rwChk) {
+      _relOn = rwChk.checked;
+      rwChk.addEventListener("change", function () {
+        _relOn = this.checked;
+        if (_relwin && _relwin.el) _relwin.el.style.display = _relOn ? "" : "none";
+      });
+    }
 
     var ccChk = document.getElementById("comspocChk");
     if (ccChk) {

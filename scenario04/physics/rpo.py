@@ -76,6 +76,17 @@ _PRESETS: dict[tuple[int, int], dict] = {
     },
     (69673, 67689): {
         "title": "神龍第4次任務 — Object H 部署與回收（69673 × 67689）",
+        # 全事件回放：06-20 ~ 07-17（涵蓋 6/22 部署 → 7/12-14 回收），10 min 步長；
+        # phases 於 Cesium 時間軸畫醒目色帶（部署/離開訪G/返回/回收）。
+        "focus_center": "2026-07-04T00:00Z",
+        "focus_hours": 320.0,
+        "fine_step_s": 600.0,
+        "phases": [
+            {"from": "2026-06-22T00:00Z", "to": "2026-06-23T00:00Z", "label": "部署", "color": "#FF5C4E"},
+            {"from": "2026-06-24T00:00Z", "to": "2026-07-06T24:00Z".replace("T24:00","T23:59"), "label": "離開・訪 G", "color": "#F2A73B"},
+            {"from": "2026-07-08T00:00Z", "to": "2026-07-11T23:59Z", "label": "返回", "color": "#35C6F4"},
+            {"from": "2026-07-12T00:00Z", "to": "2026-07-14T23:59Z", "label": "回收", "color": "#FF5C4E"},
+        ],
         "subtitle": (
             "Object H（69673）於 2026-06-22 自太空梭 67689 部署（近乎共位）；訪問 Object G 後於 07-08 返回，"
             "2026-07-12–14 與太空梭近至地面感測器無法分辨（約 0 km），"
@@ -354,8 +365,8 @@ def _pick_focus_center(preset: dict, coarse: list, lo: datetime, hi: datetime) -
     """挑選 3D 聚焦窗中心。優先採預設事件中標註 TCA 者（落於重疊窗內），
     否則採全窗最小距離之時刻。"""
     events = preset.get("events", []) if preset else []
-    cand = None
-    for ev in events:
+    cand = preset.get("focus_center") if preset else None   # 已知案例可直接指定中心
+    for ev in ([] if cand else events):
         if "TCA" in str(ev.get("label", "")).upper():
             cand = ev.get("t")
             break
@@ -503,6 +514,7 @@ def compute_rpo_scene(
         "sat_radius": settings.SAT_RADIUS_KM,
         # Cesium path.trailTime（秒）：地固座標系拖尾；GEO 案例用多日以顯示定點保持迴圈
         "trail_s": float(preset.get("trail_hours", 1.5)) * 3600.0,
+        "phases": preset.get("phases", []),   # Cesium 時間軸醒目區段
         "frame_note": "相對分量為 secondary−primary 於 primary 之 RTN(LVLH)：R 徑向外、T 沿軌、N 軌道面法向；"
                       "SGP4/TEME 幾何重建，公開 TLE 級精度",
     }

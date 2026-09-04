@@ -18,7 +18,8 @@
   .cesium-widget-credits{display:none!important}
   #hud{position:absolute;top:14px;left:14px;width:340px;max-width:calc(100vw - 28px);
     background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px 12px;
-    backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(0,0,0,.45);z-index:10;max-height:calc(100vh - 28px);overflow:auto}
+    backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(0,0,0,.45);z-index:10;
+    max-height:calc(100vh - 130px);overflow:auto}  /* 下緣讓開 Cesium 動畫鈕與時間軸 */
   #hud h1{font-size:16px;margin:0 0 4px;line-height:1.25;font-weight:700}
   #hud .sub{color:var(--muted);font-size:12px;margin:0 0 12px;line-height:1.5}
   .picker{margin:0 0 12px;border:1px solid var(--line);border-radius:9px;padding:10px}

@@ -188,7 +188,7 @@
       // 之平分線 → 地球（角徑約 12°）在左、兩物體在右，各離軸約 ±12°，仿 COMSPOC 構圖。
       var c = C.Cartographic.fromCartesian(basis.mid);
       var lon = C.Math.toDegrees(c.longitude), rMid = C.Cartesian3.magnitude(basis.mid);
-      var distC = Math.max(1.6e7, rMid * 1.42);
+      var distC = Math.max(2.4e7, rMid * 1.42);   // LEO 遠景下限 24,000 km（地球約佔 31° 視角）
       dest = C.Cartesian3.fromDegrees(lon - 12, 6, distC - 6378137);
       var toC = C.Cartesian3.normalize(C.Cartesian3.negate(dest, new C.Cartesian3()), new C.Cartesian3());
       var toS = C.Cartesian3.normalize(C.Cartesian3.subtract(basis.mid, dest, new C.Cartesian3()), new C.Cartesian3());
@@ -220,16 +220,35 @@
   }
 
   // 切換至指定衛星視角（相機跟隨該顆），並更新按鈕/標籤
+  // 視角三態：t=第三方遠景（預設，綜觀整個事件）→ p=primary → s=secondary → t …
   function setViewpoint(which) {
     if (!_eP || !_eS || !_meta) return;
     _vp = which;
-    try { viewer.trackedEntity = (which === "p") ? _eP : _eS; } catch (e) {}
-    var curName = (which === "p") ? _meta.primName : _meta.secName;
-    var otherName = (which === "p") ? _meta.secName : _meta.primName;
+    var names = { t: "第三方遠景", p: _meta.primName, s: _meta.secName };
+    var next  = { t: "p", p: "s", s: "t" }[which];
+    if (which === "t") {
+      try { viewer.trackedEntity = undefined; } catch (e) {}
+      comspocCamera("wide");                 // 遠景構圖：地球在側、兩物體與軌道全入鏡
+    } else {
+      try { viewer.trackedEntity = (which === "p") ? _eP : _eS; } catch (e) {}
+    }
     var lab = document.getElementById("vpLabel");
-    if (lab) lab.textContent = "目前視角：" + curName;
+    if (lab) lab.textContent = "目前視角：" + names[which];
     var btn = document.getElementById("vpToggle");
-    if (btn) btn.textContent = "🎥 切換到 " + otherName + " 視角";
+    if (btn) btn.textContent = "🎥 切換到 " + names[next] + (next === "t" ? "" : " 視角");
+  }
+
+  // Cesium 時間軸醒目色帶：meta.phases = [{from,to,label,color}]（部署/訪G/返回/回收）
+  function paintPhases(phases) {
+    if (!viewer.timeline || !phases || !phases.length) return;
+    try { viewer.timeline._highlightRanges = []; } catch (e) {}   // 換場景時清舊色帶
+    phases.forEach(function (ph, i) {
+      try {
+        var r = viewer.timeline.addHighlightRange(ph.color || "#F2A73B", 4, 1 + i * 5);
+        r.setRange(C.JulianDate.fromIso8601(ph.from), C.JulianDate.fromIso8601(ph.to));
+      } catch (e) {}
+    });
+    try { viewer.timeline.resize(); } catch (e) {}
   }
 
   // ── 相對運動圖：距離–時間、RTN 分量–時間（純 canvas），游標隨 Cesium 時鐘同步 ──
@@ -420,6 +439,7 @@
     // 播放速度：全窗約 3 分鐘播完（原 90 s 減半），讓機動段看得清楚
     viewer.clock.multiplier = Math.max(15, spanSec / 180);
     viewer.clock.shouldAnimate = true;
+    paintPhases(meta.phases);                       // 需在 zoomTo 前掛上，色帶才會隨刻度繪出
     if (viewer.timeline) viewer.timeline.zoomTo(t0, t1);
 
     _tick = function (clock) {
@@ -438,8 +458,8 @@
     viewer.clock.onTick.addEventListener(_tick);
 
     document.getElementById("loading").style.display = "none";
-    // 自動切換為其中一顆衛星視角（預設 primary）；相機跟隨該顆，可用按鈕來回切換
-    setViewpoint("p");
+    // 預設第三方遠景綜觀事件；操作者可循 遠景→primary→secondary 切換
+    setViewpoint("t");
     if (_comspocOn) setComspoc(true);
 
     stat("TCA " + fmtRange(summary.d_min) + " km · Pc(proxy) " + fmtPc(summary.pc_max).replace("&lt;", "<")
@@ -519,7 +539,7 @@
     });
     var vpBtn = document.getElementById("vpToggle");
     if (vpBtn) vpBtn.addEventListener("click", function () {
-      setViewpoint(_vp === "p" ? "s" : "p");   // 來回切換兩顆衛星視角
+      setViewpoint({ t: "p", p: "s", s: "t" }[_vp] || "t");   // 遠景→primary→secondary 循環
     });
     var pcChk = document.getElementById("pcSphereChk");
     _pcSphereOn = pcChk ? pcChk.checked : true;   // 預設開啟

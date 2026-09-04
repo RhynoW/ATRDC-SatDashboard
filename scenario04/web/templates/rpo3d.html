@@ -76,10 +76,6 @@
   a.back{position:absolute;top:14px;right:14px;z-index:10;background:var(--panel);border:1px solid var(--line);
     border-radius:8px;padding:8px 12px;color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:12px}
   a.back:hover{color:var(--ink)}
-.charts{margin-top:8px}.charts h2{font-size:12px;color:#8b949e;margin:0 0 4px;font-weight:500}
-.charts .ch{background:#0a0f1a;border:1px solid #21262d;border-radius:6px;padding:4px 6px 2px;margin-bottom:6px}
-.charts .cl{font-size:10.5px;color:#8b949e;margin-bottom:2px}.charts canvas{width:100%;display:block}
-.charts .cstat{font-size:11px;color:#c9d1d9;font-family:monospace}
 </style>
 </head>
 <body>
@@ -122,12 +118,6 @@
       <label style="margin-top:6px"><input type="checkbox" id="comspocChk"> 🛰 COMSPOC 模式（全期地固軌跡迴圈 + 外側定鏡頭 + Ranges）</label>
       <span id="comspocInfo" style="display:block;color:var(--muted);font-size:10px;margin:5px 0 0 22px"></span>
       <button id="camToggle" class="vpctl-btn" style="display:none;margin:6px 0 0 22px;background:var(--sec);color:#03202b;border:0;border-radius:7px;padding:6px 10px;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer">📷 鏡頭 ⇄</button>
-    </div>
-    <div class="charts">
-      <h2>相對運動（聚焦窗）</h2>
-      <div class="ch"><div class="cl">距離 |ρ| (km) — 時間</div><canvas id="ch_dist" height="90"></canvas></div>
-      <div class="ch"><div class="cl"><span style="color:#f0883e">R 徑向</span>・<span style="color:#58a6ff">T 沿軌</span>・<span style="color:#bc8cff">N 法向</span> (km) — 時間</div><canvas id="ch_rtn" height="110"></canvas></div>
-      <div class="cstat" id="ch_stat">—</div>
     </div>
     <div class="tl"><h2>事件時間軸</h2><div id="timeline"></div></div>
     <div class="note" id="note"></div>

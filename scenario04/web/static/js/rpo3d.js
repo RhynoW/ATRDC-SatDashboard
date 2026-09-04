@@ -417,7 +417,8 @@
     viewer.clock.stopTime = t1.clone();
     viewer.clock.currentTime = C.JulianDate.addSeconds(t0, spanSec / 2, new C.JulianDate());
     viewer.clock.clockRange = C.ClockRange.LOOP_STOP;
-    viewer.clock.multiplier = Math.max(30, spanSec / 90);
+    // 播放速度：全窗約 3 分鐘播完（原 90 s 減半），讓機動段看得清楚
+    viewer.clock.multiplier = Math.max(15, spanSec / 180);
     viewer.clock.shouldAnimate = true;
     if (viewer.timeline) viewer.timeline.zoomTo(t0, t1);
 

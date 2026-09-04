@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RPO 案例總覽 — SatDashboard</title>
+<style>
+:root{--bg:#0A0D13;--panel:#12161f;--line:rgba(255,255,255,.09);--ink:#dfe6f0;--muted:#8b96a8;
+      --prim:#F2A73B;--sec:#35C6F4;--crit:#FF5C4E;--mono:"Consolas","Courier New",monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.65 "Segoe UI","Microsoft JhengHei",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:28px 20px 60px}
+.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+h1{font-size:22px;margin:0}
+.top a{color:var(--sec);text-decoration:none;font-family:var(--mono);font-size:12px}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 16px}
+.card h2{font-size:16px;margin:0 0 6px}
+.card .ids{font-family:var(--mono);font-size:11px;color:var(--muted);margin:0 0 8px}
+.card p{margin:6px 0;color:var(--ink);font-size:13px}
+.btn{display:inline-block;background:var(--prim);color:#1a1205;border-radius:8px;padding:8px 14px;
+     font-family:var(--mono);font-size:12.5px;font-weight:700;text-decoration:none;margin:10px 10px 2px 0}
+.btn.alt{background:var(--sec);color:#03202b}
+.btn:hover{filter:brightness(1.08)}
+.tl{margin:10px 0 2px;border-top:1px solid var(--line)}
+.tlrow{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.tlrow .d{font-family:var(--mono);font-size:11px;color:var(--prim)}
+.feat{border-color:var(--prim)}
+.feat h2{color:var(--prim)}
+.howto{background:rgba(53,198,244,.06);border:1px solid rgba(53,198,244,.25);border-radius:9px;padding:10px 14px;margin:12px 0 4px;font-size:12.5px}
+.howto b{color:var(--sec)}
+.note{color:var(--muted);font-size:11.5px;font-family:var(--mono);margin-top:10px}
+h3{font-size:13.5px;margin:14px 0 4px;color:var(--sec)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>🛰 RPO 案例總覽</h1>
+    <a href="/">← 地球儀主頁</a>
+    <a href="/rpo">開啟 RPO 檢視器（任意配對）</a>
+  </div>
+  <p class="sub">以公開 TLE + SGP4 獨立重建之交會/近接操作（RPO）案例。點「▶ 回放」直接進入
+     3D 場景；距離為 TLE 級精度（km 級）幾何重建，Pc 為 Chan 首階排序代理、非作業級。</p>
+
+  {% if featured %}
+  <div class="card feat">
+    <h2>特寫：神龍太空飛機（第 4 次任務）× Object H — 部署、訪問與回收全程回放</h2>
+    <div class="ids">primary 69673（OBJECT H，2026-024H）× secondary 67689（PRC TEST SPACECRAFT 4，2026-024A）</div>
+
+    <p><b>背景</b> — 中國第 4 架可重複使用試驗太空飛機（NORAD 67689，2026-024A，2026-02-07
+       酒泉發射，西方稱 Shenlong「神龍」）於 605 km / 49.99° 軌道運作。2026-06-22 釋放一顆
+       小型衛星 Object H（NORAD 69673，2026-024H）。H 隨後機動離開、前往「上一次任務（2023-195）
+       釋放的 Object G（59884）」繞行偵察，再折返太空飛機並於 7 月中旬被回收——
+       美國第 18 太空防禦中隊（18 SDS）與 LeoLabs 均作此評估，路透社 2026-08 報導即此事件。
+       本案例以 Space-Track 公開 TLE 逐日 SGP4 重建，時序與 LeoLabs 完全一致。</p>
+
+    <h3>逐段時序（回放時對照畫面右側時間軸）</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-06-22</div><div><b>部署</b>：H 自太空飛機釋放，兩者相距僅 ≈0.2 km、近乎共位。</div></div>
+      <div class="tlrow"><div class="d">06-24 ~ 07-06</div><div><b>離開</b>：H 沿軌道漸行漸遠，前往訪問 Object G（H–太空梭距離升至約 1,000 km）。</div></div>
+      <div class="tlrow"><div class="d">07-08 ~ 07-11</div><div><b>返回</b>：訪 G 結束後折返，H–太空梭 722 → 5 km——逆轉自然漂移需要推力，是「受控接近」的直接證據。</div></div>
+      <div class="tlrow"><div class="d">07-12 ~ 07-14</div><div><b>回收</b>：兩者距離 ≈0 km，地面感測器已無法分辨；18 SDS 評估 H 已被太空飛機收回。</div></div>
+      <div class="tlrow"><div class="d">07-14 之後</div><div><b>共位</b>：編目上 H 與太空飛機維持近乎相同軌道（≈0 km）。</div></div>
+    </div>
+
+    <div class="howto"><b>怎麼看回放</b>：
+      ① 左側「距離–時間」曲線是主線索：V 字谷 = 接近事件，貼地 0 = 回收；
+      ② 3D 視角預設跟隨 H，可按「切換視角」改看太空飛機；
+      ③ 紅線是兩者連線（越紅越近），紅點標最接近時刻；
+      ④ 播放速度已調為全程約 3 分鐘，時間軸可拖曳到 07-12 直接看回收段；
+      ⑤ 3σ 橢球代表 TLE 級不確定度——次公里距離落在雜訊底，回收段請看趨勢而非單點數值。</div>
+
+    <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ 回放：部署與回收（69673 × 67689）</a>
+    <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ 支線：H 訪問 Object G（69673 × 59884）</a>
+    <div class="note">獨立重現：verify_shenlong_2026_rpo.py（SGP4 逐日最小距離）；報告章：期末_RPO案例_神龍_20260807。</div>
+  </div>
+  {% endif %}
+
+  {% for c in cases %}
+  <div class="card">
+    <h2>{{ c.title }}</h2>
+    <div class="ids">{{ c.primary }} × {{ c.secondary }}</div>
+    <p>{{ c.subtitle }}</p>
+    {% if c.timeline %}
+    <div class="tl">
+      {% for r in c.timeline %}
+      <div class="tlrow"><div class="d">{{ r.d }}</div><div>{{ r.t | safe }}</div></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <a class="btn" href="/rpo?primary={{ c.primary }}&secondary={{ c.secondary }}">▶ 回放（{{ c.primary }} × {{ c.secondary }}）</a>
+  </div>
+  {% endfor %}
+
+  <p class="note">方法學：兩物體各取最近 elset 以 SGP4 傳播至共同時鐘；已知案例載入 preset
+     視窗與事件標註。GEO 案例可勾「COMSPOC 模式」看地固座標系定點保持迴圈。</p>
+</div>
+</body>
+</html>

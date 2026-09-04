@@ -1,6 +1,7 @@
 """RPO 3D 場景路由：兩顆衛星相對接近 + Chan Pc 之 Cesium 3D 展示。
 
   GET /rpo                       → 3D 場景頁（預設神龍 58573 × 59884）
+  GET /rpo/cases                 → RPO 案例總覽 landing page（各案例直接連結）
   GET /api/rpo/<prim>/<sec>      → 場景資料 JSON（orbit / series / meta / summary）
 """
 from __future__ import annotations
@@ -26,6 +27,16 @@ def rpo_presets():
     out = [{"primary": p, "secondary": s, "title": info.get("title", f"{p} × {s}")}
            for (p, s), info in _PRESETS.items()]
     return jsonify({"presets": out})
+
+
+@bp.get("/rpo/cases")
+def rpo_cases():
+    """RPO 案例總覽：精選案例卡片 + 直接回放連結（特寫＝神龍4 × Object H）。"""
+    cases = [{"primary": p, "secondary": s, **info} for (p, s), info in _PRESETS.items()]
+    featured = next((c for c in cases
+                     if (c["primary"], c["secondary"]) == (69673, 67689)), None)
+    rest = [c for c in cases if c is not featured]
+    return render_template("rpo_cases.html", featured=featured, cases=rest)
 
 
 @bp.get("/rpo", strict_slashes=False)

@@ -66,7 +66,12 @@ if errorlevel 1 (
   echo.
   echo   push 失敗；嘗試自動復原（LFS 清理會重寫 HF 端歷史 -> fetch-first 為預期現象）...
   git fetch hf main
-  if errorlevel 1 goto :fail
+  if errorlevel 1 git -c protocol.version=0 fetch hf main
+  if errorlevel 1 (
+    echo   [!] fetch 持續失敗（如 fatal: expected 'acknowledgments'＝LFS 清理重寫後的協商錯誤）。
+    echo       手動復原：乾淨 clone 提交 DB 後、本機自 clone 對齊；步驟見專案記憶或問 Claude。
+    goto :fail
+  )
   git branch -f backup_%TODAY% master
   git reset --hard hf/main
   copy /y %APP%\DB\space_db_slim.duckdb %APP%\scenario04\DB\space_db_slim.duckdb >nul

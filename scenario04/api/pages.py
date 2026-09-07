@@ -22,6 +22,12 @@ def taipei_page():
     return render_template("taipei.html", cesium_token=settings.CESIUM_ION_TOKEN)
 
 
+@bp.get("/cable")
+def cable_page():
+    """台灣周邊海纜態勢互動地圖（示意路線＋斷纜事件蒐整；本機 Cesium）。"""
+    return render_template("cable.html")
+
+
 @bp.get("/starlink")
 def starlink_page():
     return render_template("starlink.html")

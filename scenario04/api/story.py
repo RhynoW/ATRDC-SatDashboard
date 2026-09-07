@@ -333,6 +333,8 @@ TW_SITES: list[dict] = [
     {"key": "taichung", "name": "台中",           "lat": 24.1477, "lon": 120.6736},
     {"key": "tropic",  "name": "北回歸線（嘉義）", "lat": 23.4500, "lon": 120.4400},
     {"key": "eluanbi", "name": "鵝鑾鼻",          "lat": 21.9017, "lon": 120.8536},
+    {"key": "nangan",  "name": "馬祖南竿",        "lat": 26.1602, "lon": 119.9297},
+    {"key": "kinmen",  "name": "金門",            "lat": 24.4365, "lon": 118.3186},
 ]
 _REVISIT_CACHE: dict = {}
 

@@ -40,7 +40,8 @@ function provHtml(){
     row('歷史範圍', (PROV.tle_epoch_min || '').slice(0, 10) + ' ～ ' + (PROV.tle_epoch_max || '').slice(0, 10) + (PROV.tle_epoch_max > (PROV.tle_epoch_latest_past || '') ? '（含未來 epoch）' : '')) +
     row('版本／狀態', (PROV.app_commit ? 'commit ' + PROV.app_commit + '・' : '') + (PROV.status || '技術展示／非操作級')) +
     row('資料庫更新', (PROV.db_updated_at || '').slice(0, 16).replace('T', ' ') + ' UTC') + row('傳播模型', PROV.propagator) +
-    row('座標系', PROV.frame) + row('精度等級', PROV.accuracy) + row('碰撞機率', PROV.pc_model) + row('機動候選', PROV.maneuver_method) +
+    row('座標系', PROV.frame) + row('精度等級', PROV.accuracy) + row('接近關注參數', PROV.pc_model) + row('軌道變化候選', PROV.maneuver_method) +
+    row('口徑快照', ((PROV.generated_at || '').slice(0, 16).replace('T', ' ') + ' UTC（頁面產生時間；未來 epoch 之 TLE 為 GEO 平根數常態，傳播一律以「不晚於現在之最新 epoch」為準）')) +
     '</div></details>';
 }
 
@@ -758,6 +759,41 @@ async function loadTrack(el, norad){
   SKY_TIMER = setInterval(() => { k++; draw(); }, 120);
 }
 
+/* ── 首屏狀態卡：離島備援窗口／覆蓋空窗／接近關注事件（幾何層、候選需人工複核） ── */
+async function initHeroCards(cfg){
+  const box = $id('hcards'); if(!box) return;
+  const group = cfg.group || 'oneweb', site = cfg.site || 'nangan', thr = cfg.threshold_km || 10;
+  const card = (v, l, s) => '<div class="hcard"><b>' + v + '</b><span>' + l + '</span>' +
+                            (s ? '<i>' + s + '</i>' : '') + '</div>';
+  try{
+    const [rv, cj] = await Promise.all([
+      fetch('/api/story/revisit?group=' + group + '&site=' + site).then(r => r.json()),
+      fetch('/api/conjunctions?threshold_km=' + thr + '&max_pairs=400').then(r => r.json()).catch(() => null),
+    ]);
+    if(rv.error){ box.innerHTML = '<div class="ph">' + esc(rv.error) + '</div>'; return; }
+    // 取最接近 25° 的仰角門檻（一般使用者終端常見遮蔽角）
+    let mi = 0, best = 1e9;
+    rv.masks.forEach((m, i) => { const d = Math.abs(m - 25); if(d < best){ best = d; mi = i; } });
+    const b = rv.by_mask[String(Math.round(rv.masks[mi]))];
+    // 下一個候選窗口：由可見顆數時間帶找目前／下一個 >0 的時槽
+    const tl = b.timeline || [], binMin = rv.window.hours * 60 / tl.length;
+    let nextTxt = '—';
+    if(tl.length){
+      if(tl[0] > 0){ nextTxt = '現在即有幾何覆蓋'; }
+      else{
+        const k = tl.findIndex(x => x > 0);
+        nextTxt = k < 0 ? rv.window.hours + ' h 內無窗口' : '約 ' + Math.round(k * binMin) + ' 分鐘後';
+      }
+    }
+    const age = (PROV && PROV.tle_age_days != null) ? 'TLE 資料齡 ' + PROV.tle_age_days + ' 天' : '';
+    box.innerHTML =
+      card(esc(rv.site_name), esc(rv.label) + ' 備援觀測點', '可於第五部切換站點') +
+      card(nextTxt, '下一個候選備援窗口（門檻 ' + rv.masks[mi].toFixed(0) + '°）', '幾何層，非通聯保證') +
+      card(b.coverage_pct >= 99.999 ? '無中斷' : b.max_gap_min.toFixed(0) + ' 分', '最長覆蓋空窗（' + rv.window.hours + ' h 內）', age) +
+      card(cj && cj.count != null ? fmtN(cj.count) + ' 對' : '—', '空間接近關注事件（<' + thr + ' km）', '候選，需人工複核');
+  }catch(e){ box.innerHTML = ''; }
+}
+
 async function initCdm(el){
   const thr = el.dataset.thr || 10;
   const d = await (await fetch('/api/conjunctions?threshold_km=' + thr + '&max_pairs=400')).json();
@@ -767,13 +803,13 @@ async function initCdm(el){
   el.innerHTML = '<div class="kpis">' + kpi(fmtN(d.count), '<' + thr + ' km 幾何接近配對（TLE 傳播）') +
     kpi(fmtN(d.total_scanned), '掃描物體數') + kpi((d.elapsed_sec || 0) + ' s', '向量化 SGP4 掃描耗時') +
     kpi(pairs.filter(p => p.risk_level === 'RED').length + ' / ' + pairs.filter(p => p.risk_level === 'AMBER').length, 'RED / AMBER（前 10）') + '</div>' +
-    '<table class="data"><tr><th>主體</th><th>次體</th><th>最接近距離</th><th>Pc（proxy）</th><th>等級</th><th></th></tr>' +
+    '<table class="data"><tr><th>主體</th><th>次體</th><th>最接近距離</th><th>接近關注參數</th><th>等級</th><th></th></tr>' +
     pairs.map(p => '<tr><td>' + esc(p.primary_name) + '<br><span style="color:#6e7681">' + p.primary_norad + ' · ' + p.primary_alt_km + ' km</span></td>' +
       '<td>' + esc(p.secondary_name) + '<br><span style="color:#6e7681">' + p.secondary_norad + '</span></td>' +
       '<td>' + p.miss_km.toFixed(2) + ' km</td><td>' + p.Pc_str + '</td>' +
       '<td><b style="color:' + lv(p.risk_level) + '">' + p.risk_level + '</b></td>' +
       '<td><button class="nbtn" data-p="' + p.primary_norad + '" data-s="' + p.secondary_norad + '">3D 展開</button></td></tr>').join('') +
-    '</table><div class="note">幾何篩選（<' + thr + ' km）≠ 碰撞風險：Pc 為 Chan (2008) 2-D 近似，σ R/T/N 為固定假設值（' + (PROV ? PROV.pc_model.replace(/^.*σ/, 'σ') : '100/500/100 m') + '），非 CDM 協方差，僅供排序；已排除距離≈0 之對接／共位配對。</div>' +
+    '</table><div class="note">「接近關注參數」（Pc proxy）僅用於排序須人工複核的事件，非碰撞判定、非正式碰撞機率。幾何篩選（<' + thr + ' km）≠ 碰撞風險：其值為 Chan (2008) 2-D 近似，σ R/T/N 為固定假設值（' + (PROV ? PROV.pc_model.replace(/^.*σ/, 'σ') : '100/500/100 m') + '），非 CDM 協方差，僅供排序；已排除距離≈0 之對接／共位配對。</div>' +
     '<div class="frame" id="' + el.id + '-fr" style="display:none" data-h="820"></div>';
   el.querySelectorAll('button[data-p]').forEach(b => b.addEventListener('click', () => {
     const fr = $id(el.id + '-fr'); fr.style.display = ''; fr.querySelectorAll('iframe').forEach(f => f.remove());
@@ -839,7 +875,9 @@ async function renderStory(sid){
   // 封面（標題／副標／說明）併入第一節上方，不再獨立佔一整頁（滿頁吸附下獨立封面會卡在第一頁）
   const heroHtml = '<div class="hero-in"><h2>' + esc(st.title) + '</h2>' +
           '<div class="sub">' + esc(st.subtitle || '') + '</div>' +
+          (st.hero_cards ? '<div class="hcards" id="hcards"><div class="ph">載入即時狀態…</div></div>' : '') +
           (st.hero_note ? '<div class="note">' + esc(st.hero_note) + '</div>' : '') + provHtml() + '</div>';
+  if(st.hero_cards) setTimeout(() => initHeroCards(st.hero_cards), 0);
   let h = '';
 
   const SECS = st.sections || [];

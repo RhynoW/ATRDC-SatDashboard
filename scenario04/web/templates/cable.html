@@ -136,6 +136,17 @@ const INCIDENTS=[
 ];
 
 let viewer,cableDS=null,landingDS=null,admDS=null,twDS=null,landDS=null,selKey=null;
+
+/* depthTestAgainstTerrain=true 之下，高度 0 的線面會沉入地表——
+   將各圖層微幅抬離（2–6 km，全球視角無感），近面可見、背面被地球正確遮擋 */
+function liftPolyline(pl,h){
+  const pos=pl.positions&&pl.positions.getValue(Cesium.JulianDate.now());
+  if(!pos)return;
+  pl.positions=pos.map(p=>{
+    const c=Cesium.Cartographic.fromCartesian(p);
+    return Cesium.Cartesian3.fromRadians(c.longitude,c.latitude,h);
+  });
+}
 const SYS={};          // key(properties.id) → {name, zh?, desc?, inc?, entities:[], color}
 
 function startApp(){
@@ -170,7 +181,7 @@ function startApp(){
       const fill=Cesium.Color.fromCssColorString('#3e4a3d').withAlpha(0.5);
       ds.entities.values.forEach(e=>{
         if(e.polygon){e.polygon.material=new Cesium.ColorMaterialProperty(fill);
-          e.polygon.outline=false;}
+          e.polygon.outline=false;e.polygon.height=2000;}
       });
       applyLayers();
     }).catch(()=>{});
@@ -179,7 +190,8 @@ function startApp(){
       admDS=ds;viewer.dataSources.add(ds);
       const col=Cesium.Color.fromCssColorString('#f0f6fc').withAlpha(0.85);
       ds.entities.values.forEach(e=>{
-        if(e.polyline){e.polyline.material=new Cesium.ColorMaterialProperty(col);e.polyline.width=2.2;}
+        if(e.polyline){e.polyline.material=new Cesium.ColorMaterialProperty(col);e.polyline.width=2.2;
+          liftPolyline(e.polyline,4000);}
       });
       applyLayers();
     }).catch(()=>{});
@@ -190,7 +202,7 @@ function startApp(){
       ds.entities.values.forEach(e=>{
         if(e.polygon){
           e.polygon.fill=false;e.polygon.outline=true;
-          e.polygon.outlineColor=col;
+          e.polygon.outlineColor=col;e.polygon.height=4000;
           const pr=e.properties;
           e._admName=(pr&&(pr.COUNTYNAME||pr.name))
             ? (pr.COUNTYNAME?pr.COUNTYNAME.getValue():pr.name.getValue()) : '';
@@ -214,6 +226,7 @@ function startApp(){
                     desc:cur?cur.d:null,inc:!!(cur&&cur.inc),tw:!!cur};
         }
         SYS[key].entities.push(e);
+        liftPolyline(e.polyline,6000);
         styleEntity(e,SYS[key],false);
         e._sysKey=key;
       });
@@ -267,6 +280,9 @@ function toggleLandings(on){
       landingDS=ds;
       ds.entities.values.forEach(e=>{
         e.billboard=undefined;
+        const p=e.position&&e.position.getValue(Cesium.JulianDate.now());
+        if(p){const c=Cesium.Cartographic.fromCartesian(p);
+          e.position=Cesium.Cartesian3.fromRadians(c.longitude,c.latitude,5000);}
         e.point=new Cesium.PointGraphics({pixelSize:4,
           color:Cesium.Color.fromCssColorString('#3fb950')});
         e._lndName=e.properties&&e.properties.name?e.properties.name.getValue():'';

@@ -13,6 +13,12 @@ function esc(s){
   return String(s).replace(/[&<>"']/g,
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+/* 表格儲存格：先 esc，再把 markdown 連結 [文字](https://…) 轉為 <a>（僅限表格用） */
+function mdCell(s){
+  return esc(s).replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
 function $id(i){ return document.getElementById(i); }
 
 /* ── 資料口徑（provenance）：頁面載入時抓一次，供口徑列／各區塊註記 ── */
@@ -738,7 +744,7 @@ async function renderStory(sid){
       sec.rows.forEach((row, ri) => {
         const anchor = (sec.row_anchors || [])[ri] || '';
         h += '<tr class="rw"' + (anchor ? ' data-go="' + esc(anchor) + '"' : '') + '>' +
-             row.map(c => '<td>' + esc(c) + '</td>').join('') + '</tr>';
+             row.map(c => '<td>' + mdCell(c) + '</td>').join('') + '</tr>';
       });
       h += '</table>';
       if(sec.note) h += '<div class="tbl-note">' + esc(sec.note) + '</div>';

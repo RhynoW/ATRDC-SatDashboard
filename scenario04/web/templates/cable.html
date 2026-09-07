@@ -159,6 +159,7 @@ function startApp(){
     navigationHelpButton:false,fullscreenButton:false,selectionIndicator:false});
   viewer.scene.globe.enableLighting=false;
   viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#0b2a45');  /* 海洋底色 */
+  viewer.scene.globe.depthTestAgainstTerrain=true;  /* 地球本體遮擋背面圖資（防止透視到另一端） */
   document.getElementById('map-loading').textContent='載入全球海纜圖資…';
   viewer.camera.setView({destination:Cesium.Rectangle.fromDegrees(105,8,140,33)});
 
@@ -249,15 +250,13 @@ function styleEntity(e,sys,selected){
 function addIncidents(){
   INCIDENTS.forEach(ev=>{
     const e=viewer.entities.add({
-      position:Cesium.Cartesian3.fromDegrees(ev.lon,ev.lat),
+      position:Cesium.Cartesian3.fromDegrees(ev.lon,ev.lat,8000),
       point:{pixelSize:9,color:Cesium.Color.fromCssColorString('#f85149'),
-        outlineColor:Cesium.Color.WHITE,outlineWidth:2,
-        disableDepthTestDistance:Number.POSITIVE_INFINITY},
+        outlineColor:Cesium.Color.WHITE,outlineWidth:2},
       label:{text:'⚠ '+ev.t,font:'11px "Noto Sans TC",sans-serif',
         fillColor:Cesium.Color.fromCssColorString('#f85149'),
         style:Cesium.LabelStyle.FILL_AND_OUTLINE,outlineColor:Cesium.Color.BLACK,outlineWidth:3,
-        pixelOffset:new Cesium.Cartesian2(0,14),
-        disableDepthTestDistance:Number.POSITIVE_INFINITY}});
+        pixelOffset:new Cesium.Cartesian2(0,14)}});
     e._incRef=ev.id;e._isInc=true;
   });
 }
@@ -269,8 +268,7 @@ function toggleLandings(on){
       ds.entities.values.forEach(e=>{
         e.billboard=undefined;
         e.point=new Cesium.PointGraphics({pixelSize:4,
-          color:Cesium.Color.fromCssColorString('#3fb950'),
-          disableDepthTestDistance:Number.POSITIVE_INFINITY});
+          color:Cesium.Color.fromCssColorString('#3fb950')});
         e._lndName=e.properties&&e.properties.name?e.properties.name.getValue():'';
         e.label=undefined;
       });

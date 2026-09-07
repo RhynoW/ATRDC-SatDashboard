@@ -14,6 +14,12 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
+# slim DB 發布位置：HF Dataset（DB 已移出 Space git——LFS 額度/歷史重寫問題的根本解，
+# 2026-09-07）。部署容器內無 DB 檔時於 resolve_db() 自動下載一次。
+SLIM_DB_DATASET_URL = (
+    "https://huggingface.co/datasets/RhynoWu/satdashboard-db/resolve/main/space_db_slim.duckdb"
+)
+
 RAW_TABLE  = settings.RAW_TABLE
 META_TABLE = settings.META_TABLE
 
@@ -41,8 +47,35 @@ def resolve_db() -> Path | None:
                 logger.warning("DB 解析：%s（%s）優先於預設路徑 %s",
                                path, desc, settings.DB_PATH.name)
             return path
-    logger.error("找不到資料庫: %s（含專案根與 slim 各回退位置皆無）", settings.DB_PATH)
+    # 5. 皆無（典型＝HF Space 全新容器）→ 自 Dataset 下載 slim 快照（~200 MB，站內數十秒）
+    dl = _download_slim_db(settings.DB_PATH.parent / "space_db_slim.duckdb")
+    if dl is not None:
+        return dl
+    logger.error("找不到資料庫: %s（含專案根、slim 回退與 Dataset 下載皆無）", settings.DB_PATH)
     return None
+
+
+def _download_slim_db(dest: Path) -> Path | None:
+    """自 HF Dataset 串流下載 slim DB 至 dest（先寫 .part 再改名，避免半成品被誤用）。"""
+    import requests
+
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix(".part")
+        logger.warning("DB 不存在，自 Dataset 下載：%s → %s", SLIM_DB_DATASET_URL, dest)
+        t0 = time.time()
+        with requests.get(SLIM_DB_DATASET_URL, stream=True, timeout=(10, 600)) as r:
+            r.raise_for_status()
+            with open(tmp, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1 << 20):
+                    f.write(chunk)
+        tmp.replace(dest)
+        logger.warning("DB 下載完成：%.0f MB（%.0f s）",
+                       dest.stat().st_size / 1e6, time.time() - t0)
+        return dest
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Dataset 下載 slim DB 失敗：%s", exc)
+        return None
 
 
 def check_db_freshness(db_path: Path | None = None,

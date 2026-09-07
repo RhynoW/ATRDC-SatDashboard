@@ -92,7 +92,7 @@
       <label><input type="checkbox" id="lyr-lnd" onchange="toggleLandings(this.checked)">
         <span style="color:#3fb950">●</span>全球登陸點</label>
       <label><input type="checkbox" id="lyr-adm" checked onchange="applyLayers()">
-        <span class="lg-line" style="background:#f0f6fc"></span>全球國界／陸地填色</label>
+        <span class="lg-line" style="background:#f0f6fc"></span>全球國界</label>
       <label><input type="checkbox" id="lyr-twadm" checked onchange="applyLayers()">
         <span class="lg-line" style="background:#3fb950"></span>台灣縣市界</label>
     </div>
@@ -135,7 +135,7 @@ const INCIDENTS=[
   txt:'多哥籍權宜輪「宏泰58」拖斷；扣船偵辦，船長判刑 3 年（首例定罪）。'},
 ];
 
-let viewer,cableDS=null,landingDS=null,admDS=null,twDS=null,landDS=null,selKey=null;
+let viewer,cableDS=null,landingDS=null,admDS=null,twDS=null,selKey=null;
 
 /* depthTestAgainstTerrain=true 之下，高度 0 的線面會沉入地表——
    將各圖層微幅抬離（2–6 km，全球視角無感），近面可見、背面被地球正確遮擋 */
@@ -174,17 +174,7 @@ function startApp(){
   document.getElementById('map-loading').textContent='載入全球海纜圖資…';
   viewer.camera.setView({destination:Cesium.Rectangle.fromDegrees(105,8,140,33)});
 
-  /* 行政界（自動載入）：陸地填色 110m＋全球國界線 Natural Earth 50m＋台灣縣市界 g0v TopoJSON */
-  Cesium.GeoJsonDataSource.load('/static/data/ne_110m_land.json')
-    .then(ds=>{
-      landDS=ds;viewer.dataSources.add(ds,0);
-      const fill=Cesium.Color.fromCssColorString('#3e4a3d').withAlpha(0.5);
-      ds.entities.values.forEach(e=>{
-        if(e.polygon){e.polygon.material=new Cesium.ColorMaterialProperty(fill);
-          e.polygon.outline=false;e.polygon.height=2000;}
-      });
-      applyLayers();
-    }).catch(()=>{});
+  /* 行政界（自動載入）：全球國界線 Natural Earth 50m＋台灣縣市界 g0v TopoJSON */
   Cesium.GeoJsonDataSource.load('/static/data/ne_50m_admin0_boundary_lines.json')
     .then(ds=>{
       admDS=ds;viewer.dataSources.add(ds);
@@ -332,9 +322,7 @@ function applyLayers(){
     e.show=glb&&(!twOnly||SYS[k].tw);
   }));
   viewer.entities.values.forEach(e=>{if(e._isInc)e.show=inc;});
-  const adm=document.getElementById('lyr-adm').checked;
-  if(admDS)admDS.show=adm;
-  if(landDS)landDS.show=adm;
+  if(admDS)admDS.show=document.getElementById('lyr-adm').checked;
   if(twDS)twDS.show=document.getElementById('lyr-twadm').checked;
 }
 </script>

@@ -74,6 +74,9 @@
       非實際海圖座標；已除役系統（如 SeaMeWe-3）不在圖資內；2023 年受損之台馬二、三號屬較舊國內纜，
       未收錄於該圖資，事件標記仍列。斷纜事件位置為新聞描述之近似海域，歸因以司法認定為準，
       未定案者以「疑似」表述。底圖：Cesium Ion World Imagery（未設 token 時自動退用本機 Natural Earth II）。
+      行政界圖層：全球國界線取自 Natural Earth 50m（公眾領域），台灣縣市界取自
+      <a href="https://github.com/g0v/twgeojson" target="_blank" rel="noopener">g0v twgeojson</a>（2010 版縣市界）；
+      界線僅供視覺參考，不代表任何主權立場。
     </div>
   </div>
   <div id="map-wrap">
@@ -88,6 +91,10 @@
         <span style="color:#f85149">⚠</span>斷纜事件（2023–2025）</label>
       <label><input type="checkbox" id="lyr-lnd" onchange="toggleLandings(this.checked)">
         <span style="color:#3fb950">●</span>全球登陸點</label>
+      <label><input type="checkbox" id="lyr-adm" checked onchange="applyLayers()">
+        <span class="lg-line" style="background:#e6edf3;opacity:.5"></span>全球國界</label>
+      <label><input type="checkbox" id="lyr-twadm" checked onchange="applyLayers()">
+        <span class="lg-line" style="background:#3fb950"></span>台灣縣市界</label>
     </div>
   </div>
 </div>
@@ -128,7 +135,7 @@ const INCIDENTS=[
   txt:'多哥籍權宜輪「宏泰58」拖斷；扣船偵辦，船長判刑 3 年（首例定罪）。'},
 ];
 
-let viewer,cableDS=null,landingDS=null,selKey=null;
+let viewer,cableDS=null,landingDS=null,admDS=null,twDS=null,selKey=null;
 const SYS={};          // key(properties.id) → {name, zh?, desc?, inc?, entities:[], color}
 
 function startApp(){
@@ -153,6 +160,32 @@ function startApp(){
   viewer.scene.globe.enableLighting=false;
   document.getElementById('map-loading').textContent='載入全球海纜圖資…';
   viewer.camera.setView({destination:Cesium.Rectangle.fromDegrees(105,8,140,33)});
+
+  /* 行政界（自動載入）：全球國界線 Natural Earth 50m＋台灣縣市界 g0v TopoJSON */
+  Cesium.GeoJsonDataSource.load('/static/data/ne_50m_admin0_boundary_lines.json')
+    .then(ds=>{
+      admDS=ds;viewer.dataSources.add(ds);
+      const col=Cesium.Color.fromCssColorString('#e6edf3').withAlpha(0.38);
+      ds.entities.values.forEach(e=>{
+        if(e.polyline){e.polyline.material=new Cesium.ColorMaterialProperty(col);e.polyline.width=1;}
+      });
+      applyLayers();
+    }).catch(()=>{});
+  Cesium.GeoJsonDataSource.load('/static/data/tw_county.topo.json')
+    .then(ds=>{
+      twDS=ds;viewer.dataSources.add(ds);
+      const col=Cesium.Color.fromCssColorString('#3fb950').withAlpha(0.85);
+      ds.entities.values.forEach(e=>{
+        if(e.polygon){
+          e.polygon.fill=false;e.polygon.outline=true;
+          e.polygon.outlineColor=col;
+          const pr=e.properties;
+          e._admName=(pr&&(pr.COUNTYNAME||pr.name))
+            ? (pr.COUNTYNAME?pr.COUNTYNAME.getValue():pr.name.getValue()) : '';
+        }
+      });
+      applyLayers();
+    }).catch(()=>{});
 
   Cesium.GeoJsonDataSource.load('/static/data/cable-geo.json',{clampToGround:false})
     .then(ds=>{
@@ -185,6 +218,7 @@ function startApp(){
     else if(p.id._incRef){const ev=INCIDENTS.find(x=>x.id===p.id._incRef);
       showDetail('⚠ '+ev.t+'｜'+ev.cable,'<span class="k">事件：</span>'+ev.txt);}
     else if(p.id._lndName)showDetail('● 登陸點','<span class="k">名稱：</span>'+p.id._lndName);
+    else if(p.id._admName)showDetail('🗺 行政區','<span class="k">名稱：</span>'+p.id._admName);
   },Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
 
@@ -270,6 +304,8 @@ function applyLayers(){
     e.show=glb&&(!twOnly||SYS[k].tw);
   }));
   viewer.entities.values.forEach(e=>{if(e._isInc)e.show=inc;});
+  if(admDS)admDS.show=document.getElementById('lyr-adm').checked;
+  if(twDS)twDS.show=document.getElementById('lyr-twadm').checked;
 }
 </script>
 </body>

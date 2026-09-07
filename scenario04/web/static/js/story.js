@@ -582,6 +582,121 @@ async function initRadar(el){
   ctx.fillText(tw.name, tx + (right ? -12 : 12), ty + 4);
 }
 
+/* -- 重訪 / 覆蓋分析（可調地面觀測仰角門檻）--------------------------------
+   後端一次傳播、回傳多個仰角門檻的結果，故滑桿切換門檻不需重新請求。 */
+const RV = {};   // el.id -> {data, mi}
+
+async function initRevisit(el){
+  const group = el.dataset.group || 'oneweb';
+  const site  = el.dataset.site  || 'taipei';
+  el.innerHTML = '<div class="ph">傳播星系軌道並計算各仰角門檻的覆蓋…</div>';
+  const d = await (await fetch('/api/story/revisit?group=' + encodeURIComponent(group) +
+                               '&site=' + encodeURIComponent(site))).json();
+  if(d.error){ el.innerHTML = '<div class="ph">' + esc(d.error) + '</div>'; return; }
+
+  // 預設門檻：取最接近 25 度（一般使用者終端常見遮蔽角）者
+  let mi = 0, best = 1e9;
+  d.masks.forEach((m, i) => { const dd = Math.abs(m - 25); if(dd < best){ best = dd; mi = i; } });
+  RV[el.id] = {data: d, mi: mi};
+
+  const sites = d.sites || [];
+  el.innerHTML =
+    '<div class="rvctl">' +
+      '<label>觀測點 <select id="' + el.id + '-site">' +
+        sites.map(s => '<option value="' + esc(s.key) + '"' + (s.key === site ? ' selected' : '') + '>' +
+          esc(s.name) + '（' + s.lat.toFixed(2) + '°N）</option>').join('') +
+      '</select></label>' +
+      '<label class="rng">地面觀測仰角門檻 ' +
+        '<input type="range" id="' + el.id + '-mask" min="0" max="' + (d.masks.length - 1) + '" step="1" value="' + mi + '">' +
+        '<b id="' + el.id + '-maskv"></b></label>' +
+    '</div>' +
+    '<div id="' + el.id + '-out"></div>';
+
+  $id(el.id + '-mask').oninput = e => { RV[el.id].mi = +e.target.value; drawRevisit(el.id); };
+  $id(el.id + '-site').onchange = async e => {
+    const out = $id(el.id + '-out'); out.innerHTML = '<div class="ph">重新計算中…</div>';
+    const nd = await (await fetch('/api/story/revisit?group=' + encodeURIComponent(group) +
+                                  '&site=' + encodeURIComponent(e.target.value))).json();
+    if(nd.error){ out.innerHTML = '<div class="ph">' + esc(nd.error) + '</div>'; return; }
+    RV[el.id].data = nd; drawRevisit(el.id);
+  };
+  drawRevisit(el.id);
+}
+
+function drawRevisit(id){
+  const st = RV[id]; if(!st) return;
+  const d = st.data, masks = d.masks, m = masks[st.mi], k = String(Math.round(m)), b = d.by_mask[k];
+  $id(id + '-maskv').textContent = m.toFixed(0) + '°';
+
+  const hrs = d.window.hours;
+  const noOutage = b.coverage_pct >= 99.999;
+  const satRv = b.sat_revisit_median_min;
+  const covCls = b.coverage_pct >= 99.9 ? ' gain' : '';
+
+  $id(id + '-out').innerHTML =
+    '<div class="kpis">' +
+      kpi(b.coverage_pct.toFixed(2) + '%', '覆蓋率（' + hrs + ' h 內至少 1 顆在門檻之上）', covCls) +
+      kpi(noOutage ? '無中斷' : b.max_gap_min.toFixed(1) + ' 分', '最長無覆蓋空窗') +
+      kpi(satRv == null ? '—' : (satRv / 60).toFixed(1) + ' h', '單星重訪週期（中位數）') +
+      kpi(b.mean_revisit_min == null ? '—' : b.mean_revisit_min.toFixed(2) + ' 分', '星系級平均過頂間隔') +
+      kpi(b.max_simultaneous, '同時可見顆數峰值') +
+    '</div>' +
+    '<div class="rvgrid">' +
+      '<div><div class="cap">覆蓋率 vs 仰角門檻（%）</div><canvas id="' + id + '-cov"></canvas></div>' +
+      '<div><div class="cap">最長無覆蓋空窗 vs 仰角門檻（分）</div><canvas id="' + id + '-gap"></canvas></div>' +
+    '</div>' +
+    '<div class="cap">未來 ' + hrs + ' h 可見顆數時間帶（門檻 ' + m.toFixed(0) + '°；紅色＝完全無覆蓋）</div>' +
+    '<canvas id="' + id + '-tl"></canvas>' +
+    (b.top_gaps.length
+      ? '<div class="cap">最長的無覆蓋空窗（門檻 ' + m.toFixed(0) + '°）</div><table class="data"><tr><th>#</th><th>空窗起始（UTC）</th><th>長度</th></tr>' +
+        b.top_gaps.map((g, i) => '<tr><td>' + (i + 1) + '</td><td>' +
+          g.start_utc.slice(5, 16).replace('T', ' ') + '</td><td>' + g.minutes.toFixed(1) + ' 分</td></tr>').join('') +
+        '</table>'
+      : '') +
+    '<div class="note">觀測點 ' + esc(d.site_name) + '；' + esc(d.label) + ' ' + fmtN(d.n_sats_propagated) +
+      ' 顆（TLE 可傳播）；時窗 ' + hrs + ' h、取樣 ' + d.window.step_sec + ' s。' +
+      '「單星重訪週期」為同一顆衛星再次過頂的間隔中位數（傳統 revisit period 定義）；' +
+      '「星系級平均過頂間隔」為任一顆衛星過頂的平均間隔，星系規模愈大此值愈小，兩者不可混用。' +
+      (b.gap_edge_censored_min > 0
+        ? '時窗頭尾另有被截斷之空窗（至少 ' + b.gap_edge_censored_min.toFixed(1) + ' 分），未計入統計。'
+        : '') +
+      '中位過頂長度 ' + (b.median_pass_min == null ? '—' : b.median_pass_min.toFixed(1) + ' 分') +
+      '，中位最大仰角 ' + (b.median_max_el_deg == null ? '—' : b.median_max_el_deg.toFixed(1) + '°') + '。</div>';
+
+  drawBars($id(id + '-cov'), masks.map(x => x.toFixed(0) + '°'),
+           masks.map(x => d.by_mask[String(Math.round(x))].coverage_pct),
+           masks.map((x, i) => i === st.mi ? '#ffd747' : '#1f6feb'), '');
+  drawBars($id(id + '-gap'), masks.map(x => x.toFixed(0) + '°'),
+           masks.map(x => d.by_mask[String(Math.round(x))].max_gap_min),
+           masks.map((x, i) => i === st.mi ? '#ffd747' : '#f85149'), '');
+  drawTimeline($id(id + '-tl'), b.timeline, hrs);
+}
+
+/* 可見顆數時間帶：0 顆的時段以紅色標出（服務中斷） */
+function drawTimeline(cv, arr, hours){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 600, h = 96;
+  cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + 'px';
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, w, h);
+  const padB = 20, padT = 8, n = arr.length, mx = Math.max(...arr, 1);
+  const bw = w / n;
+  arr.forEach((v, i) => {
+    const bh = (h - padT - padB) * v / mx;
+    ctx.fillStyle = v === 0 ? '#f85149' : '#238636';
+    ctx.fillRect(i * bw, v === 0 ? h - padB - 6 : h - padB - bh, Math.max(bw, 1), v === 0 ? 6 : bh);
+  });
+  ctx.strokeStyle = '#21262d'; ctx.beginPath(); ctx.moveTo(0, h - padB); ctx.lineTo(w, h - padB); ctx.stroke();
+  ctx.fillStyle = '#8b949e'; ctx.font = '10.5px Segoe UI'; ctx.textAlign = 'center';
+  const stepH = Math.max(1, Math.round(hours / 8));
+  for(let t = 0; t <= hours; t += stepH){
+    const x = w * t / hours;
+    ctx.fillText('+' + t + ' h', Math.min(w - 14, Math.max(14, x)), h - 6);
+  }
+  ctx.textAlign = 'left'; ctx.fillStyle = '#6e7681';
+  ctx.fillText('峰值 ' + mx + ' 顆', 4, 12);
+}
+
 async function initSkyplot(el){
   let sats = [];
   if(el.dataset.norads) sats = el.dataset.norads.split(',').map(x => ({norad: +x, name: 'NORAD ' + x}));
@@ -701,7 +816,8 @@ async function initReentry(el){
 }
 
 const LAZY_INIT = {groupstats: initGroupStats, maneuvers: initManeuvers, radar: initRadar,
-                   skyplot: initSkyplot, cdm: initCdm, isrres: initIsrRes, reentry: initReentry};
+                   skyplot: initSkyplot, cdm: initCdm, isrres: initIsrRes, reentry: initReentry,
+                   revisit: initRevisit};
 function initLazy(el){
   if(el.classList.contains('inited')) return;
   el.classList.add('inited');
@@ -769,6 +885,7 @@ async function renderStory(sid){
            (sec.n ? ' data-n="' + sec.n + '"' : '') +
            (sec.norads ? ' data-norads="' + sec.norads.join(',') + '"' : '') +
            (sec.threshold_km ? ' data-thr="' + sec.threshold_km + '"' : '') +
+           (sec.site ? ' data-site="' + esc(sec.site) + '"' : '') +
            '><div class="ph">捲動至此載入…</div></div>';
     }
     h += '</div></div>';

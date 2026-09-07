@@ -38,9 +38,11 @@ KIND_LABEL = {
     "skyplot": "過頂 Skyplot（radar_eval 之視圖；API 名稱沿用既有實作，輸出為幾何可見性指標）",
     "cdm": "幾何接近事件（單一時刻距離篩選，非碰撞風險判定）",
     "embed": "內嵌頁面", "toc": "章節總覽",
+    "revisit": "重訪 / 覆蓋分析（多仰角門檻；SGP4 傳播之幾何可見性，非鏈路預算）",
     "reentry": "再入估算（SGP4 近地點掠過 ＋ 數值 Monte Carlo；TLE-derived）",
 }
-API_OF = {"groupstats": "group_stats", "isrres": "isr_resolution", "radar": "radar_eval", "skyplot": "radar_eval"}
+API_OF = {"groupstats": "group_stats", "isrres": "isr_resolution", "radar": "radar_eval",
+          "skyplot": "radar_eval", "revisit": "revisit"}
 
 # ── 匯出字串表（依故事 lang；預設 zh）──
 I18N = {

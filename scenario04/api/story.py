@@ -327,6 +327,70 @@ def api_story_radar_eval():
     return json_response(res)
 
 
+# 台灣代表觀測點（供故事頁「重訪週期」區塊之緯度選單；高度取近海平面）
+TW_SITES: list[dict] = [
+    {"key": "taipei",  "name": "台北",            "lat": 25.0330, "lon": 121.5654},
+    {"key": "taichung", "name": "台中",           "lat": 24.1477, "lon": 120.6736},
+    {"key": "tropic",  "name": "北回歸線（嘉義）", "lat": 23.4500, "lon": 120.4400},
+    {"key": "eluanbi", "name": "鵝鑾鼻",          "lat": 21.9017, "lon": 120.8536},
+]
+_REVISIT_CACHE: dict = {}
+
+
+@bp.get("/api/story/revisit")
+def api_story_revisit():
+    """星系對台灣緯度地面點之重訪 / 覆蓋分析（一次傳播、多仰角門檻）。
+
+    Query params:
+        group     GROUPS 之鍵（預設 oneweb）
+        site      TW_SITES 之鍵；未給或不明時以 lat/lon 為準
+        lat/lon   自訂觀測點（site 未命中時使用）
+        hours     分析時窗（6–48，預設 24）
+        step_sec  取樣間隔（15–120，預設 30）
+    """
+    import time as _time
+    from ..ingestion.index import get_sat_index
+    from ..physics.revisit import compute_revisit
+    from . import parse_float_arg
+
+    key = request.args.get("group", "oneweb").strip()
+    if key not in GROUPS:
+        return json_response({"error": f"group 需為 {list(GROUPS)}"}), 400
+
+    site_key = request.args.get("site", "").strip()
+    site = next((s for s in TW_SITES if s["key"] == site_key), None)
+    if site:
+        lat, lon, site_name = site["lat"], site["lon"], site["name"]
+    else:
+        lat = parse_float_arg(request.args, "lat", TW_SITES[0]["lat"], -85.0, 85.0)
+        lon = parse_float_arg(request.args, "lon", TW_SITES[0]["lon"], -180.0, 180.0)
+        site_name = f"{lat:.2f}°N, {lon:.2f}°E"
+
+    hours = parse_float_arg(request.args, "hours", 24.0, 6.0, 48.0)
+    step = parse_float_arg(request.args, "step_sec", 30.0, 15.0, 120.0)
+
+    # 快取 30 分鐘：同一組參數在 TLE 未更新期間結果實質不變，避免重複傳播
+    ck = f"{key}|{lat:.3f}|{lon:.3f}|{hours:.0f}|{step:.0f}"
+    hit = _REVISIT_CACHE.get(ck)
+    if hit and _time.monotonic() - hit[0] < 1800:
+        return json_response({**hit[1], "from_cache": True})
+
+    idx = get_sat_index()
+    ids = group_members(idx, key)
+    if not ids:
+        return json_response({"error": f"群組 {key} 無成員"}), 404
+
+    res = compute_revisit(ids, idx, lat, lon, hours=hours, step_sec=step)
+    if res.get("error"):
+        return json_response(res), 500
+    res["group"] = key
+    res["label"] = GROUPS[key]["label"]
+    res["site_name"] = site_name
+    res["sites"] = TW_SITES
+    _REVISIT_CACHE[ck] = (_time.monotonic(), res)
+    return json_response(res, max_age=600)
+
+
 @bp.get("/api/story/track")
 def api_story_track():
     """台灣站對指定衛星之未來過頂 az/el 序列（norad 必填）。"""

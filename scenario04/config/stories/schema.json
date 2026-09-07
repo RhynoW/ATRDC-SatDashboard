@@ -51,7 +51,8 @@
               "radar",
               "skyplot",
               "cdm",
-              "reentry"
+              "reentry",
+              "revisit"
             ]
           },
           "title": {
@@ -174,6 +175,10 @@
                 "anchor"
               ]
             }
+          },
+          "site": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,31}$"
           }
         },
         "allOf": [

@@ -92,7 +92,7 @@
       <label><input type="checkbox" id="lyr-lnd" onchange="toggleLandings(this.checked)">
         <span style="color:#3fb950">●</span>全球登陸點</label>
       <label><input type="checkbox" id="lyr-adm" checked onchange="applyLayers()">
-        <span class="lg-line" style="background:#e6edf3;opacity:.5"></span>全球國界</label>
+        <span class="lg-line" style="background:#f0f6fc"></span>全球國界／陸地填色</label>
       <label><input type="checkbox" id="lyr-twadm" checked onchange="applyLayers()">
         <span class="lg-line" style="background:#3fb950"></span>台灣縣市界</label>
     </div>
@@ -135,7 +135,7 @@ const INCIDENTS=[
   txt:'多哥籍權宜輪「宏泰58」拖斷；扣船偵辦，船長判刑 3 年（首例定罪）。'},
 ];
 
-let viewer,cableDS=null,landingDS=null,admDS=null,twDS=null,selKey=null;
+let viewer,cableDS=null,landingDS=null,admDS=null,twDS=null,landDS=null,selKey=null;
 const SYS={};          // key(properties.id) → {name, zh?, desc?, inc?, entities:[], color}
 
 function startApp(){
@@ -158,16 +158,27 @@ function startApp(){
     sceneModePicker:false,infoBox:false,geocoder:false,homeButton:false,
     navigationHelpButton:false,fullscreenButton:false,selectionIndicator:false});
   viewer.scene.globe.enableLighting=false;
+  viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#0b2a45');  /* 海洋底色 */
   document.getElementById('map-loading').textContent='載入全球海纜圖資…';
   viewer.camera.setView({destination:Cesium.Rectangle.fromDegrees(105,8,140,33)});
 
-  /* 行政界（自動載入）：全球國界線 Natural Earth 50m＋台灣縣市界 g0v TopoJSON */
+  /* 行政界（自動載入）：陸地填色 110m＋全球國界線 Natural Earth 50m＋台灣縣市界 g0v TopoJSON */
+  Cesium.GeoJsonDataSource.load('/static/data/ne_110m_land.json')
+    .then(ds=>{
+      landDS=ds;viewer.dataSources.add(ds,0);
+      const fill=Cesium.Color.fromCssColorString('#3e4a3d').withAlpha(0.5);
+      ds.entities.values.forEach(e=>{
+        if(e.polygon){e.polygon.material=new Cesium.ColorMaterialProperty(fill);
+          e.polygon.outline=false;}
+      });
+      applyLayers();
+    }).catch(()=>{});
   Cesium.GeoJsonDataSource.load('/static/data/ne_50m_admin0_boundary_lines.json')
     .then(ds=>{
       admDS=ds;viewer.dataSources.add(ds);
-      const col=Cesium.Color.fromCssColorString('#e6edf3').withAlpha(0.38);
+      const col=Cesium.Color.fromCssColorString('#f0f6fc').withAlpha(0.85);
       ds.entities.values.forEach(e=>{
-        if(e.polyline){e.polyline.material=new Cesium.ColorMaterialProperty(col);e.polyline.width=1;}
+        if(e.polyline){e.polyline.material=new Cesium.ColorMaterialProperty(col);e.polyline.width=2.2;}
       });
       applyLayers();
     }).catch(()=>{});
@@ -212,13 +223,16 @@ function startApp(){
 
   const handler=new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
   handler.setInputAction(mv=>{
-    const p=viewer.scene.pick(mv.position);
-    if(!p||!p.id)return;
-    if(p.id._sysKey)selectSys(p.id._sysKey);
-    else if(p.id._incRef){const ev=INCIDENTS.find(x=>x.id===p.id._incRef);
-      showDetail('⚠ '+ev.t+'｜'+ev.cable,'<span class="k">事件：</span>'+ev.txt);}
-    else if(p.id._lndName)showDetail('● 登陸點','<span class="k">名稱：</span>'+p.id._lndName);
-    else if(p.id._admName)showDetail('🗺 行政區','<span class="k">名稱：</span>'+p.id._admName);
+    /* drillPick：略過陸地填色等背景多邊形，取第一個有意義的目標 */
+    const picks=viewer.scene.drillPick(mv.position,6)||[];
+    for(const p of picks){
+      if(!p.id)continue;
+      if(p.id._sysKey){selectSys(p.id._sysKey);return;}
+      if(p.id._incRef){const ev=INCIDENTS.find(x=>x.id===p.id._incRef);
+        showDetail('⚠ '+ev.t+'｜'+ev.cable,'<span class="k">事件：</span>'+ev.txt);return;}
+      if(p.id._lndName){showDetail('● 登陸點','<span class="k">名稱：</span>'+p.id._lndName);return;}
+      if(p.id._admName){showDetail('🗺 行政區','<span class="k">名稱：</span>'+p.id._admName);return;}
+    }
   },Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
 
@@ -304,7 +318,9 @@ function applyLayers(){
     e.show=glb&&(!twOnly||SYS[k].tw);
   }));
   viewer.entities.values.forEach(e=>{if(e._isInc)e.show=inc;});
-  if(admDS)admDS.show=document.getElementById('lyr-adm').checked;
+  const adm=document.getElementById('lyr-adm').checked;
+  if(admDS)admDS.show=adm;
+  if(landDS)landDS.show=adm;
   if(twDS)twDS.show=document.getElementById('lyr-twadm').checked;
 }
 </script>

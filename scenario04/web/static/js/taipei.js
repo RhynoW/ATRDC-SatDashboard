@@ -1,13 +1,161 @@
 'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   三語字典（繁中／英文／日文）— 台北衛星覆蓋時間軸頁
+   注意：I18N/t/tpl/setLang 置於 startApp() 之外，讓語言切換按鈕在 Cesium
+   尚未載入完成前也能運作；動態面板（分類概況／過頂預報／時間軸徽章等）
+   則透過 _refreshUI 掛勾，於 startApp() 初始化後回填。
+   ═══════════════════════════════════════════════════════════════════════════ */
+const I18N = {
+  zh: {
+    doc_title: '台北覆蓋分析 — Cesium 2D',
+    header_title: '台北覆蓋分析 — 台北周邊 2,000 km 內的衛星通過',
+    btn_refresh: '更新',
+    nav_home: '返回主頁',
+    panel_title: '衛星分類覆蓋',
+    panel_sub: '台北 25.03°N 121.57°E　·　仰角遮蔽 5°',
+    tab_overview: '分類概況',
+    tab_passes: '衛星通過預報',
+    step_label_prefix: '時間步長：',
+    btn_apply_step: '套用',
+    step_label_min: '{n} 分',
+    step_label_60: '60 分',
+    panel_loading: '載入中...',
+    map_loading: '初始化地圖...',
+    legend_title: '衛星分類',
+    cat_us_eo_label: '美國商用光學', cat_us_eo_sub: 'Vantor/Maxar · Planet SkySat',
+    cat_cn_comm_label: '中國商用光學', cat_cn_comm_sub: 'SuperView · 高分 · 吉林',
+    cat_cn_mil_label: '中國軍用偵察', cat_cn_mil_sub: '遙感 Yaogan',
+    cat_tw_tasa_label: '台灣 TASA', cat_tw_tasa_sub: 'Formosat-5 / -7 / -8',
+    cat_starlink_label: 'Starlink 星鏈', cat_starlink_sub: 'SpaceX · Gen1/Gen2/V2 Mini',
+    legend_circle_note: '2000 km 覆蓋圈',
+    tl_bounds_past: '−30天', tl_bounds_future: '+30天',
+    tl_now_btn: '現在',
+    tl_badge_now: '現在', tl_badge_hist: '歷史', tl_badge_future: '預測',
+    status_total: '衛星', status_visible: '可見', status_plotted: '圖上', status_time: '時刻',
+    overview_loading: '資料載入中...',
+    unit_count: '顆',
+    stat_db: '資料庫', stat_visible: '可見', stat_plotted: '圖上',
+    note_filtered: '已被篩選隱藏',
+    note_truncated: '大星座僅顯示台北可見的衛星',
+    passes_loading: '衛星通過預報載入中（10–30 秒）...',
+    passes_none: '24 小時內無衛星通過記錄',
+    pass_duration: '持續時間 {m} 分 {s} 秒',
+    init_fail: '初始化失敗: {msg}',
+  },
+  ja: {
+    doc_title: '台北カバレッジ分析 — Cesium 2D',
+    header_title: '台北カバレッジ分析 — 台北から半径2,000 km圏内の衛星通過',
+    btn_refresh: '更新',
+    nav_home: 'ホームへ戻る',
+    panel_title: '衛星カテゴリ別カバレッジ',
+    panel_sub: '台北 北緯25.03° 東経121.57°　・　仰角マスク 5°',
+    tab_overview: 'カテゴリ概況',
+    tab_passes: '衛星通過予測',
+    step_label_prefix: '時間ステップ：',
+    btn_apply_step: '適用',
+    step_label_min: '{n}分',
+    step_label_60: '60分',
+    panel_loading: '読み込み中...',
+    map_loading: '地図を初期化中...',
+    legend_title: '衛星カテゴリ',
+    cat_us_eo_label: '米国商用光学', cat_us_eo_sub: 'Vantor/Maxar・Planet SkySat',
+    cat_cn_comm_label: '中国商用光学', cat_cn_comm_sub: 'SuperView・高分・吉林',
+    cat_cn_mil_label: '中国軍用偵察', cat_cn_mil_sub: '遥感（Yaogan）',
+    cat_tw_tasa_label: '台湾 TASA', cat_tw_tasa_sub: 'Formosat-5 / -7 / -8',
+    cat_starlink_label: 'Starlink', cat_starlink_sub: 'SpaceX・Gen1/Gen2/V2 Mini',
+    legend_circle_note: '半径2000kmカバレッジ圏',
+    tl_bounds_past: '−30日', tl_bounds_future: '+30日',
+    tl_now_btn: '現在',
+    tl_badge_now: '現在', tl_badge_hist: '過去', tl_badge_future: '予測',
+    status_total: '衛星', status_visible: '可視', status_plotted: '地図上に表示', status_time: '時刻',
+    overview_loading: 'データ読み込み中...',
+    unit_count: '機',
+    stat_db: 'DB', stat_visible: '可視', stat_plotted: '地図表示',
+    note_filtered: 'フィルタで非表示',
+    note_truncated: '大規模コンステレーションは台北から可視の衛星のみ表示',
+    passes_loading: '衛星通過予測を読み込み中（10〜30秒）...',
+    passes_none: '24時間以内に衛星の通過はありません',
+    pass_duration: '通過時間 {m}分{s}秒',
+    init_fail: '初期化に失敗しました: {msg}',
+  },
+  en: {
+    doc_title: 'Taipei Coverage Analysis — Cesium 2D',
+    header_title: 'Taipei Coverage Analysis — Satellite Passes within 2,000 km of Taipei',
+    btn_refresh: 'Refresh',
+    nav_home: 'Home',
+    panel_title: 'Satellite Category Coverage',
+    panel_sub: 'Taipei 25.03°N 121.57°E   ·   Elevation Mask Angle: 5°',
+    tab_overview: 'Category Overview',
+    tab_passes: 'Satellite Pass Forecast',
+    step_label_prefix: 'Time Step:',
+    btn_apply_step: 'Apply',
+    step_label_min: '{n} min',
+    step_label_60: '60 min',
+    panel_loading: 'Loading...',
+    map_loading: 'Initializing map...',
+    legend_title: 'Satellite Categories',
+    cat_us_eo_label: 'US Commercial Optical', cat_us_eo_sub: 'Vantor/Maxar · Planet SkySat',
+    cat_cn_comm_label: 'China Commercial Optical', cat_cn_comm_sub: 'SuperView · Gaofen · Jilin-1',
+    cat_cn_mil_label: 'China Military Reconnaissance', cat_cn_mil_sub: 'Yaogan (Remote Sensing)',
+    cat_tw_tasa_label: 'Taiwan TASA', cat_tw_tasa_sub: 'Formosat-5 / -7 / -8',
+    cat_starlink_label: 'Starlink', cat_starlink_sub: 'SpaceX · Gen1/Gen2/V2 Mini',
+    legend_circle_note: '2000 km Coverage Radius',
+    tl_bounds_past: '−30 days', tl_bounds_future: '+30 days',
+    tl_now_btn: 'Now',
+    tl_badge_now: 'Now', tl_badge_hist: 'Past', tl_badge_future: 'Forecast',
+    status_total: 'Satellites', status_visible: 'Visible', status_plotted: 'Displayed on Map', status_time: 'Time',
+    overview_loading: 'Loading data...',
+    unit_count: 'sats',
+    stat_db: 'DB', stat_visible: 'Visible', stat_plotted: 'Displayed on Map',
+    note_filtered: 'Hidden by filter',
+    note_truncated: 'Large constellations show only satellites visible from Taipei',
+    passes_loading: 'Loading pass forecast (10–30 s)...',
+    passes_none: 'No satellite passes in the next 24 hours',
+    pass_duration: 'Duration: {m} min {s} sec',
+    init_fail: 'Initialization failed: {msg}',
+  },
+};
+const LOCALE_MAP = {zh:'zh-TW', en:'en-US', ja:'ja-JP'};
+let LANG = localStorage.getItem('taipei_lang') || 'zh';
+if(!I18N[LANG]) LANG = 'zh';
+let _refreshUI = null;  // startApp() 掛勾：語言切換時重繪動態內容
+
+function t(key){
+  const d = I18N[LANG] || I18N.zh;
+  return (key in d) ? d[key] : (I18N.zh[key] !== undefined ? I18N.zh[key] : key);
+}
+function tpl(key, vars){
+  let s = t(key);
+  Object.keys(vars || {}).forEach(k => { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
+  return s;
+}
+function setLang(lang){
+  if(!I18N[lang]) return;
+  LANG = lang;
+  localStorage.setItem('taipei_lang', lang);
+  document.documentElement.lang = LOCALE_MAP[lang] || 'zh-TW';
+  document.title = t('doc_title');
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+
+  if(_refreshUI) _refreshUI();
+}
+
 function startApp(){
 
 const TAIPEI_LAT=25.0330, TAIPEI_LON=121.5654;
 const CATS={
-  US_EO:  {label:'美國商用光學衛星',sublabel:'Vantor/Maxar · Planet SkySat',color:'#4488FF'},
-  CN_COMM:{label:'中國商用光學衛星',sublabel:'SuperView · 高分 · 吉林',  color:'#FF9800'},
-  CN_MIL: {label:'中國軍用偵察衛星',sublabel:'遙感 Yaogan',                        color:'#F44336'},
-  TW_TASA:{label:'台灣 TASA 衛星',  sublabel:'Formosat-5 / -7 / -8',              color:'#00E5FF'},
-  STARLINK:{label:'Starlink 星鏈',  sublabel:'SpaceX · Gen1/Gen2/V2 Mini',         color:'#A855F7'},
+  US_EO:  {labelKey:'cat_us_eo_label',   subKey:'cat_us_eo_sub',   color:'#4488FF'},
+  CN_COMM:{labelKey:'cat_cn_comm_label', subKey:'cat_cn_comm_sub', color:'#FF9800'},
+  CN_MIL: {labelKey:'cat_cn_mil_label',  subKey:'cat_cn_mil_sub',  color:'#F44336'},
+  TW_TASA:{labelKey:'cat_tw_tasa_label', subKey:'cat_tw_tasa_sub', color:'#00E5FF'},
+  STARLINK:{labelKey:'cat_starlink_label',subKey:'cat_starlink_sub',color:'#A855F7'},
 };
 
 let viewer=null, satDs=null, circleDs=null, bordersDs=null;
@@ -135,7 +283,7 @@ async function loadCoverage(ts=null){
 let _passesStepSec=900;  // 預設 15 分鐘步長
 
 function updateStepLabel(v){
-  document.getElementById('step-label').textContent=v>=60?'60 分':v+' 分';
+  document.getElementById('step-label').textContent=v>=60?t('step_label_60'):tpl('step_label_min',{n:v});
 }
 
 function applyStepChange(){
@@ -245,7 +393,7 @@ function switchPanelTab(tab){
 function renderOverview(){
   const body=document.getElementById('panel-body');
   body.innerHTML='';
-  if(!coverageData){body.innerHTML="<div class='pass-empty'>資料載入中...</div>";return;}
+  if(!coverageData){body.innerHTML="<div class='pass-empty'>"+t('overview_loading')+"</div>";return;}
   Object.entries(CATS).forEach(([catId,cfg])=>{
     const cd=coverageData.categories[catId];
     if(!cd) return;
@@ -260,16 +408,16 @@ function renderOverview(){
     card.dataset.cat=catId;
     card.innerHTML=
       "<div class='cat-header'><div class='cat-dot' style='background:"+cfg.color+"'></div>"
-      +"<span class='cat-label'>"+cfg.label+"</span>"
-      +"<span class='cat-cnt'>"+nAll+" 顆</span></div>"
-      +"<div class='cat-sublabel'>"+cfg.sublabel+"</div>"
+      +"<span class='cat-label'>"+t(cfg.labelKey)+"</span>"
+      +"<span class='cat-cnt'>"+nAll+" "+t('unit_count')+"</span></div>"
+      +"<div class='cat-sublabel'>"+t(cfg.subKey)+"</div>"
       +"<div class='cat-stats'>"
-      +"<div class='cstat'><div class='sv' style='color:"+cfg.color+"'>"+nAll+"</div><div class='sl'>資料庫</div></div>"
-      +"<div class='cstat'><div class='sv' style='color:#4CAF50'>"+cd.visible_count+"</div><div class='sl'>可見</div></div>"
-      +"<div class='cstat'><div class='sv' style='color:#FFD600'>"+plotted+"</div><div class='sl'>圖上</div></div>"
+      +"<div class='cstat'><div class='sv' style='color:"+cfg.color+"'>"+nAll+"</div><div class='sl'>"+t('stat_db')+"</div></div>"
+      +"<div class='cstat'><div class='sv' style='color:#4CAF50'>"+cd.visible_count+"</div><div class='sl'>"+t('stat_visible')+"</div></div>"
+      +"<div class='cstat'><div class='sv' style='color:#FFD600'>"+plotted+"</div><div class='sl'>"+t('stat_plotted')+"</div></div>"
       +"</div>"
-      +(filtered?"<div class='cat-note'>已被篩選隱藏</div>"
-        :(truncated?"<div class='cat-note'>大星座僅繪台北可見衛星</div>":""));
+      +(filtered?"<div class='cat-note'>"+t('note_filtered')+"</div>"
+        :(truncated?"<div class='cat-note'>"+t('note_truncated')+"</div>":""));
     card.addEventListener('click',()=>toggleCatFilter(catId));
     body.appendChild(card);
   });
@@ -280,7 +428,7 @@ function renderPasses(){
   const body=document.getElementById('panel-body');
   body.innerHTML='';
   if(!passesData){
-    body.innerHTML="<div class='pass-empty'>過頂預報載入中（10–30 秒）...</div>";
+    body.innerHTML="<div class='pass-empty'>"+t('passes_loading')+"</div>";
     return;
   }
   const catIds=activeCatFilter?[activeCatFilter]:Object.keys(CATS);
@@ -290,13 +438,13 @@ function renderPasses(){
     if(!cd) return;
     const hdr=document.createElement('div');
     hdr.className='pass-cat-hdr';
-    hdr.innerHTML="<span style='width:8px;height:8px;border-radius:50%;background:"+cfg.color+";display:inline-block'></span>"+cfg.label;
+    hdr.innerHTML="<span style='width:8px;height:8px;border-radius:50%;background:"+cfg.color+";display:inline-block'></span>"+t(cfg.labelKey);
     body.appendChild(hdr);
     const passes=cd.passes||[];
     if(!passes.length){
       const e=document.createElement('div');
       e.className='pass-empty';
-      e.textContent='24 小時內無過頂記錄';
+      e.textContent=t('passes_none');
       body.appendChild(e); return;
     }
     passes.slice(0,8).forEach(p=>{
@@ -312,7 +460,7 @@ function renderPasses(){
         +"<span class='pass-time'>&#8599; "+ts+" CST</span>"
         +"<span class='pass-el' style='color:"+elCol+"'>Max "+p.max_el_deg+"&deg;</span>"
         +"</div>"
-        +"<div class='pass-dur'>持續 "+dm+"m "+ds_+"s</div>";
+        +"<div class='pass-dur'>"+tpl('pass_duration',{m:dm,s:ds_})+"</div>";
       body.appendChild(item);
     });
   });
@@ -348,11 +496,11 @@ function _tlUpdateDisplay(){
   document.getElementById('tl-time').textContent=_cst(ts);
   const badge=document.getElementById('tl-badge');
   if(Math.abs(_tlMin)<5){
-    badge.textContent='現在'; badge.className='tl-badge now';
+    badge.textContent=t('tl_badge_now'); badge.className='tl-badge now';
   } else if(_tlMin<0){
-    badge.textContent='歷史'; badge.className='tl-badge hist';
+    badge.textContent=t('tl_badge_hist'); badge.className='tl-badge hist';
   } else {
-    badge.textContent='預測'; badge.className='tl-badge future';
+    badge.textContent=t('tl_badge_future'); badge.className='tl-badge future';
   }
 }
 
@@ -389,7 +537,7 @@ async function _loadForTs(){
   _loading=true;
   const ts=_tlTs();
   const ldEl=document.getElementById('tl-loading');
-  if(ldEl) ldEl.textContent='載入中...';
+  if(ldEl) ldEl.textContent=t('panel_loading');
   try{
     await Promise.all([loadCoverage(ts), loadPasses(ts)]);
   }finally{
@@ -459,7 +607,7 @@ window.tlSliderChange=tlSliderChange;
 window.jumpToNow=jumpToNow;
 
 init().catch(e=>{
-  document.getElementById('map-loading').textContent='初始化失敗: '+e.message;
+  document.getElementById('map-loading').textContent=tpl('init_fail',{msg:e.message});
   console.error(e);
 });
 
@@ -467,4 +615,23 @@ window.switchPanelTab=switchPanelTab;
 window.toggleCatFilter=toggleCatFilter;
 window.refreshAll=refreshAll;
 
+// 語言切換時重繪動態內容（分類概況／過頂預報／時間軸徽章／步長標籤）
+_refreshUI=function(){
+  const stepSlider=document.getElementById('step-slider');
+  if(stepSlider) updateStepLabel(stepSlider.value);
+  _tlUpdateDisplay();
+  if(activePanelTab==='overview') renderOverview();
+  else renderPasses();
+};
+
 } // end startApp
+
+// 頁面靜態文字（data-i18n）不需等待 Cesium/startApp() 即可套用已儲存的語言偏好
+(function _applyInitialLang(){
+  function _apply(){ setLang(LANG); }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',_apply);
+  } else {
+    _apply();
+  }
+})();

@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <title>Story — 太空態勢敘事</title>
+<!-- <html lang> 與此標題僅為初始／SEO 用途，實際語言由 story.js 之 applyStaticI18n() 依 localStorage 動態設定 -->
+<style>
+#lang-switcher{position:fixed;top:8px;right:64px;z-index:40;display:flex;gap:4px}
+.lang-btn{background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:5px;padding:4px 9px;font-size:12px;cursor:pointer}
+.lang-btn:hover{background:#30363d;color:#c9d1d9}
+.lang-btn.active{background:#1f6feb;color:#fff;border-color:#1f6feb}
+</style>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
 :root{color-scheme:dark}
@@ -166,18 +173,23 @@ table.data a{color:#58a6ff;text-decoration:none}
 <script src="{{ url_for('static', filename='js/story.js') }}" defer></script>
 </head>
 <body>
+<div id="lang-switcher">
+  <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+  <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+  <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+</div>
 <div id="hdr">
-  <h1>&#128214; <span id="hdr-title">太空態勢敘事</span></h1>
+  <h1>&#128214; <span id="hdr-title" data-i18n="hdr_title_default">太空態勢敘事</span></h1>
   <span class="sp"></span>
   <div class="nav" id="stepnav" style="display:none">
-    <button id="nav-prev" title="上一步（↑ / PageUp）"><b>&#9650;</b><span>上一步</span></button>
-    <button id="nav-next" title="下一步（↓ / PageDown）"><b>&#9660;</b><span>下一步</span></button>
+    <button id="nav-prev" data-i18n-title="nav_prev_title" title="上一步（↑ / PageUp）"><b>&#9650;</b><span data-i18n="nav_prev">上一步</span></button>
+    <button id="nav-next" data-i18n-title="nav_next_title" title="下一步（↓ / PageDown）"><b>&#9660;</b><span data-i18n="nav_next">下一步</span></button>
   </div>
   <span class="sp"></span>
-  <a href="/story" id="lnk-list" style="display:none">故事清單</a>
-  <a href="/">返回主頁</a>
+  <a href="/story" id="lnk-list" data-i18n="lnk_list" style="display:none">故事清單</a>
+  <a href="/" data-i18n="nav_home">返回主頁</a>
 </div>
 <div id="dots"></div>
-<div id="wrap"><div style="padding:60px 0;color:#8b949e">載入中…</div></div>
+<div id="wrap"><div style="padding:60px 0;color:#8b949e" data-i18n="loading_text">載入中…</div></div>
 </body>
 </html>

@@ -37,25 +37,34 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft J
 #stats th,#stats td{padding:6px 10px;text-align:right;border-bottom:1px solid #21262d}
 #stats th{color:#8b949e;font-weight:500}
 #stats td:first-child,#stats th:first-child{text-align:left;color:#e6edf3}
+#lang-switcher{display:flex;gap:4px}
+.lang-btn{padding:4px 8px;background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.lang-btn:hover{background:#30363d;color:#c9d1d9}
+.lang-btn.active{background:#A855F7;color:#fff;border-color:#A855F7}
 </style>
 <script src="{{ url_for('static', filename='js/orbit.js') }}" defer></script>
 </head>
 <body>
 <div id="hdr">
-  <h1>&#128992; 軌道要素歷史</h1>
-  <span class="sub">Spiral Polar（傾角／升交點赤經／近地點幅角）＋ SMA 圓形圖</span>
+  <h1>&#128992; <span data-i18n="page_title">軌道要素歷史</span></h1>
+  <span class="sub" data-i18n="subtitle">Spiral Polar（傾角／升交點赤經／近地點幅角）＋ SMA 圓形圖</span>
   <span class="sp"></span>
-  <a href="/">&#8592; 返回主頁</a>
+  <div id="lang-switcher">
+    <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+    <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+  </div>
+  <a href="/">&#8592; <span data-i18n="nav_home">返回主頁</span></a>
 </div>
 <div id="ctrl">
-  <input id="q" placeholder="衛星名稱或 NORAD ID（至少 2 字元）" autocomplete="off"/>
-  <label>起 <input type="date" id="d0"/></label>
-  <label>迄 <input type="date" id="d1"/></label>
-  <button id="go">載入</button>
+  <input id="q" data-i18n-placeholder="q_placeholder" placeholder="衛星名稱或 NORAD ID（至少 2 字元）" autocomplete="off"/>
+  <label><span data-i18n="lbl_start">起</span> <input type="date" id="d0"/></label>
+  <label><span data-i18n="lbl_end">迄</span> <input type="date" id="d1"/></label>
+  <button id="go" data-i18n="btn_load">載入</button>
   <span id="sel-info"></span>
   <div id="sug"></div>
 </div>
-<div id="status">請先搜尋並選取衛星（預設日期範圍：最近 1 年）</div>
+<div id="status" data-i18n="status_default">請先搜尋並選取衛星（預設日期範圍：最近 1 年）</div>
 <div id="satinfo" style="display:none"></div>
 <style>
 #satinfo{margin:6px 22px 2px;background:#161b22;border:1px solid #21262d;border-radius:8px;padding:10px 14px;max-width:1516px}
@@ -67,13 +76,13 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft J
 #satinfo .notes{margin-top:6px;font-size:12px;color:#8b949e;border-top:1px solid #21262d;padding-top:6px}
 </style>
 <div id="player" style="display:none;padding:4px 22px 6px;align-items:center;gap:12px">
-  <button id="play" title="播放/暫停">&#9654;</button>
+  <button id="play" data-i18n-title="tip_play" title="播放/暫停">&#9654;</button>
   <input type="range" id="tl" min="0" max="0" value="0" step="1"/>
   <select id="spd">
-    <option value="5">5 天/秒</option>
-    <option value="10" selected>10 天/秒</option>
-    <option value="20">20 天/秒</option>
-    <option value="40">40 天/秒</option>
+    <option value="5" data-i18n="spd_5">5 天/秒</option>
+    <option value="10" selected data-i18n="spd_10">10 天/秒</option>
+    <option value="20" data-i18n="spd_20">20 天/秒</option>
+    <option value="40" data-i18n="spd_40">40 天/秒</option>
   </select>
   <span id="cur"></span>
 </div>
@@ -87,23 +96,23 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft J
 </style>
 <div id="grid">
   <div class="card">
-    <h3>半長軸變化（圓形時間圖）</h3>
-    <div class="hint">0°=起始時間、順時針演進至 360°=結束；半徑 r =（當日 SMA − 全期最小值）正規化</div>
+    <h3 data-i18n="card_sma_title">半長軸變化（圓形時間圖）</h3>
+    <div class="hint" data-i18n="card_sma_hint">0°=起始時間、順時針演進至 360°=結束；半徑 r =（當日 SMA − 全期最小值）正規化</div>
     <canvas id="cv-sma"></canvas><div class="cap" id="cap-sma"></div>
   </div>
   <div class="card">
-    <h3>傾角 inclination（Spiral Polar）</h3>
-    <div class="hint">角度=傾角值、半徑=時間螺旋（內→外）、顏色=時間</div>
+    <h3 data-i18n="card_inc_title">傾角 inclination（Spiral Polar）</h3>
+    <div class="hint" data-i18n="card_inc_hint">角度=傾角值、半徑=時間螺旋（內→外）、顏色=時間</div>
     <canvas id="cv-inc"></canvas><div class="cap" id="cap-inc"></div>
   </div>
   <div class="card">
-    <h3>升交點赤經 RAAN（Spiral Polar）</h3>
-    <div class="hint">角度=RAAN 值、半徑=時間螺旋（內→外）、顏色=時間</div>
+    <h3 data-i18n="card_raan_title">升交點赤經 RAAN（Spiral Polar）</h3>
+    <div class="hint" data-i18n="card_raan_hint">角度=RAAN 值、半徑=時間螺旋（內→外）、顏色=時間</div>
     <canvas id="cv-raan"></canvas><div class="cap" id="cap-raan"></div>
   </div>
   <div class="card">
-    <h3>近地點幅角 ARGP（Spiral Polar）</h3>
-    <div class="hint">角度=ARGP 值、半徑=時間螺旋（內→外）、顏色=時間</div>
+    <h3 data-i18n="card_argp_title">近地點幅角 ARGP（Spiral Polar）</h3>
+    <div class="hint" data-i18n="card_argp_hint">角度=ARGP 值、半徑=時間螺旋（內→外）、顏色=時間</div>
     <canvas id="cv-argp"></canvas><div class="cap" id="cap-argp"></div>
   </div>
 </div>

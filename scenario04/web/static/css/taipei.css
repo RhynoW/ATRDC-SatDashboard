@@ -9,6 +9,10 @@ html,body{height:100%;overflow:hidden;background:#0a0e17;color:#c9d1d9;font-fami
   display:inline-flex;align-items:center}
 .tbtn:hover{color:#c9d1d9;border-color:#58a6ff}
 #clock{font-size:11px;color:#8b949e;white-space:nowrap}
+#lang-switcher{display:flex;gap:4px}
+.lang-btn{padding:4px 8px;background:#162032;color:#8b949e;border:1px solid #1e3a5f;border-radius:4px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.lang-btn:hover{background:#1e3a5f;color:#c9d1d9}
+.lang-btn.active{background:#58a6ff;color:#0a0e17;border-color:#58a6ff}
 #main{display:flex;height:calc(100vh - 44px)}
 #panel{width:290px;background:#0d1117;border-right:1px solid #21262d;
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}

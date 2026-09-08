@@ -26,6 +26,10 @@ body{font-family:Tahoma,sans-serif;background:#0a0e17;color:#c9d1d9;display:flex
 #starlink-link:hover{background:#A855F722}
 #rpo-link{color:#F2A73B;border:1px solid #F2A73B44}
 #rpo-link:hover{background:#F2A73B22}
+#constel-link{color:#FFD700;border:1px solid #FFD70044}
+#constel-link:hover{background:#FFD70022}
+#story-link{color:#FFD700;border:1px solid #FFD70044}
+#story-link:hover{background:#FFD70022}
 
 /* ── 語言切換 ── */
 #lang-switcher{display:flex;gap:4px;flex-shrink:0}

@@ -14,6 +14,10 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft J
 #hdr .sp{flex:1}
 #hdr a{color:#58a6ff;font-size:12.5px;text-decoration:none;border:1px solid #30363d;border-radius:5px;padding:5px 11px;background:#21262d}
 #hdr a:hover{background:#30363d}
+#lang-switcher{display:flex;gap:4px}
+.lang-btn{padding:4px 8px;background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.lang-btn:hover{background:#30363d;color:#c9d1d9}
+.lang-btn.active{background:#A855F7;color:#fff;border-color:#A855F7}
 #meta{padding:10px 22px 0;font-size:12px;color:#8b949e;display:flex;gap:18px;flex-wrap:wrap}
 #meta b{color:#e6edf3}
 #ctrl{padding:10px 22px;display:flex;gap:16px;align-items:center;font-size:12.5px;color:#8b949e;flex-wrap:wrap}
@@ -33,42 +37,129 @@ body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Tahoma,'Microsoft J
 </head>
 <body>
 <div id="hdr">
-  <h1>&#127756; 星座排行</h1>
-  <span class="sub">僅有效載荷（不含碎片／火箭體）</span>
+  <h1>&#127756; <span data-i18n="app_title">星座排行</span></h1>
+  <span class="sub" data-i18n="app_subtitle">僅有效載荷（不含碎片／火箭體）</span>
   <span class="sp"></span>
+  <div id="lang-switcher">
+    <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+    <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+  </div>
   <a href="/api/stats/constellations" target="_blank">JSON API</a>
-  <a href="/">&#8592; 返回主頁</a>
+  <a href="/">&#8592; <span data-i18n="nav_home">返回主頁</span></a>
 </div>
 <div id="meta">
-  <span>有效載荷總數 <b id="m-total">—</b></span>
-  <span>星座數 <b id="m-n">—</b></span>
-  <span>統計時間 <b id="m-time">—</b></span>
+  <span><span data-i18n="lbl_total">有效載荷總數</span> <b id="m-total">—</b></span>
+  <span><span data-i18n="lbl_count">星座數</span> <b id="m-n">—</b></span>
+  <span><span data-i18n="lbl_time">統計時間</span> <b id="m-time">—</b></span>
 </div>
 <div id="ctrl">
-  <label>顯示前
+  <label><span data-i18n="lbl_top_prefix">顯示前</span>
     <select id="sel-top">
       <option value="10">10</option>
       <option value="20" selected>20</option>
       <option value="30">30</option>
-      <option value="0">全部</option>
-    </select> 名
+      <option value="0" data-i18n="opt_all">全部</option>
+    </select> <span data-i18n="lbl_top_suffix">名</span>
   </label>
-  <label><input type="checkbox" id="chk-other" checked/> 隱藏「其他衛星」</label>
-  <label>長條比例
+  <label><input type="checkbox" id="chk-other" checked/> <span data-i18n="lbl_hide_other">隱藏「其他衛星」</span></label>
+  <label><span data-i18n="lbl_bar_scale">長條比例</span>
     <select id="sel-scale">
-      <option value="linear" selected>線性</option>
-      <option value="sqrt">平方根（易讀小星座）</option>
+      <option value="linear" selected data-i18n="opt_linear">線性</option>
+      <option value="sqrt" data-i18n="opt_sqrt">平方根（易讀小星座）</option>
     </select>
   </label>
 </div>
-<div id="list"><div id="empty">載入中...</div></div>
+<div id="list"><div id="empty" data-i18n="loading_msg">載入中...</div></div>
 <script>
 'use strict';
+
+// ── 三語字典（中／英／日）─────────────────────────────────────────────────────
+const I18N = {
+  zh: {
+    doc_title: '星座排行 — 僅有效載荷',
+    app_title: '星座排行',
+    app_subtitle: '僅有效載荷（不含碎片／火箭體）',
+    nav_home: '返回主頁',
+    lbl_total: '有效載荷總數',
+    lbl_count: '星座數',
+    lbl_time: '統計時間',
+    lbl_top_prefix: '顯示前',
+    lbl_top_suffix: '名',
+    opt_all: '全部',
+    lbl_hide_other: '隱藏「其他衛星」',
+    lbl_bar_scale: '長條比例',
+    opt_linear: '線性',
+    opt_sqrt: '平方根（易讀小星座）',
+    loading_msg: '載入中...',
+    error_msg: '載入失敗，請重新整理',
+  },
+  ja: {
+    doc_title: 'コンステレーションランキング — ペイロードのみ',
+    app_title: 'コンステレーションランキング',
+    app_subtitle: 'ペイロードのみ（デブリ・ロケット本体を含まず）',
+    nav_home: 'ホームに戻る',
+    lbl_total: 'ペイロード総数',
+    lbl_count: 'コンステレーション数',
+    lbl_time: '統計時刻',
+    lbl_top_prefix: '表示件数：上位',
+    lbl_top_suffix: '件',
+    opt_all: 'すべて',
+    lbl_hide_other: '「その他の衛星」を非表示',
+    lbl_bar_scale: 'バーのスケール',
+    opt_linear: '線形',
+    opt_sqrt: '平方根スケール（小規模のコンステレーションを見やすく表示）',
+    loading_msg: '読み込み中...',
+    error_msg: '読み込みに失敗しました。再読み込みしてください',
+  },
+  en: {
+    doc_title: 'Constellation Ranking — Payloads Only',
+    app_title: 'Constellation Ranking',
+    app_subtitle: 'Payloads Only (Excludes Debris and Rocket Bodies)',
+    nav_home: 'Back to Home',
+    lbl_total: 'Total Payloads',
+    lbl_count: 'Constellations',
+    lbl_time: 'Statistics Time',
+    lbl_top_prefix: 'Show Top',
+    lbl_top_suffix: 'entries',
+    opt_all: 'All',
+    lbl_hide_other: 'Hide "Other Satellites"',
+    lbl_bar_scale: 'Bar Scaling',
+    opt_linear: 'Linear',
+    opt_sqrt: 'Square-Root Scale (Improves Visibility of Smaller Constellations)',
+    loading_msg: 'Loading...',
+    error_msg: 'Failed to load. Please refresh.',
+  },
+};
+const LOCALE_MAP = {zh:'zh-Hant', en:'en-US', ja:'ja-JP'};
+let LANG = localStorage.getItem('constellations_lang') || 'zh';
+if(!I18N[LANG]) LANG = 'zh';
+
+function t(key){
+  const d = I18N[LANG] || I18N.zh;
+  return (key in d) ? d[key] : (I18N.zh[key] !== undefined ? I18N.zh[key] : key);
+}
+function tpl(key, vars){
+  let s = t(key);
+  Object.keys(vars || {}).forEach(k => { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
+  return s;
+}
+function setLang(lang){
+  if(!I18N[lang]) return;
+  LANG = lang;
+  localStorage.setItem('constellations_lang', lang);
+  document.documentElement.lang = LOCALE_MAP[lang] || 'zh-Hant';
+  document.title = t('doc_title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('.lang-btn').forEach(b => { b.classList.toggle('active', b.dataset.lang === lang); });
+  if(DATA) render();
+}
+
 let DATA=null;
-function fmt(n){return n.toLocaleString('zh-Hant');}
+function fmt(n){return n.toLocaleString(LOCALE_MAP[LANG] || 'zh-Hant');}
 function render(){
   const list=document.getElementById('list');
-  if(!DATA){list.innerHTML="<div id='empty'>載入失敗，請重新整理</div>";return;}
+  if(!DATA){list.innerHTML="<div id='empty'>"+t('error_msg')+"</div>";return;}
   const hideOther=document.getElementById('chk-other').checked;
   const top=parseInt(document.getElementById('sel-top').value);
   const scale=document.getElementById('sel-scale').value;
@@ -96,14 +187,15 @@ async function load(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     DATA=await r.json();
     document.getElementById('m-total').textContent=fmt(DATA.payload_total);
-    const t=new Date(DATA.updated_at);
+    const updTime=new Date(DATA.updated_at);
     document.getElementById('m-time').textContent=
-      new Date(t.getTime()+8*3600*1000).toISOString().replace('T',' ').slice(0,19)+' CST';
+      new Date(updTime.getTime()+8*3600*1000).toISOString().replace('T',' ').slice(0,19)+' CST';
   }catch(e){console.error(e);DATA=null;}
   render();
 }
 ['sel-top','chk-other','sel-scale'].forEach(id=>
   document.getElementById(id).addEventListener('change',render));
+setLang(LANG);
 load();
 </script>
 </body>

@@ -53,7 +53,7 @@ const GLOBE_I18N = {
     btn_track: 'NORAD 監視',
     tip_track: 'NORAD監視（user_defined_tracking_NORADリスト、複数衛星を同時追跡可能）',
     nav_taipei: '台北カバレッジ分析', nav_starlink: 'Starlink 分析', nav_rpo: 'RPO機能テスト',
-    nav_constel: '星座ランキング',
+    nav_constel: 'コンステレーションランキング',
     tip_rpo: '近接ペアの相対接近3Dシーン＋Chan Pc（2衛星視点切替可能）',
     nav_story: 'StoryMap', tip_story: 'StoryMap ナラティブページ：星系・マヌーバ・地上追跡・衝突警報の統合展示',
     dbi_db: 'DB:', dbi_update: '更新：', dbi_valid: '有効衛星：', dbi_epoch: 'TLE日付：', dbi_size: 'サイズ：',

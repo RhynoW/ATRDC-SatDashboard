@@ -20,64 +20,69 @@
 </head>
 <body>
 <div id="topbar">
-  <h1>&#127988; 台北覆蓋分析 &#8212; 2000 km 範圍衛星過頂</h1>
+  <h1>&#127988; <span data-i18n="header_title">台北覆蓋分析 &#8212; 2000 km 範圍衛星過頂</span></h1>
   <div id="clock">&#8212;</div>
-  <button class="tbtn" onclick="refreshAll()">&#8635; 更新</button>
+  <div id="lang-switcher">
+    <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+    <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+  </div>
+  <button class="tbtn" onclick="refreshAll()">&#8635; <span data-i18n="btn_refresh">更新</span></button>
   <a class="tbtn" href="/starlink">&#127921; Starlink</a>
   <a class="tbtn" href="/story">&#128214; StoryMap</a>
-  <a class="tbtn" href="/">&#8592; 返回主頁</a>
+  <a class="tbtn" href="/">&#8592; <span data-i18n="nav_home">返回主頁</span></a>
 </div>
 <div id="main">
   <div id="panel">
     <div id="panel-header">
-      <h2>衛星分類覆蓋</h2>
-      <div class="sub">台北 25.03&#176;N 121.57&#176;E &nbsp;&#183;&nbsp; 仰角遮蔽 5&#176;</div>
+      <h2 data-i18n="panel_title">衛星分類覆蓋</h2>
+      <div class="sub" data-i18n="panel_sub">台北 25.03&#176;N 121.57&#176;E &nbsp;&#183;&nbsp; 仰角遮蔽 5&#176;</div>
     </div>
     <div id="tab-bar">
-      <button class="ptab active" data-tab="overview" onclick="switchPanelTab('overview')">分類概況</button>
-      <button class="ptab" data-tab="passes" onclick="switchPanelTab('passes')">過頂預報</button>
+      <button class="ptab active" data-tab="overview" onclick="switchPanelTab('overview')" data-i18n="tab_overview">分類概況</button>
+      <button class="ptab" data-tab="passes" onclick="switchPanelTab('passes')" data-i18n="tab_passes">過頂預報</button>
     </div>
     <div id="step-control" style="display:none;align-items:center;gap:6px;
          padding:4px 10px;border-bottom:1px solid #21262d;font-size:11px;">
-      <span style="color:#8b949e;white-space:nowrap;">時間步長：</span>
+      <span style="color:#8b949e;white-space:nowrap;" data-i18n="step_label_prefix">時間步長：</span>
       <input type="range" id="step-slider" min="1" max="60" step="1" value="15"
              style="flex:1;accent-color:#4af;" oninput="updateStepLabel(this.value)">
       <span id="step-label" style="color:#4af;width:38px;text-align:right;white-space:nowrap;">15 分</span>
       <button onclick="applyStepChange()"
               style="padding:2px 8px;background:#1a3a5c;color:#4af;
-                     border:1px solid #4af;border-radius:3px;font-size:10px;cursor:pointer;">套用</button>
+                     border:1px solid #4af;border-radius:3px;font-size:10px;cursor:pointer;" data-i18n="btn_apply_step">套用</button>
     </div>
-    <div id="panel-body"><div class="pass-empty">載入中...</div></div>
+    <div id="panel-body"><div class="pass-empty" data-i18n="panel_loading">載入中...</div></div>
   </div>
   <div id="map-wrap">
     <div id="cesiumContainer"></div>
-    <div id="map-loading">初始化地圖...</div>
+    <div id="map-loading" data-i18n="map_loading">初始化地圖...</div>
     <div id="legend">
-      <h4>衛星分類</h4>
+      <h4 data-i18n="legend_title">衛星分類</h4>
       <div class="leg-row" data-cat="US_EO" onclick="toggleCatFilter('US_EO')">
         <div class="leg-dot" style="background:#4488FF"></div>
-        <span class="leg-label">美國商用光學</span>
+        <span class="leg-label" data-i18n="cat_us_eo_label">美國商用光學</span>
       </div>
       <div class="leg-row" data-cat="CN_COMM" onclick="toggleCatFilter('CN_COMM')">
         <div class="leg-dot" style="background:#FF9800"></div>
-        <span class="leg-label">中國商用光學</span>
+        <span class="leg-label" data-i18n="cat_cn_comm_label">中國商用光學</span>
       </div>
       <div class="leg-row" data-cat="CN_MIL" onclick="toggleCatFilter('CN_MIL')">
         <div class="leg-dot" style="background:#F44336"></div>
-        <span class="leg-label">中國軍用偵察</span>
+        <span class="leg-label" data-i18n="cat_cn_mil_label">中國軍用偵察</span>
       </div>
       <div class="leg-row" data-cat="TW_TASA" onclick="toggleCatFilter('TW_TASA')">
         <div class="leg-dot" style="background:#00E5FF"></div>
-        <span class="leg-label">台灣 TASA</span>
+        <span class="leg-label" data-i18n="cat_tw_tasa_label">台灣 TASA</span>
       </div>
       <div class="leg-row" data-cat="STARLINK" onclick="toggleCatFilter('STARLINK')">
         <div class="leg-dot" style="background:#A855F7"></div>
-        <span class="leg-label">Starlink 星鏈</span>
+        <span class="leg-label" data-i18n="cat_starlink_label">Starlink 星鏈</span>
       </div>
       <div style="border-top:1px solid #21262d;margin-top:5px;padding-top:5px;
                   display:flex;align-items:center;gap:7px">
         <div style="width:14px;height:3px;background:#FFD600;border-radius:1px;flex-shrink:0"></div>
-        <span style="font-size:10px;color:#8b949e">2000 km 覆蓋圈</span>
+        <span style="font-size:10px;color:#8b949e" data-i18n="legend_circle_note">2000 km 覆蓋圈</span>
       </div>
     </div>
     <!-- Timeline bar -->
@@ -85,19 +90,19 @@
       <input type="range" id="tl-slider" min="-43200" max="43200" step="15" value="0"
              oninput="tlSliderInput(this.value)" onchange="tlSliderChange(this.value)"/>
       <div id="tl-row">
-        <span id="tl-bounds" class="tl-lb">&#8722;30天</span>
+        <span id="tl-bounds" class="tl-lb" data-i18n="tl_bounds_past">&#8722;30天</span>
         <span id="tl-time">&#8212;</span>
-        <span id="tl-bounds" class="tl-rb">&#43;30天</span>
-        <button class="tl-now-btn" onclick="jumpToNow()">&#9654; 現在</button>
-        <span id="tl-badge" class="tl-badge now">現在</span>
+        <span id="tl-bounds" class="tl-rb" data-i18n="tl_bounds_future">&#43;30天</span>
+        <button class="tl-now-btn" onclick="jumpToNow()">&#9654; <span data-i18n="tl_now_btn">現在</span></button>
+        <span id="tl-badge" class="tl-badge now" data-i18n="tl_badge_now">現在</span>
         <span id="tl-loading"></span>
       </div>
     </div>
     <div id="statusbar">
-      <div class="sitem">衛星 <span id="st-total">&#8212;</span></div>
-      <div class="sitem">可見 <span id="st-visible">&#8212;</span></div>
-      <div class="sitem">圖上 <span id="st-plotted">&#8212;</span></div>
-      <div class="sitem">時刻 <span id="st-time">&#8212;</span></div>
+      <div class="sitem"><span data-i18n="status_total">衛星</span> <span id="st-total">&#8212;</span></div>
+      <div class="sitem"><span data-i18n="status_visible">可見</span> <span id="st-visible">&#8212;</span></div>
+      <div class="sitem"><span data-i18n="status_plotted">圖上</span> <span id="st-plotted">&#8212;</span></div>
+      <div class="sitem"><span data-i18n="status_time">時刻</span> <span id="st-time">&#8212;</span></div>
     </div>
   </div>
 </div>

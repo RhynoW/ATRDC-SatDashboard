@@ -7,7 +7,510 @@
      sat       {title, norads[], body, anchor, start?, row?, autoplay?, height?}
      positions {title, body, mode, val?, ids?, sequence?, height?}   世界地圖位置分布
      embed     {title, body, url, height}                            任意頁面內嵌
-   ?autoplay=<總秒數> → 自動導覽：依各節 dur 權重分配時間、平滑捲動走完全篇。 */
+   ?autoplay=<總秒數> → 自動導覽：依各節 dur 權重分配時間、平滑捲動走完全篇。
+
+   雙語（繁中／日文）：I18N 字典 + t()/tpl()/setLang()，模式參照 starlink.js。
+   只翻譯本檔案自產生的介面控制項文字（按鈕、標籤、表頭、圖說、提示訊息）；
+   故事 JSON（title/body/columns/rows/note 等）與其他 API 動態回傳內容（PROV.*、
+   d.note、d.method.* 等後端組字串）維持原樣不翻譯。 */
+
+// ── 雙語字典（zh / ja）──────────────────────────────────────────────────────
+const I18N = {
+  zh: {
+    doc_title_list: 'Story — 太空態勢敘事',
+    hdr_title_default: '太空態勢敘事',
+    nav_prev: '上一步', nav_prev_title: '上一步（↑ / PageUp）',
+    nav_next: '下一步', nav_next_title: '下一步（↓ / PageDown）',
+    lnk_list: '故事清單', nav_home: '返回主頁', loading_text: '載入中…',
+
+    list_title: '太空態勢敘事',
+    list_sub: 'StoryMaps 式互動故事 — 以軌道資料說故事',
+    list_updated: '更新：{d}',
+    list_empty: '尚無故事。',
+
+    err_story_not_found: '故事不存在。', err_story_back: '回清單',
+    err_load_fail: '載入失敗：{err}',
+    ph_scroll_load: '捲動至此載入…',
+    ph_scroll_load_orbit: '捲動至此載入軌道視圖…',
+    ph_scroll_load_pos: '捲動至此載入位置分布…',
+    open_full_page: '開啟完整頁面 ↗',
+
+    prov_title: '資料口徑',
+    prov_stale_prefix: '⚠ TLE 資料齡 {age}',
+    prov_ok_prefix: 'TLE 最新 epoch {date}・資料齡 {age}',
+    prov_age_day: '{n} 天',
+    prov_row_source: '資料來源',
+    prov_row_catalog: '目錄／有效',
+    prov_row_catalog_val: '{cat} 顆去重 NORAD（{rec} 筆 TLE）；≤7 天有 TLE 可傳播 {fresh} 顆',
+    prov_row_history: '歷史範圍',
+    prov_future_flag: '（含未來 epoch）',
+    prov_row_version: '版本／狀態',
+    prov_commit_prefix: 'commit {c}・',
+    prov_status_default: '技術展示／非操作級',
+    prov_row_db_update: '資料庫更新',
+    prov_row_propagator: '傳播模型',
+    prov_row_frame: '座標系',
+    prov_row_accuracy: '精度等級',
+    prov_row_pc: '接近篩選參數',
+    prov_row_maneuver: '軌道變化候選',
+    prov_row_snapshot: '口徑快照',
+    prov_row_snapshot_val: '{t} UTC（頁面產生時間；未來 epoch 之 TLE 為 GEO 平根數常態，傳播一律以「不晚於現在之最新 epoch」為準）',
+
+    pos_load_fail: '位置資料載入失敗',
+    pos_cap: '衛星數：{n}｜TLE 傳播位置，計算時刻 {t} UTC{epoch}',
+    pos_cap_epoch: '｜TLE 最新 epoch {d}（資料齡 {age} 天）',
+
+    regime_heo_other: 'HEO/其他',
+    globe_label_cap: '標籤：正面且不重疊者，上限 {n}（隨旋轉輪替）',
+
+    gs_kpi_objects: '在軌物體（不含碎片／火箭體）', gs_kpi_regime: '軌道域',
+    gs_kpi_alt_median: '高度中位數', gs_kpi_launch_range: '發射年份範圍',
+    gs_bars_launch: '歷年發射數（依目錄發射日期）',
+    gs_bars_alt: '高度分佈（km；LEO 每 100 km 一格，MEO／GEO 各一格）',
+    gs_note: '點選衛星開啟逐日軌道歷史（SMA 圓形圖＋Spiral Polar，近一年）。',
+
+    isr_bars_sensor: '感測器類型（顆）', isr_bars_res: '成像解析度級別（光學＋SAR，顆）', isr_unclassified: '未分類',
+    th_isr_series: '系列', th_isr_count: '顆', th_isr_sensor: '感測器',
+    th_isr_res: '解析度級別', th_isr_note: '註記',
+    isr_note_suffix: '（圖中 * 為推估級別；單位 m）',
+    sensor_光學: '光學', sensor_SAR: 'SAR', sensor_射頻訊號: '射頻訊號',
+    sensor_氣象掩星: '氣象掩星', sensor_技術試驗: '技術試驗', sensor_導航: '導航',
+
+    legend_before: '建立前', legend_after: '建立後（＋台灣站）',
+
+    man_connector: '；大陸群組另含：',
+    man_kpi_sats: '星系衛星數', man_kpi_events: '2026 機動候選事件',
+    man_kpi_sats_with_event: '有事件之衛星', man_kpi_sats_with_event_val: '{n}（{pct}%）',
+    man_kpi_rate100: '每 100 顆衛星事件數', man_kpi_rate1000: '每千次 TLE 轉移事件數',
+    man_kpi_median_da: '中位 |Δa|', man_kpi_prc_flag: 'PRC 管線旗標事件（1–5 月）',
+    man_bars_month: '月分佈', man_note_top: '最活躍衛星（事件數）',
+    man_details_summary: '最大 |Δa| 事件（前 {n}）：前後 TLE epoch、間隔、等效 Δv',
+    th_man_sat: '衛星', th_man_tle_before: 'TLE 前', th_man_tle_after: 'TLE 後',
+    th_man_gap_h: '間隔 (h)', th_man_da: 'Δa (km)', th_man_dv: '等效 Δv (m/s)', th_man_regime: '軌道域',
+    man_final_note: '候選 ≠ 已確認：Δv 是由 Δa 依 Δv≈n·Δa/2 換算的等效值（假設切向脈衝）。其他可能解釋包括 TLE 品質雜訊／軌道決定更新、LEO 大氣阻力模型誤差，以及資料缺漏造成的跳變。確認機動需要精密星曆或多來源交叉驗證。',
+
+    radar_kpi_arcs: '每日追蹤弧段（平均／顆）', radar_kpi_gap: '最大無觀測間隙',
+    radar_kpi_track_min: '累計追蹤時間／24 h', radar_kpi_taiwan_only: '僅台灣站可見（全球站皆不可見）',
+    radar_kpi_gain: '相對觀測資訊增益（σ∝1/√N 概念指標）', radar_kpi_taiwan_arc_sats: '台灣站有弧段之衛星',
+    radar_bars_pb: '建立前 vs 建立後（樣本平均）',
+    radar_bars_map: '地面站佈局：全球已知 SSN 站（{n}）＋台灣假想站',
+    th_radar_sat: '衛星', th_radar_arcs: '弧段 前→後', th_radar_taiwan_arc: '台灣弧段',
+    th_radar_gap: '最大間隙 前→後（分）', th_radar_precision: '精度提升',
+    radar_note: '{model} 樣本：{label} 低軌 {n} 顆，評估起點 {t0}，仰角遮蔽 {mask}°。',
+    radar_details_summary: '模型假設表',
+    radar_legend_1: '追蹤弧段／日', radar_legend_2: '最大間隙（分）', radar_legend_3: '累計追蹤（分）',
+
+    rv_loading: '傳播星系軌道並計算各仰角門檻的覆蓋率…',
+    rv_label_site: '觀測點', rv_label_mask: '地面觀測仰角門檻',
+    rv_recalc: '重新計算中…',
+    rv_kpi_coverage: '覆蓋率（{h} h 內至少 1 顆在門檻之上）', rv_no_outage: '無中斷',
+    rv_kpi_max_gap: '最長無覆蓋空窗', rv_kpi_sat_revisit: '單星重訪週期（中位數）',
+    rv_kpi_mean_revisit: '星系級平均通過間隔', rv_kpi_max_simul: '同時可見顆數峰值',
+    rv_cap_cov: '覆蓋率 vs 仰角門檻（%）', rv_cap_gap: '最長無覆蓋空窗 vs 仰角門檻（分）',
+    rv_cap_timeline: '未來 {h} h 可見顆數時間帶（門檻 {m}°；紅色＝完全無覆蓋）',
+    rv_cap_top_gaps: '最長的無覆蓋空窗（門檻 {m}°）',
+    th_rv_idx: '#', th_rv_start: '空窗起始（UTC）', th_rv_len: '長度',
+    rv_note: '觀測點 {site}；{label} {n} 顆（TLE 可傳播）；時窗 {h} h、取樣 {step} s。「單星重訪週期」為同一顆衛星再次通過的間隔中位數（傳統 revisit period 定義）；「星系級平均通過間隔」為任一顆衛星通過的平均間隔，星系規模愈大此值愈小，兩者不可混用。{censored}中位通過長度 {pmed}，中位最大仰角 {emed}。',
+    rv_censored: '時窗頭尾另有被截斷之空窗（至少 {n} 分），未計入統計。',
+    site_taipei: '台北', site_taichung: '台中', site_tropic: '北回歸線（嘉義）',
+    site_eluanbi: '鵝鑾鼻', site_nangan: '馬祖南竿', site_kinmen: '金門',
+
+    tl_peak: '峰值 {n} 顆',
+
+    sky_no_sat: '無可示範衛星', sky_kpi_sat: '衛星',
+    sky_kpi_passes: '未來 24 h 通過次數', sky_kpi_max_el: '最高仰角',
+    th_sky_idx: '#', th_sky_aos: 'AOS（UTC）', th_sky_los: 'LOS',
+    th_sky_maxel: '最大仰角', th_sky_dur: '時長',
+    sky_note: '站點：{name}（{lat}°N, {lon}°E）；仰角遮蔽 {mask}°。',
+    sky_no_pass_24h: '24 h 內無衛星通過',
+    sky_tracking: '追蹤中（第 {n} 次通過）{t} UTC · Az {az}° · El {el}° · 距離 {rng} km',
+
+    hero_site_role: '{label} 備援觀測點', hero_site_hint: '可於第五部切換站點',
+    hero_next_window: '下一個候選備援窗口（門檻 {m}°）', hero_geo_only: '幾何層，非通聯保證',
+    hero_now_covered: '現在即有幾何覆蓋', hero_no_window: '{h} h 內無窗口',
+    hero_window_in: '約 {m} 分鐘後', hero_tle_age: 'TLE 資料齡 {n} 天',
+    hero_max_gap: '最長無覆蓋空窗（{h} h 內）',
+    hero_conjunction: '空間接近關注事件（<{thr} km）', hero_candidate_note: '候選，需人工複核',
+    hero_pairs: '{n} 對',
+
+    cdm_kpi_pairs: '<{thr} km 幾何接近配對（TLE 傳播）', cdm_kpi_scanned: '掃描物體數',
+    cdm_kpi_elapsed: '{s} s', cdm_kpi_elapsed_label: '向量化 SGP4 掃描耗時',
+    cdm_kpi_red_amber: 'RED / AMBER（前 10）',
+    th_cdm_primary: '主體', th_cdm_secondary: '次體', th_cdm_miss: '最接近距離',
+    th_cdm_pc: '接近篩選參數', th_cdm_level: '等級',
+    cdm_expand_btn: '3D 展開',
+    cdm_note: '「接近篩選參數」（Pc proxy）僅用於排序供人工複核的事件，並非碰撞判定或正式碰撞機率。幾何篩選（<{thr} km）≠ 碰撞風險；此值為 Chan (2008) 二維近似，σ R/T/N 為固定假設值（{sigma}），不是 CDM 協方差，僅供排序使用；距離約為 0 的對接／共位配對已排除。',
+
+    re_kpi_mc_median: '{name}：數值 MC 中位再入時刻 [TLE-derived]',
+    re_kpi_mc_pos: '{name}：MC 中位落點（5–95% 跨度 {h} h）',
+    re_kpi_vs_esa: '{name}：本系統 − ESA 預報',
+    th_re_sat: '衛星', th_re_last_tle: '最後 TLE', th_re_s1: '階段一 SGP4 近地點掠過',
+    th_re_s2: '階段二 數值 MC 中位', th_re_esa: 'ESA 預報 [ESA-reported]', th_re_delta: 'Δ（S1／S2）',
+    re_reentered: '（{n}/{total} 次再入）',
+    re_hindcast_summary: 'Salsa 2024-09-08 18:47Z 回測（誤差＝本系統 − ESA 實際）與密度尺度校準',
+    th_re_hc_lead: '前置', th_re_hc_tle: 'TLE', th_re_hc_s1err: 'S1 誤差',
+    th_re_hc_s2err: 'S2 誤差', th_re_hc_mcerr: 'MC 中位誤差', th_re_hc_mcspread: 'MC 跨度',
+    re_lead_days: '{n} 天',
+    re_calib_note: 'NRLMSIS 密度尺度校準值 ×{scale}（掃描 {scales}，平均誤差 h：{err}）',
+    re_spacetrack_note: 'Space-Track 18 SDS 衰減預報（日級）：{s}',
+    re_generated: '｜產生 {t}',
+    re_msg_suffix: '（{src}，訊息 {msg}）',
+    hero_loading: '載入即時狀態…',
+  },
+  ja: {
+    doc_title_list: 'Story — 宇宙状況把握ストーリー',
+    hdr_title_default: '宇宙状況把握ストーリー',
+    nav_prev: '前へ', nav_prev_title: '前へ（↑ / PageUp）',
+    nav_next: '次へ', nav_next_title: '次へ（↓ / PageDown）',
+    lnk_list: 'ストーリー一覧', nav_home: 'ホームに戻る', loading_text: '読み込み中…',
+
+    list_title: '宇宙状況把握ストーリー',
+    list_sub: 'StoryMaps 形式のインタラクティブストーリー — 軌道データで語る',
+    list_updated: '更新日：{d}',
+    list_empty: 'ストーリーはまだありません。',
+
+    err_story_not_found: 'ストーリーが見つかりません。', err_story_back: '一覧に戻る',
+    err_load_fail: '読み込み失敗：{err}',
+    ph_scroll_load: 'スクロールすると読み込まれます…',
+    ph_scroll_load_orbit: 'スクロールすると軌道ビューが読み込まれます…',
+    ph_scroll_load_pos: 'スクロールすると位置分布が読み込まれます…',
+    open_full_page: '全画面で開く ↗',
+
+    prov_title: 'データの出典・品質',
+    prov_stale_prefix: '⚠ TLEデータの経過日数：{age}',
+    prov_ok_prefix: 'TLE最新エポック {date}・データ齢 {age}',
+    prov_age_day: '{n} 日',
+    prov_row_source: 'データソース',
+    prov_row_catalog: 'カタログ／有効',
+    prov_row_catalog_val: '{cat} 機（重複を除いたNORADオブジェクト）（TLE {rec} 件）；直近7日以内のTLEで伝播可能 {fresh} 機',
+    prov_row_history: '収録期間',
+    prov_future_flag: '（未来エポックを含む）',
+    prov_row_version: 'バージョン／状態',
+    prov_commit_prefix: 'commit {c}・',
+    prov_status_default: '技術デモ／非運用レベル',
+    prov_row_db_update: 'データベース更新',
+    prov_row_propagator: '伝播モデル',
+    prov_row_frame: '座標系',
+    prov_row_accuracy: '精度レベル',
+    prov_row_pc: '近接スクリーニングパラメータ',
+    prov_row_maneuver: '軌道変化候補',
+    prov_row_snapshot: '出典スナップショット',
+    prov_row_snapshot_val: '{t} UTC（ページ生成時刻。未来エポックのTLEはGEOの平均軌道要素として一般的であり、伝播は常に「現在時刻以前で最新のエポック」を基準とする）',
+
+    pos_load_fail: '位置データの読み込みに失敗しました',
+    pos_cap: '衛星数：{n}｜TLE伝播位置、計算時刻 {t} UTC{epoch}',
+    pos_cap_epoch: '｜TLE最新エポック {d}（データ齢 {age} 日）',
+
+    regime_heo_other: 'HEO/その他',
+    globe_label_cap: 'ラベル：正面かつ重ならないもののみ、上限 {n}（回転に伴い入れ替わり）',
+
+    gs_kpi_objects: '軌道上物体（デブリ・ロケット体を除く）', gs_kpi_regime: '軌道域',
+    gs_kpi_alt_median: '高度中央値', gs_kpi_launch_range: '打上げ年範囲',
+    gs_bars_launch: '年別打上げ数（カタログの打上げ日ベース）',
+    gs_bars_alt: '高度分布（km；LEOは100kmごと、MEO／GEOはそれぞれ1区分）',
+    gs_note: '衛星をクリックすると日次の軌道履歴（SMA円形図＋スパイラル極座標図、直近1年）が開きます。',
+
+    isr_bars_sensor: 'センサー種別（機）', isr_bars_res: '撮像分解能クラス（光学＋SAR、機）', isr_unclassified: '未分類',
+    th_isr_series: '系列', th_isr_count: '機', th_isr_sensor: 'センサー',
+    th_isr_res: '分解能クラス', th_isr_note: '備考',
+    isr_note_suffix: '（図中の * は推定クラス；単位 m）',
+    sensor_光學: '光学', sensor_SAR: 'SAR', sensor_射頻訊號: '電波信号',
+    sensor_氣象掩星: '気象掩蔽', sensor_技術試驗: '技術試験', sensor_導航: '航法',
+
+    legend_before: '設置前', legend_after: '設置後（＋台湾局）',
+
+    man_connector: '；中国大陸グループはさらに次を含む：',
+    man_kpi_sats: 'コンステレーションの衛星数', man_kpi_events: '2026年の候補機動イベント',
+    man_kpi_sats_with_event: 'イベントのある衛星', man_kpi_sats_with_event_val: '{n}（{pct}%）',
+    man_kpi_rate100: '衛星100機あたりのイベント数', man_kpi_rate1000: 'TLE遷移1,000回あたりのイベント数',
+    man_kpi_median_da: '中央値 |Δa|', man_kpi_prc_flag: 'PRCパイプライン旗標イベント（1〜5月）',
+    man_bars_month: '月別分布', man_note_top: '最も活発な衛星（イベント数）',
+    man_details_summary: '最大 |Δa| イベント（上位 {n} 件）：前後のTLEエポック、間隔、等価Δv',
+    th_man_sat: '衛星', th_man_tle_before: 'TLE前', th_man_tle_after: 'TLE後',
+    th_man_gap_h: '間隔 (h)', th_man_da: 'Δa (km)', th_man_dv: '等価Δv (m/s)', th_man_regime: '軌道域',
+    man_final_note: '候補 ≠ 確定：Δvは、Δv≈n·Δa/2（接線方向のインパルスを仮定）によりΔaから換算した等価値です。その他の可能性として、TLE品質のばらつき／軌道決定の更新、LEOにおける大気抵抗モデル誤差、データ欠落による不連続な変化が考えられます。機動の確認には、精密暦または複数情報源による相互検証が必要です。',
+
+    radar_kpi_arcs: '1日あたりの追跡アーク（平均／機）', radar_kpi_gap: '最大無観測ギャップ',
+    radar_kpi_track_min: '累積追跡時間／24時間', radar_kpi_taiwan_only: '台湾局のみ可視（他の全世界局では不可視）',
+    radar_kpi_gain: '相対観測情報利得（σ∝1/√N の概念指標）', radar_kpi_taiwan_arc_sats: '台湾局でアークのある衛星',
+    radar_bars_pb: '設置前 vs 設置後（サンプル平均）',
+    radar_bars_map: '地上局配置：既知の全世界SSN局（{n}）＋台湾仮想局',
+    th_radar_sat: '衛星', th_radar_arcs: 'アーク 前→後', th_radar_taiwan_arc: '台湾アーク',
+    th_radar_gap: '最大ギャップ 前→後（分）', th_radar_precision: '精度向上',
+    radar_note: '{model} サンプル：{label} 低軌道 {n} 機、評価起点 {t0}、仰角マスク {mask}°。',
+    radar_details_summary: 'モデル前提条件',
+    radar_legend_1: '追跡アーク／日', radar_legend_2: '最大ギャップ（分）', radar_legend_3: '累積追跡（分）',
+
+    rv_loading: 'コンステレーション軌道を伝播し、各仰角しきい値でのカバレッジ率を計算中…',
+    rv_label_site: '観測地点', rv_label_mask: '地上観測の仰角しきい値',
+    rv_recalc: '再計算中…',
+    rv_kpi_coverage: 'カバレッジ率（{h}時間以内に1機以上がしきい値を超える）', rv_no_outage: '中断なし',
+    rv_kpi_max_gap: '最長のカバレッジ空白時間', rv_kpi_sat_revisit: '単一衛星の再訪周期（中央値）',
+    rv_kpi_mean_revisit: 'コンステレーションレベルの平均通過間隔', rv_kpi_max_simul: '同時可視機数のピーク',
+    rv_cap_cov: 'カバレッジ率 vs 仰角しきい値（%）', rv_cap_gap: '最長のカバレッジ空白時間 vs 仰角しきい値（分）',
+    rv_cap_timeline: '今後 {h} 時間の可視衛星数の推移（しきい値 {m}°；赤＝カバレッジなし）',
+    rv_cap_top_gaps: '最長のカバレッジ空白時間（しきい値 {m}°）',
+    th_rv_idx: '#', th_rv_start: 'ギャップ開始（UTC）', th_rv_len: '長さ',
+    rv_note: '観測地点 {site}；{label} {n} 機（TLE伝播可能）；時間窓 {h} 時間、サンプリング間隔 {step} 秒。「単一衛星の再訪周期」は同一衛星が再び通過するまでの間隔の中央値（従来のrevisit period定義）であり、「コンステレーションレベルの平均通過間隔」はいずれかの衛星が通過する平均間隔で、コンステレーション規模が大きいほど値は小さくなる — 両者を混同しないこと。{censored}通過時間の中央値 {pmed}、最大仰角の中央値 {emed}。',
+    rv_censored: '時間窓の前後には打ち切られたギャップ（少なくとも {n} 分）が別途存在し、統計には含まれていない。',
+    site_taipei: '台北', site_taichung: '台中', site_tropic: '北回帰線（嘉義）',
+    site_eluanbi: '鵝鑾鼻（ガランビ）', site_nangan: '馬祖南竿（ナンカン）', site_kinmen: '金門（キンモン）',
+
+    tl_peak: 'ピーク {n} 機',
+
+    sky_no_sat: 'デモ可能な衛星がありません', sky_kpi_sat: '衛星',
+    sky_kpi_passes: '今後24時間の通過回数', sky_kpi_max_el: '最大仰角',
+    th_sky_idx: '#', th_sky_aos: 'AOS（UTC）', th_sky_los: 'LOS',
+    th_sky_maxel: '最大仰角', th_sky_dur: '継続時間',
+    sky_note: '観測局：{name}（{lat}°N, {lon}°E）；仰角マスク角 {mask}°。',
+    sky_no_pass_24h: '24時間以内に衛星の通過はありません',
+    sky_tracking: '追跡中（{n}回目の通過）{t} UTC · 方位角 {az}° · 仰角 {el}° · 距離 {rng} km',
+
+    hero_site_role: '{label} バックアップ観測地点', hero_site_hint: '第5部で観測地点を切り替え可能',
+    hero_next_window: '次の候補バックアップ時間帯（しきい値 {m}°）', hero_geo_only: '幾何レベルであり、通信保証ではない',
+    hero_now_covered: '現在すでに幾何学的カバレッジあり', hero_no_window: '{h} 時間以内にウィンドウなし',
+    hero_window_in: '約 {m} 分後', hero_tle_age: 'TLEデータ齢 {n} 日',
+    hero_max_gap: '最長のカバレッジ空白時間（{h}時間以内）',
+    hero_conjunction: '近接監視イベント（<{thr} km）', hero_candidate_note: '候補であり、目視確認が必要',
+    hero_pairs: '{n} 組',
+
+    cdm_kpi_pairs: '<{thr} km 幾何接近ペア（TLE伝播）', cdm_kpi_scanned: 'スキャン物体数',
+    cdm_kpi_elapsed: '{s} 秒', cdm_kpi_elapsed_label: 'ベクトル化SGP4スキャン所要時間',
+    cdm_kpi_red_amber: 'RED / AMBER（上位10件）',
+    th_cdm_primary: '主天体', th_cdm_secondary: '副天体', th_cdm_miss: '最接近距離',
+    th_cdm_pc: '近接スクリーニングパラメータ', th_cdm_level: 'レベル',
+    cdm_expand_btn: '3D展開',
+    cdm_note: '「近接スクリーニングパラメータ」（Pc proxy）は、目視確認が必要なイベントの順位付けにのみ使用し、衝突判定でも正式な衝突確率でもありません。幾何学的スクリーニング（<{thr} km）≠衝突リスクです。この値はChan (2008)の2次元近似で、σ R/T/Nは固定の仮定値（{sigma}）であり、CDM共分散ではありません。順位付け専用で、距離が約0のドッキング／共位置ペアは除外済みです。',
+
+    re_kpi_mc_median: '{name}：数値MC中央値再突入時刻 [TLE-derived]',
+    re_kpi_mc_pos: '{name}：MC中央値の落下地点（5–95%レンジ {h} 時間）',
+    re_kpi_vs_esa: '{name}：本システム − ESA予報',
+    th_re_sat: '衛星', th_re_last_tle: '最終TLE', th_re_s1: '段階1 SGP4近地点通過',
+    th_re_s2: '段階2 数値MC中央値', th_re_esa: 'ESA予報 [ESA-reported]', th_re_delta: 'Δ（S1／S2）',
+    re_reentered: '（{n}/{total} 回再突入）',
+    re_hindcast_summary: 'Salsa 2024-09-08 18:47Z の事後再現計算（hindcast）（誤差＝本システム − ESA実測）と密度スケール較正',
+    th_re_hc_lead: 'リード', th_re_hc_tle: 'TLE', th_re_hc_s1err: 'S1誤差',
+    th_re_hc_s2err: 'S2誤差', th_re_hc_mcerr: 'MC中央値誤差', th_re_hc_mcspread: 'MCレンジ',
+    re_lead_days: '{n} 日',
+    re_calib_note: 'NRLMSIS密度スケール較正値 ×{scale}（走査 {scales}、平均誤差 h：{err}）',
+    re_spacetrack_note: 'Space-Track 18 SDS 再突入・軌道減衰予測（日次）：{s}',
+    re_generated: '｜生成 {t}',
+    re_msg_suffix: '（{src}、メッセージ {msg}）',
+    hero_loading: 'リアルタイム状態を読み込み中…',
+  },
+  en: {
+    doc_title_list: 'Story — Space Situational Awareness (SSA) Narratives',
+    hdr_title_default: 'Space Situational Awareness (SSA) Narratives',
+    nav_prev: 'Previous', nav_prev_title: 'Previous (↑ / PageUp)',
+    nav_next: 'Next', nav_next_title: 'Next (↓ / PageDown)',
+    lnk_list: 'Story List', nav_home: 'Back to Home', loading_text: 'Loading…',
+
+    list_title: 'Space Situational Awareness (SSA) Narratives',
+    list_sub: 'StoryMaps-style interactive stories — telling stories with orbital data',
+    list_updated: 'Updated: {d}',
+    list_empty: 'No stories yet.',
+
+    err_story_not_found: 'Story not found.', err_story_back: 'Back to list',
+    err_load_fail: 'Failed to load: {err}',
+    ph_scroll_load: 'Scroll here to load…',
+    ph_scroll_load_orbit: 'Scroll here to load the orbit view…',
+    ph_scroll_load_pos: 'Scroll here to load the position distribution…',
+    open_full_page: 'Open full page ↗',
+
+    prov_title: 'Data Provenance',
+    prov_stale_prefix: '⚠ TLE data age: {age}',
+    prov_ok_prefix: 'Latest TLE epoch {date} · Data age {age}',
+    prov_age_day: '{n} days',
+    prov_row_source: 'Data Source',
+    prov_row_catalog: 'Catalog / Valid',
+    prov_row_catalog_val: '{cat} de-duplicated NORAD objects ({rec} TLE records); {fresh} propagable using TLE data no more than 7 days old',
+    prov_row_history: 'Historical Range',
+    prov_future_flag: ' (includes future epochs)',
+    prov_row_version: 'Version / Status',
+    prov_commit_prefix: 'commit {c} · ',
+    prov_status_default: 'Technical Demonstration / Not for Operations',
+    prov_row_db_update: 'Database Updated',
+    prov_row_propagator: 'Propagator',
+    prov_row_frame: 'Reference Frame',
+    prov_row_accuracy: 'Accuracy Level',
+    prov_row_pc: 'Close-Approach Screening Parameter',
+    prov_row_maneuver: 'Orbital Change Candidate',
+    prov_row_snapshot: 'Data Provenance Snapshot',
+    prov_row_snapshot_val: '{t} UTC (page generation time; future-epoch TLEs are typical for GEO mean elements — propagation always uses the "latest epoch not later than now")',
+
+    pos_load_fail: 'Failed to load position data',
+    pos_cap: 'Satellites: {n} | TLE-propagated positions, computed at {t} UTC{epoch}',
+    pos_cap_epoch: ' | Latest TLE epoch {d} (data age {age} days)',
+
+    regime_heo_other: 'HEO/Other',
+    globe_label_cap: 'Labels: near-side and non-overlapping only, capped at {n} (rotates with the view)',
+
+    gs_kpi_objects: 'Objects in Orbit (excl. debris/rocket bodies)', gs_kpi_regime: 'Orbital regime',
+    gs_kpi_alt_median: 'Median altitude', gs_kpi_launch_range: 'Launch year range',
+    gs_bars_launch: 'Launches by year (catalog launch date)',
+    gs_bars_alt: 'Altitude distribution (km; LEO in 100 km bins, MEO/GEO each one bin)',
+    gs_note: 'Click a satellite to open its daily orbit history (SMA circular plot + spiral polar plot, past year).',
+
+    isr_bars_sensor: 'Sensor type (satellites)', isr_bars_res: 'Imaging resolution class (optical + SAR, satellites)', isr_unclassified: 'Unclassified',
+    th_isr_series: 'Series', th_isr_count: 'Sats', th_isr_sensor: 'Sensor',
+    th_isr_res: 'Resolution class', th_isr_note: 'Note',
+    isr_note_suffix: ' (* denotes an estimated class; units in m)',
+    sensor_光學: 'Optical', sensor_SAR: 'SAR', sensor_射頻訊號: 'RF signals',
+    sensor_氣象掩星: 'Meteorological Radio Occultation', sensor_技術試驗: 'Technology demonstration', sensor_導航: 'Navigation',
+
+    legend_before: 'Before', legend_after: 'After (+ Taiwan station)',
+
+    man_connector: '; the PRC group additionally includes: ',
+    man_kpi_sats: 'Constellation satellites', man_kpi_events: '2026 candidate maneuver events',
+    man_kpi_sats_with_event: 'Satellites with events', man_kpi_sats_with_event_val: '{n} ({pct}%)',
+    man_kpi_rate100: 'Events per 100 satellites', man_kpi_rate1000: 'Events per 1,000 TLE-to-TLE transitions',
+    man_kpi_median_da: 'Median |Δa|', man_kpi_prc_flag: 'PRC pipeline-flagged events (Jan–May)',
+    man_bars_month: 'Monthly distribution', man_note_top: 'Most active satellites (event count)',
+    man_details_summary: 'Largest |Δa| events (top {n}): before/after TLE epoch, interval, equivalent Δv',
+    th_man_sat: 'Satellite', th_man_tle_before: 'TLE before', th_man_tle_after: 'TLE after',
+    th_man_gap_h: 'Interval (h)', th_man_da: 'Δa (km)', th_man_dv: 'Equivalent Δv (m/s)', th_man_regime: 'Regime',
+    man_final_note: 'Candidate ≠ confirmed: Δv is an equivalent value derived from Δa using Δv≈n·Δa/2, assuming a tangential impulse. Alternative explanations include TLE-quality noise or orbit-determination updates, atmospheric-drag model errors in LEO, and discontinuities caused by missing data. Confirming a maneuver requires precise ephemerides or cross-validation from multiple sources.',
+
+    radar_kpi_arcs: 'Mean daily tracking arcs per satellite', radar_kpi_gap: 'Largest unobserved interval',
+    radar_kpi_track_min: 'Cumulative tracking time per 24 h', radar_kpi_taiwan_only: 'Visible only from the Taiwan station (not visible from any other global station)',
+    radar_kpi_gain: 'Relative observation information gain (σ∝1/√N concept metric)', radar_kpi_taiwan_arc_sats: 'Satellites with an arc at the Taiwan station',
+    radar_bars_pb: 'Before vs. after (sample average)',
+    radar_bars_map: 'Ground station layout: known global SSN stations ({n}) + hypothetical Taiwan ground station',
+    th_radar_sat: 'Satellite', th_radar_arcs: 'Arcs before→after', th_radar_taiwan_arc: 'Taiwan arcs',
+    th_radar_gap: 'Max gap before→after (min)', th_radar_precision: 'Precision gain',
+    radar_note: '{model} Sample: {label} LEO, {n} satellites; evaluation start time {t0}; elevation mask {mask}°.',
+    radar_details_summary: 'Model assumptions',
+    radar_legend_1: 'Tracking arcs/day', radar_legend_2: 'Max gap (min)', radar_legend_3: 'Cumulative tracking (min)',
+
+    rv_loading: 'Propagating constellation orbits and computing the coverage rate for each elevation threshold…',
+    rv_label_site: 'Observation site', rv_label_mask: 'Ground-observation elevation mask angle',
+    rv_recalc: 'Recomputing…',
+    rv_kpi_coverage: 'Coverage rate (at least one satellite above threshold within {h} h)', rv_no_outage: 'No outage',
+    rv_kpi_max_gap: 'Longest coverage gap', rv_kpi_sat_revisit: 'Single-satellite revisit period (median)',
+    rv_kpi_mean_revisit: 'Constellation-level mean pass interval', rv_kpi_max_simul: 'Peak simultaneous visible count',
+    rv_cap_cov: 'Coverage rate vs. elevation threshold (%)', rv_cap_gap: 'Longest coverage gap vs. elevation threshold (min)',
+    rv_cap_timeline: 'Visible-count time band for the next {h} h (threshold {m}°; red = zero coverage)',
+    rv_cap_top_gaps: 'Longest coverage gaps (threshold {m}°)',
+    th_rv_idx: '#', th_rv_start: 'Gap start (UTC)', th_rv_len: 'Duration',
+    rv_note: 'Observation site {site}; {label}, {n} satellites (TLE-propagable); window {h} h, sampled every {step} s. "Single-satellite revisit period" is the median interval between successive passes of the same satellite (the conventional revisit-period definition); "constellation-level mean pass interval" is the mean interval between passes of any satellite, which shrinks as the constellation grows — the two must not be conflated. {censored}Median pass duration {pmed}; median max elevation {emed}.',
+    rv_censored: 'Gaps truncated at the edges of the time window (at least {n} min) exist separately and are not included in the statistics.',
+    site_taipei: 'Taipei', site_taichung: 'Taichung', site_tropic: 'Tropic of Cancer (Chiayi)',
+    site_eluanbi: 'Eluanbi', site_nangan: 'Nangan, Matsu', site_kinmen: 'Kinmen',
+
+    tl_peak: 'Peak {n} satellites',
+
+    sky_no_sat: 'No satellite available for demonstration', sky_kpi_sat: 'Satellite',
+    sky_kpi_passes: 'Passes in the next 24 h', sky_kpi_max_el: 'Max elevation',
+    th_sky_idx: '#', th_sky_aos: 'AOS (UTC)', th_sky_los: 'LOS',
+    th_sky_maxel: 'Max elevation', th_sky_dur: 'Duration',
+    sky_note: 'Station: {name} ({lat}°N, {lon}°E); elevation mask angle: {mask}°.',
+    sky_no_pass_24h: 'No satellite passes within 24 h',
+    sky_tracking: 'Tracking (pass {n}) {t} UTC · Az {az}° · El {el}° · Range {rng} km',
+
+    hero_site_role: '{label} backup observation site', hero_site_hint: 'Switch sites in Part 5',
+    hero_next_window: 'Next candidate backup window (threshold {m}°)', hero_geo_only: 'Geometric layer only — not a communications guarantee',
+    hero_now_covered: 'Geometric coverage available now', hero_no_window: 'No window within {h} h',
+    hero_window_in: 'In about {m} min', hero_tle_age: 'TLE data age {n} days',
+    hero_max_gap: 'Longest coverage gap (within {h} h)',
+    hero_conjunction: 'Conjunction watch events (<{thr} km)', hero_candidate_note: 'Candidate — requires manual review',
+    hero_pairs: '{n} pairs',
+
+    cdm_kpi_pairs: 'Geometric close-approach pairs <{thr} km (TLE propagation)', cdm_kpi_scanned: 'Objects scanned',
+    cdm_kpi_elapsed: '{s} s', cdm_kpi_elapsed_label: 'Vectorized SGP4 scan time',
+    cdm_kpi_red_amber: 'RED / AMBER (top 10)',
+    th_cdm_primary: 'Primary', th_cdm_secondary: 'Secondary', th_cdm_miss: 'Miss distance',
+    th_cdm_pc: 'Close-Approach Screening Parameter', th_cdm_level: 'Level',
+    cdm_expand_btn: 'Expand 3D',
+    cdm_note: 'The "close-approach screening parameter" (Pc proxy) is used only to rank events for manual review; it is not a collision determination or a formal probability of collision. Geometric screening (<{thr} km) ≠ collision risk. The value is a Chan (2008) 2-D approximation using fixed assumed σ R/T/N values ({sigma}), not a CDM covariance, and is for ranking only. Docking/co-located pairs at approximately zero distance are excluded.',
+
+    re_kpi_mc_median: '{name}: numerical MC median reentry time [TLE-derived]',
+    re_kpi_mc_pos: '{name}: MC median reentry location (5–95% spread {h} h)',
+    re_kpi_vs_esa: '{name}: this system − ESA forecast',
+    th_re_sat: 'Satellite', th_re_last_tle: 'Last TLE', th_re_s1: 'Stage 1 SGP4 perigee pass',
+    th_re_s2: 'Stage 2 numerical MC median', th_re_esa: 'ESA forecast [ESA-reported]', th_re_delta: 'Δ (S1/S2)',
+    re_reentered: ' ({n}/{total} reentered)',
+    re_hindcast_summary: 'Salsa 2024-09-08 18:47Z hindcast (error = this system − ESA actual) and density-scale calibration',
+    th_re_hc_lead: 'Lead time', th_re_hc_tle: 'TLE', th_re_hc_s1err: 'S1 error',
+    th_re_hc_s2err: 'S2 error', th_re_hc_mcerr: 'MC median error', th_re_hc_mcspread: 'MC spread',
+    re_lead_days: '{n} days',
+    re_calib_note: 'NRLMSIS density-scale calibration ×{scale} (scan {scales}; mean error h: {err})',
+    re_spacetrack_note: 'Space-Track 18 SDS decay forecast (daily): {s}',
+    re_generated: ' | generated {t}',
+    re_msg_suffix: ' ({src}, message {msg})',
+    hero_loading: 'Loading live status…',
+  },
+};
+const LOCALE_MAP = {zh: 'zh-Hant', ja: 'ja-JP', en: 'en-US'};
+let LANG = localStorage.getItem('story_lang') || 'zh';
+if(!I18N[LANG]) LANG = 'zh';
+let CUR_SID = window.STORY_ID || '';
+
+function t(key){
+  const d = I18N[LANG] || I18N.zh;
+  return (key in d) ? d[key] : (I18N.zh[key] !== undefined ? I18N.zh[key] : key);
+}
+function tpl(key, vars){
+  let s = t(key);
+  Object.keys(vars || {}).forEach(k => { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
+  return s;
+}
+function sensorLabel(zhName){ return t('sensor_' + zhName) !== ('sensor_' + zhName) ? t('sensor_' + zhName) : zhName; }
+const SITE_KEY_MAP = {taipei: 'site_taipei', taichung: 'site_taichung', tropic: 'site_tropic',
+                      eluanbi: 'site_eluanbi', nangan: 'site_nangan', kinmen: 'site_kinmen'};
+function siteLabel(site){
+  const k = SITE_KEY_MAP[site.key];
+  return k ? t(k) : site.name;
+}
+
+// ── 靜態介面文字（story.html 內固定殼層元素）──────────────────────────────────
+function applyStaticI18n(){
+  document.documentElement.lang = LOCALE_MAP[LANG] || 'zh-Hant';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.getAttribute('data-i18n-title')); });
+  document.querySelectorAll('.lang-btn').forEach(b => { b.classList.toggle('active', b.dataset.lang === LANG); });
+}
+
+// ── 故事清單快取（供日文版故事自動切換判斷 {id}-ja 是否存在）──────────────────
+let STORY_LIST_CACHE = null;
+async function getStoryList(){
+  if(STORY_LIST_CACHE) return STORY_LIST_CACHE;
+  try{ STORY_LIST_CACHE = await (await fetch('/api/story/list')).json(); }
+  catch(e){ STORY_LIST_CACHE = []; }
+  return STORY_LIST_CACHE;
+}
+async function findLangVariant(sid, targetLang){
+  if(!sid) return null;
+  const list = await getStoryList();
+  const ids = new Set(list.map(s => s.id));
+  if(targetLang === 'ja'){
+    if(sid.endsWith('-ja')) return null;
+    const cand = sid + '-ja';
+    return ids.has(cand) ? cand : null;
+  }
+  if(sid.endsWith('-ja')){
+    const cand = sid.slice(0, -3);
+    return ids.has(cand) ? cand : null;
+  }
+  return null;
+}
+
+// ── 語言切換：更新殼層文字，並在有對應 {id}-ja／去 -ja 版本時自動改載入 ──────
+async function setLang(lang){
+  if(!I18N[lang]) return;
+  LANG = lang;
+  localStorage.setItem('story_lang', lang);
+  applyStaticI18n();
+  if(CUR_SID){
+    const variant = await findLangVariant(CUR_SID, lang);
+    if(variant){
+      CUR_SID = variant;
+      history.pushState({}, '', '/story/' + variant);
+    }
+    await renderStory(CUR_SID);
+  } else {
+    await renderList();
+  }
+}
 
 function esc(s){
   return String(s).replace(/[&<>"']/g,
@@ -29,19 +532,19 @@ async function loadProv(){
 }
 function provHtml(){
   if(!PROV) return '';
-  const age = PROV.tle_age_days == null ? '—' : PROV.tle_age_days + ' 天';
+  const age = PROV.tle_age_days == null ? '—' : tpl('prov_age_day', {n: PROV.tle_age_days});
   const stale = PROV.tle_age_days != null && PROV.tle_age_days > 3;
   const row = (k, v) => '<div class="pv"><span class="k">' + k + '</span><span class="v">' + esc(v || '—') + '</span></div>';
-  return '<details class="prov"' + (stale ? ' open' : '') + '><summary>資料口徑' +
-    (stale ? '<b class="stale">⚠ TLE 資料齡 ' + age + '</b>' : '<span class="ok">TLE 最新 epoch ' + (PROV.tle_epoch_latest_past || PROV.tle_epoch_max || '').slice(0, 10) + '・資料齡 ' + age + '</span>') +
+  return '<details class="prov"' + (stale ? ' open' : '') + '><summary>' + t('prov_title') +
+    (stale ? '<b class="stale">' + tpl('prov_stale_prefix', {age}) + '</b>' : '<span class="ok">' + tpl('prov_ok_prefix', {date: (PROV.tle_epoch_latest_past || PROV.tle_epoch_max || '').slice(0, 10), age}) + '</span>') +
     '</summary><div class="pgrid">' +
-    row('資料來源', PROV.source) +
-    row('目錄／有效', fmtN(PROV.catalog_sat_count || PROV.valid_sat_count) + ' 顆去重 NORAD（' + fmtN(PROV.tle_record_count) + ' 筆 TLE）；≤7 天有 TLE 可傳播 ' + fmtN(PROV.fresh_sat_count_7d) + ' 顆') +
-    row('歷史範圍', (PROV.tle_epoch_min || '').slice(0, 10) + ' ～ ' + (PROV.tle_epoch_max || '').slice(0, 10) + (PROV.tle_epoch_max > (PROV.tle_epoch_latest_past || '') ? '（含未來 epoch）' : '')) +
-    row('版本／狀態', (PROV.app_commit ? 'commit ' + PROV.app_commit + '・' : '') + (PROV.status || '技術展示／非操作級')) +
-    row('資料庫更新', (PROV.db_updated_at || '').slice(0, 16).replace('T', ' ') + ' UTC') + row('傳播模型', PROV.propagator) +
-    row('座標系', PROV.frame) + row('精度等級', PROV.accuracy) + row('接近關注參數', PROV.pc_model) + row('軌道變化候選', PROV.maneuver_method) +
-    row('口徑快照', ((PROV.generated_at || '').slice(0, 16).replace('T', ' ') + ' UTC（頁面產生時間；未來 epoch 之 TLE 為 GEO 平根數常態，傳播一律以「不晚於現在之最新 epoch」為準）')) +
+    row(t('prov_row_source'), PROV.source) +
+    row(t('prov_row_catalog'), tpl('prov_row_catalog_val', {cat: fmtN(PROV.catalog_sat_count || PROV.valid_sat_count), rec: fmtN(PROV.tle_record_count), fresh: fmtN(PROV.fresh_sat_count_7d)})) +
+    row(t('prov_row_history'), (PROV.tle_epoch_min || '').slice(0, 10) + ' ～ ' + (PROV.tle_epoch_max || '').slice(0, 10) + (PROV.tle_epoch_max > (PROV.tle_epoch_latest_past || '') ? t('prov_future_flag') : '')) +
+    row(t('prov_row_version'), (PROV.app_commit ? tpl('prov_commit_prefix', {c: PROV.app_commit}) : '') + (PROV.status || t('prov_status_default'))) +
+    row(t('prov_row_db_update'), (PROV.db_updated_at || '').slice(0, 16).replace('T', ' ') + ' UTC') + row(t('prov_row_propagator'), PROV.propagator) +
+    row(t('prov_row_frame'), PROV.frame) + row(t('prov_row_accuracy'), PROV.accuracy) + row(t('prov_row_pc'), PROV.pc_model) + row(t('prov_row_maneuver'), PROV.maneuver_method) +
+    row(t('prov_row_snapshot'), tpl('prov_row_snapshot_val', {t: (PROV.generated_at || '').slice(0, 16).replace('T', ' ')})) +
     '</div></details>';
 }
 
@@ -52,17 +555,20 @@ async function renderList(){
   const list = await r.json();
   // 清單頁不用滿頁吸附（否則 hero 100vh + mandatory snap 會把頁面吸回頂端、卡片永遠捲不到）
   document.documentElement.classList.add('nosnap');
-  let h = '<div class="hero list"><h2>太空態勢敘事</h2>' +
-          '<div class="sub">StoryMaps 式互動故事 — 以軌道資料說故事</div></div>' +
+  document.title = t('doc_title_list');
+  CUR_SID = '';
+  let h = '<div class="hero list"><h2>' + esc(t('list_title')) + '</h2>' +
+          '<div class="sub">' + esc(t('list_sub')) + '</div></div>' +
           '<div class="cards">';
   list.forEach(s => {
     h += '<a class="card" href="/story/' + esc(s.id) + '"><h4>' + esc(s.title) +
          '</h4><p>' + esc(s.subtitle) + '</p>' +
-         (s.updated ? '<div class="up">更新：' + esc(s.updated) + '</div>' : '') + '</a>';
+         (s.updated ? '<div class="up">' + esc(tpl('list_updated', {d: s.updated})) + '</div>' : '') + '</a>';
   });
   h += '</div>';
-  if(!list.length) h += '<div style="color:#8b949e;padding:30px 0">尚無故事。</div>';
+  if(!list.length) h += '<div style="color:#8b949e;padding:30px 0">' + esc(t('list_empty')) + '</div>';
   wrap.innerHTML = h;
+  applyStaticI18n();
 }
 
 /* ── orbit 內嵌網址 ── */
@@ -86,9 +592,9 @@ function satFrame(sec, idx){
     btns = '<span style="font-size:12.5px;color:#8b949e">NORAD ' + ns[0] + '</span>';
   }
   return '<div class="sat-head">' + btns +
-    '<a class="open" href="/orbit?norad=' + ns[0] + '" target="_blank">開啟完整頁面 ↗</a></div>' +
+    '<a class="open" href="/orbit?norad=' + ns[0] + '" target="_blank">' + esc(t('open_full_page')) + '</a></div>' +
     '<div class="frame" id="fr' + idx + '" data-src="' + orbitUrl(ns[0], sec) +
-    '" data-h="' + hgt + '"><div class="ph">捲動至此載入軌道視圖…</div></div>';
+    '" data-h="' + hgt + '"><div class="ph">' + esc(t('ph_scroll_load_orbit')) + '</div></div>';
 }
 
 /* 上一步／下一步：以視窗高度為一步（每節恰為 100vh；封面已併入第一節） */
@@ -147,14 +653,16 @@ async function initPosMap(box){
   try{
     const r = await fetch(url);
     d = await r.json();
-  }catch(e){ box.innerHTML = '<div class="ph">位置資料載入失敗</div>'; return; }
+  }catch(e){ box.innerHTML = '<div class="ph">' + esc(t('pos_load_fail')) + '</div>'; return; }
   const st = PM[pmId] = {sats: d.sats || [], names: d.names || {}, focus: -1};
   box.innerHTML = '<canvas></canvas>';
   st.cv = box.querySelector('canvas');
   const capEl = box.parentElement.querySelector('.pm-cap');
-  if(capEl) capEl.textContent = '衛星數：' + d.count + '｜TLE 傳播位置，計算時刻 ' +
-    new Date(d.timestamp).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' +
-    (PROV && PROV.tle_epoch_max ? '｜TLE 最新 epoch ' + (PROV.tle_epoch_latest_past || PROV.tle_epoch_max).slice(0, 10) + '（資料齡 ' + PROV.tle_age_days + ' 天）' : '');
+  if(capEl) capEl.textContent = tpl('pos_cap', {
+    n: d.count,
+    t: new Date(d.timestamp).toISOString().slice(0, 16).replace('T', ' '),
+    epoch: (PROV && PROV.tle_epoch_max ? tpl('pos_cap_epoch', {d: (PROV.tle_epoch_latest_past || PROV.tle_epoch_max).slice(0, 10), age: PROV.tle_age_days}) : ''),
+  });
 
   if(box.dataset.globe === '1'){ initGlobe3D(pmId); return; }
 
@@ -264,7 +772,7 @@ function drawGlobe3D(pmId){
   // 衛星（依軌道域配色）
   const big = st.sats.length > 200;
   const hasNames = Object.keys(st.names).length > 0;
-  const REG = [['LEO', 2000, '#58d0ff'], ['MEO', 30000, '#3fb950'], ['GEO/IGSO', 40000, '#ffd747'], ['HEO/其他', 1e9, '#f778ba']];
+  const REG = [['LEO', 2000, '#58d0ff'], ['MEO', 30000, '#3fb950'], ['GEO/IGSO', 40000, '#ffd747'], [t('regime_heo_other'), 1e9, '#f778ba']];
   const regOf = alt => REG.find(r => alt < r[1]);
   const regCount = {};
   const MAX_LABELS = big ? 150 : 100000;           // 大星系：正面不重疊標籤上限
@@ -302,7 +810,7 @@ function drawGlobe3D(pmId){
   labels.forEach(([nm, x, y]) => ctx.fillText(nm, x, y));
   if(big && hasNames){
     ctx.fillStyle = '#6e7681'; ctx.font = '10.5px Segoe UI'; ctx.textAlign = 'right';
-    ctx.fillText('標籤：正面且不重疊者，上限 ' + MAX_LABELS + '（隨旋轉輪替）', w - 8, h - 8);
+    ctx.fillText(tpl('globe_label_cap', {n: MAX_LABELS}), w - 8, h - 8);
   }
   // 圖例：軌道域顆數
   let ly = 14;
@@ -380,7 +888,7 @@ function drawPosMap(pmId){
 function kpi(v, l, cls){
   return '<div class="kpi' + (cls ? ' ' + cls : '') + '"><div class="v">' + v + '</div><div class="l">' + esc(l) + '</div></div>';
 }
-function fmtN(n){ return Number(n).toLocaleString('zh-Hant'); }
+function fmtN(n){ return Number(n).toLocaleString(LOCALE_MAP[LANG] || 'zh-Hant'); }
 
 /* 細長條圖（color 可為單色或逐根顏色陣列；值標籤：≤14 根全標，否則只標最大） */
 function drawBars(cv, labels, values, color, unit){
@@ -420,14 +928,14 @@ async function initGroupStats(el){
   const years = Object.keys(d.launch_years), yv = Object.values(d.launch_years);
   const altK = Object.keys(d.alt_hist), altV = Object.values(d.alt_hist);
   el.innerHTML =
-    '<div class="kpis">' + kpi(fmtN(d.n), '在軌物體（不含碎片／火箭體）') +
-    kpi(esc(reg), '軌道域') + kpi(d.alt_median != null ? fmtN(Math.round(d.alt_median)) + ' km' : '—', '高度中位數') +
-    kpi(years.length ? years[0] + '–' + years[years.length - 1] : '—', '發射年份範圍') + '</div>' +
-    '<div class="two"><div class="bars"><h5>歷年發射數（依目錄發射日期）</h5><canvas id="' + el.id + '-y"></canvas></div>' +
-    '<div class="bars"><h5>高度分佈（km；LEO 每 100 km 一格，MEO／GEO 各一格）</h5><canvas id="' + el.id + '-a"></canvas></div></div>' +
+    '<div class="kpis">' + kpi(fmtN(d.n), t('gs_kpi_objects')) +
+    kpi(esc(reg), t('gs_kpi_regime')) + kpi(d.alt_median != null ? fmtN(Math.round(d.alt_median)) + ' km' : '—', t('gs_kpi_alt_median')) +
+    kpi(years.length ? years[0] + '–' + years[years.length - 1] : '—', t('gs_kpi_launch_range')) + '</div>' +
+    '<div class="two"><div class="bars"><h5>' + esc(t('gs_bars_launch')) + '</h5><canvas id="' + el.id + '-y"></canvas></div>' +
+    '<div class="bars"><h5>' + esc(t('gs_bars_alt')) + '</h5><canvas id="' + el.id + '-a"></canvas></div></div>' +
     '<div class="chips">' + d.sample.map(s => '<a class="chip" href="/orbit?norad=' + s.norad + '" target="_blank">' +
       esc(s.name) + ' ↗</a>').join('') + '</div>' +
-    '<div class="note">點選衛星開啟逐日軌道歷史（SMA 圓形圖＋Spiral Polar，近一年）。</div>';
+    '<div class="note">' + esc(t('gs_note')) + '</div>';
   drawBars($id(el.id + '-y'), years, yv, '#58a6ff');
   drawBars($id(el.id + '-a'), altK.map(k => k >= 20000 ? (k == 20000 ? 'MEO' : 'GEO') : k), altV,
            altK.map(k => k >= 30000 ? '#ffd747' : (k >= 20000 ? '#3fb950' : '#58d0ff')));
@@ -450,20 +958,20 @@ async function initIsrRes(el){
   const rk = Object.keys(d.resolution), rv = Object.values(d.resolution);
   el.innerHTML =
     '<div class="kpis">' + sk.map(k => '<div class="kpi"><div class="v" style="color:' + (SENSOR_COLOR[k] || '#e6edf3') + '">' +
-      fmtN(d.sensor[k]) + '</div><div class="l">' + esc(k) + '</div></div>').join('') +
-    (d.unknown ? kpi(fmtN(d.unknown), '未分類') : '') + '</div>' +
-    '<div class="two"><div class="bars"><h5>感測器類型（顆）</h5><canvas id="' + el.id + '-s"></canvas></div>' +
-    '<div class="bars"><h5>成像解析度級別（光學＋SAR，顆）</h5><canvas id="' + el.id + '-r"></canvas></div></div>' +
-    '<table class="data"><tr><th>系列</th><th>顆</th><th>感測器</th><th>解析度級別</th><th>註記</th></tr>' +
+      fmtN(d.sensor[k]) + '</div><div class="l">' + esc(sensorLabel(k)) + '</div></div>').join('') +
+    (d.unknown ? kpi(fmtN(d.unknown), t('isr_unclassified')) : '') + '</div>' +
+    '<div class="two"><div class="bars"><h5>' + esc(t('isr_bars_sensor')) + '</h5><canvas id="' + el.id + '-s"></canvas></div>' +
+    '<div class="bars"><h5>' + esc(t('isr_bars_res')) + '</h5><canvas id="' + el.id + '-r"></canvas></div></div>' +
+    '<table class="data"><tr><th>' + esc(t('th_isr_series')) + '</th><th>' + esc(t('th_isr_count')) + '</th><th>' + esc(t('th_isr_sensor')) + '</th><th>' + esc(t('th_isr_res')) + '</th><th>' + esc(t('th_isr_note')) + '</th></tr>' +
     d.series.map(s => '<tr><td>' + esc(s.series) + '</td><td>' + s.n + '</td><td style="color:' + (SENSOR_COLOR[s.sensor] || '#c9d1d9') + '">' +
-      esc(s.sensor) + '</td><td>' + esc(s.res) + '</td><td style="text-align:left;color:#8b949e">' + esc(s.note) + '</td></tr>').join('') +
+      esc(sensorLabel(s.sensor)) + '</td><td>' + esc(s.res) + '</td><td style="text-align:left;color:#8b949e">' + esc(s.note) + '</td></tr>').join('') +
     '</table><div class="note">' + esc(d.note) + '</div>';
-  drawBars($id(el.id + '-s'), sk, sv, sk.map(k => SENSOR_COLOR[k] || '#8b949e'));
+  drawBars($id(el.id + '-s'), sk.map(sensorLabel), sv, sk.map(k => SENSOR_COLOR[k] || '#8b949e'));
   const seq = ['#1f6feb', '#388bfd', '#58a6ff', '#79c0ff', '#a5d6ff', '#cae8ff'];
   const shortLbl = k => k.replace('（推估）', '*').replace('SAR ≈', 'SAR ').replace(/ m$/, '').replace(' m*', '*');
   drawBars($id(el.id + '-r'), rk.map(shortLbl), rv,
            rk.map((k, i) => k.startsWith('SAR') ? '#bc8cff' : seq[Math.min(i, seq.length - 1)]));
-  el.querySelector('.note').textContent += '（圖中 * 為推估級別；單位 m）';
+  el.querySelector('.note').textContent += t('isr_note_suffix');
 }
 
 /* 前／後配對長條（雷達效益） */
@@ -485,8 +993,8 @@ function drawPaired(cv, labels, before, after, units){
     });
     ctx.fillStyle = '#8b949e'; ctx.fillText(lb, padL + i * gw + gw / 2, h - padB + 14);
   });
-  ctx.textAlign = 'left'; ctx.fillStyle = '#6e7681'; ctx.fillRect(padL, h - 10, 10, 8); ctx.fillStyle = '#8b949e'; ctx.fillText('建立前', padL + 14, h - 2);
-  ctx.fillStyle = '#3fb950'; ctx.fillRect(padL + 60, h - 10, 10, 8); ctx.fillStyle = '#8b949e'; ctx.fillText('建立後（＋台灣站）', padL + 74, h - 2);
+  ctx.textAlign = 'left'; ctx.fillStyle = '#6e7681'; ctx.fillRect(padL, h - 10, 10, 8); ctx.fillStyle = '#8b949e'; ctx.fillText(t('legend_before'), padL + 14, h - 2);
+  ctx.fillStyle = '#3fb950'; ctx.fillRect(padL + 60, h - 10, 10, 8); ctx.fillStyle = '#8b949e'; ctx.fillText(t('legend_after'), padL + 74, h - 2);
 }
 
 async function initManeuvers(el){
@@ -494,33 +1002,32 @@ async function initManeuvers(el){
   const d = await r.json();
   if(d.error){ el.innerHTML = '<div class="ph">' + esc(d.error) + '</div>'; return; }
   const keys = (el.dataset.groups || '').split(',').filter(k => d.groups[k]);
-  let h = '<div class="note">' + esc(d.method.stat) + '；大陸群組另含：' + esc(d.method.prc) + '</div>';
+  let h = '<div class="note">' + esc(d.method.stat) + t('man_connector') + esc(d.method.prc) + '</div>';
   keys.forEach((k, i) => {
     const g = d.groups[k];
     const months = Object.keys(g.monthly), mv = Object.values(g.monthly);
     const pct = g.n_sats ? Math.round(100 * g.n_sats_with_event / g.n_sats) : 0;
     h += '<h4 style="margin:16px 0 4px;font-size:14px;color:#e6edf3">' + esc(g.label) + '</h4>' +
-      '<div class="kpis">' + kpi(fmtN(g.n_sats), '星系衛星數') + kpi(fmtN(g.n_events), '2026 機動候選事件') +
-      kpi(fmtN(g.n_sats_with_event) + '（' + pct + '%）', '有事件之衛星') +
-      (g.rate_per_100_sats != null ? kpi(g.rate_per_100_sats, '每 100 顆衛星事件數') : '') +
-      (g.rate_per_1000_transitions != null ? kpi(g.rate_per_1000_transitions, '每千次 TLE 轉移事件數') : '') +
-      (g.median_abs_da_km != null ? kpi(g.median_abs_da_km + ' km', '中位 |Δa|') : '') +
-      (g.prc_pipeline ? kpi(fmtN(g.prc_pipeline.n_events), 'PRC 管線旗標事件（1–5 月）') : '') + '</div>' +
-      '<div class="two"><div class="bars"><h5>月分佈</h5><canvas id="' + el.id + '-m' + i + '"></canvas></div>' +
-      '<div><div class="note" style="margin:0 0 4px">最活躍衛星（事件數）</div><div class="chips">' +
-      g.top.slice(0, 8).map(t => '<a class="chip" href="/orbit?norad=' + t.norad + '" target="_blank">' +
-        esc(t.name) + ' · ' + t.events + '</a>').join('') + '</div></div></div>';
+      '<div class="kpis">' + kpi(fmtN(g.n_sats), t('man_kpi_sats')) + kpi(fmtN(g.n_events), t('man_kpi_events')) +
+      kpi(tpl('man_kpi_sats_with_event_val', {n: fmtN(g.n_sats_with_event), pct}), t('man_kpi_sats_with_event')) +
+      (g.rate_per_100_sats != null ? kpi(g.rate_per_100_sats, t('man_kpi_rate100')) : '') +
+      (g.rate_per_1000_transitions != null ? kpi(g.rate_per_1000_transitions, t('man_kpi_rate1000')) : '') +
+      (g.median_abs_da_km != null ? kpi(g.median_abs_da_km + ' km', t('man_kpi_median_da')) : '') +
+      (g.prc_pipeline ? kpi(fmtN(g.prc_pipeline.n_events), t('man_kpi_prc_flag')) : '') + '</div>' +
+      '<div class="two"><div class="bars"><h5>' + esc(t('man_bars_month')) + '</h5><canvas id="' + el.id + '-m' + i + '"></canvas></div>' +
+      '<div><div class="note" style="margin:0 0 4px">' + esc(t('man_note_top')) + '</div><div class="chips">' +
+      g.top.slice(0, 8).map(tp => '<a class="chip" href="/orbit?norad=' + tp.norad + '" target="_blank">' +
+        esc(tp.name) + ' · ' + tp.events + '</a>').join('') + '</div></div></div>';
     if(g.events && g.events.length){
-      h += '<details class="evd"><summary>最大 |Δa| 事件（前 ' + g.events.length + '）：前後 TLE epoch、間隔、等效 Δv</summary>' +
-        '<table class="data"><tr><th>衛星</th><th>TLE 前</th><th>TLE 後</th><th>間隔 (h)</th><th>Δa (km)</th><th>等效 Δv (m/s)</th><th>軌道域</th></tr>' +
+      h += '<details class="evd"><summary>' + esc(tpl('man_details_summary', {n: g.events.length})) + '</summary>' +
+        '<table class="data"><tr><th>' + esc(t('th_man_sat')) + '</th><th>' + esc(t('th_man_tle_before')) + '</th><th>' + esc(t('th_man_tle_after')) + '</th><th>' + esc(t('th_man_gap_h')) + '</th><th>' + esc(t('th_man_da')) + '</th><th>' + esc(t('th_man_dv')) + '</th><th>' + esc(t('th_man_regime')) + '</th></tr>' +
         g.events.map(e => '<tr><td><a href="/orbit?norad=' + e.norad + '&start=' + e.epoch_before.slice(0, 10) + '" target="_blank">' + esc(e.name) + '</a><br><span style="color:#6e7681">' + e.norad + '</span></td>' +
           '<td>' + e.epoch_before.slice(0, 16).replace('T', ' ') + '</td><td>' + e.epoch_after.slice(0, 16).replace('T', ' ') + '</td>' +
           '<td>' + e.gap_h + '</td><td>' + (e.da_km > 0 ? '+' : '') + e.da_km + '</td><td>' + e.dv_ms + '</td><td>' + e.regime + '</td></tr>').join('') +
         '</table></details>';
     }
   });
-  h += '<div class="note">候選≠確認：Δv 為 Δa 以 Δv≈n·Δa/2 換算之等效值（假設切向脈衝）；替代解釋包括 TLE 品質波動／軌道決定更新、大氣阻力模型誤差（LEO）、資料缺漏造成之跳變。' +
-       '確認機動需精密星曆或多來源交叉驗證。</div>';
+  h += '<div class="note">' + esc(t('man_final_note')) + '</div>';
   el.innerHTML = h;
   keys.forEach((k, i) => {
     const g = d.groups[k];
@@ -538,25 +1045,25 @@ async function initRadar(el){
   const arrow = (a, b, unit, better) => a + unit + ' → <b style="color:' + (better ? '#3fb950' : '#e6edf3') + '">' + b + unit + '</b>';
   el.innerHTML =
     '<div class="kpis">' +
-    kpi(arrow(s.arcs_before, s.arcs_after, '', s.arcs_after > s.arcs_before), '每日追蹤弧段（平均／顆）') +
-    kpi(arrow(s.gap_max_before_min, s.gap_max_after_min, ' 分', s.gap_max_after_min < s.gap_max_before_min), '最大無觀測間隙') +
-    kpi(arrow(s.track_min_before, s.track_min_after, ' 分', s.track_min_after > s.track_min_before), '累計追蹤時間／24 h') +
-    kpi(s.taiwan_only_min + ' 分', '僅台灣站可見（全球站皆不可見）') +
-    kpi('+' + (s.info_gain_pct != null ? s.info_gain_pct : s.precision_gain_pct) + '%', '相對觀測資訊增益（σ∝1/√N 概念指標）', 'gain') +
-    kpi(s.sats_with_taiwan_arc + '/' + s.n_sats, '台灣站有弧段之衛星') + '</div>' +
-    '<div class="bars"><h5>建立前 vs 建立後（樣本平均）</h5><canvas id="' + el.id + '-pb"></canvas></div>' +
-    '<div class="two"><div><div class="bars"><h5>地面站佈局：全球已知 SSN 站（' + d.n_stations_before + '）＋台灣假想站</h5>' +
+    kpi(arrow(s.arcs_before, s.arcs_after, '', s.arcs_after > s.arcs_before), t('radar_kpi_arcs')) +
+    kpi(arrow(s.gap_max_before_min, s.gap_max_after_min, ' 分', s.gap_max_after_min < s.gap_max_before_min), t('radar_kpi_gap')) +
+    kpi(arrow(s.track_min_before, s.track_min_after, ' 分', s.track_min_after > s.track_min_before), t('radar_kpi_track_min')) +
+    kpi(s.taiwan_only_min + ' 分', t('radar_kpi_taiwan_only')) +
+    kpi('+' + (s.info_gain_pct != null ? s.info_gain_pct : s.precision_gain_pct) + '%', t('radar_kpi_gain'), 'gain') +
+    kpi(s.sats_with_taiwan_arc + '/' + s.n_sats, t('radar_kpi_taiwan_arc_sats')) + '</div>' +
+    '<div class="bars"><h5>' + esc(t('radar_bars_pb')) + '</h5><canvas id="' + el.id + '-pb"></canvas></div>' +
+    '<div class="two"><div><div class="bars"><h5>' + esc(tpl('radar_bars_map', {n: d.n_stations_before})) + '</h5>' +
     '<canvas id="' + el.id + '-map"></canvas></div></div>' +
-    '<div><table class="data"><tr><th>衛星</th><th>弧段 前→後</th><th>台灣弧段</th><th>最大間隙 前→後（分）</th><th>精度提升</th></tr>' +
+    '<div><table class="data"><tr><th>' + esc(t('th_radar_sat')) + '</th><th>' + esc(t('th_radar_arcs')) + '</th><th>' + esc(t('th_radar_taiwan_arc')) + '</th><th>' + esc(t('th_radar_gap')) + '</th><th>' + esc(t('th_radar_precision')) + '</th></tr>' +
     d.sats.slice(0, 8).map(x => '<tr><td><a href="/orbit?norad=' + x.norad + '" target="_blank">' + esc(x.name) + '</a></td>' +
       '<td>' + x.arcs_before + ' → ' + x.arcs_after + '</td><td>' + x.arcs_taiwan + '</td>' +
       '<td>' + x.gap_max_before_min + ' → ' + x.gap_max_after_min + '</td><td>+' + (x.info_gain_pct != null ? x.info_gain_pct : x.precision_gain_pct) + '%</td></tr>').join('') +
     '</table></div></div>' +
-    '<div class="note">' + esc(d.model_note) + ' 樣本：' + esc(d.label) + ' 低軌 ' + s.n_sats + ' 顆，評估起點 ' + d.t0 + '，仰角遮蔽 ' + d.mask_deg + '°。</div>' +
-    (d.assumptions ? '<details class="evd"><summary>模型假設表</summary><table class="data">' +
+    '<div class="note">' + tpl('radar_note', {model: esc(d.model_note), label: esc(d.label), n: s.n_sats, t0: d.t0, mask: d.mask_deg}) + '</div>' +
+    (d.assumptions ? '<details class="evd"><summary>' + esc(t('radar_details_summary')) + '</summary><table class="data">' +
       Object.entries(d.assumptions).map(([k, v]) => '<tr><td style="text-align:left">' + esc(k) + '</td><td style="text-align:left">' + esc(String(v)) + '</td></tr>').join('') +
       '</table></details>' : '');
-  drawPaired($id(el.id + '-pb'), ['追蹤弧段／日', '最大間隙（分）', '累計追蹤（分）'],
+  drawPaired($id(el.id + '-pb'), [t('radar_legend_1'), t('radar_legend_2'), t('radar_legend_3')],
              [s.arcs_before, s.gap_max_before_min, s.track_min_before],
              [s.arcs_after, s.gap_max_after_min, s.track_min_after], ['', '', '']);
   // 站點地圖
@@ -590,7 +1097,7 @@ const RV = {};   // el.id -> {data, mi}
 async function initRevisit(el){
   const group = el.dataset.group || 'oneweb';
   const site  = el.dataset.site  || 'taipei';
-  el.innerHTML = '<div class="ph">傳播星系軌道並計算各仰角門檻的覆蓋…</div>';
+  el.innerHTML = '<div class="ph">' + esc(t('rv_loading')) + '</div>';
   const d = await (await fetch('/api/story/revisit?group=' + encodeURIComponent(group) +
                                '&site=' + encodeURIComponent(site))).json();
   if(d.error){ el.innerHTML = '<div class="ph">' + esc(d.error) + '</div>'; return; }
@@ -603,11 +1110,11 @@ async function initRevisit(el){
   const sites = d.sites || [];
   el.innerHTML =
     '<div class="rvctl">' +
-      '<label>觀測點 <select id="' + el.id + '-site">' +
+      '<label>' + esc(t('rv_label_site')) + ' <select id="' + el.id + '-site">' +
         sites.map(s => '<option value="' + esc(s.key) + '"' + (s.key === site ? ' selected' : '') + '>' +
-          esc(s.name) + '（' + s.lat.toFixed(2) + '°N）</option>').join('') +
+          esc(siteLabel(s)) + '（' + s.lat.toFixed(2) + '°N）</option>').join('') +
       '</select></label>' +
-      '<label class="rng">地面觀測仰角門檻 ' +
+      '<label class="rng">' + esc(t('rv_label_mask')) + ' ' +
         '<input type="range" id="' + el.id + '-mask" min="0" max="' + (d.masks.length - 1) + '" step="1" value="' + mi + '">' +
         '<b id="' + el.id + '-maskv"></b></label>' +
     '</div>' +
@@ -615,7 +1122,7 @@ async function initRevisit(el){
 
   $id(el.id + '-mask').oninput = e => { RV[el.id].mi = +e.target.value; drawRevisit(el.id); };
   $id(el.id + '-site').onchange = async e => {
-    const out = $id(el.id + '-out'); out.innerHTML = '<div class="ph">重新計算中…</div>';
+    const out = $id(el.id + '-out'); out.innerHTML = '<div class="ph">' + esc(t('rv_recalc')) + '</div>';
     const nd = await (await fetch('/api/story/revisit?group=' + encodeURIComponent(group) +
                                   '&site=' + encodeURIComponent(e.target.value))).json();
     if(nd.error){ out.innerHTML = '<div class="ph">' + esc(nd.error) + '</div>'; return; }
@@ -633,36 +1140,35 @@ function drawRevisit(id){
   const noOutage = b.coverage_pct >= 99.999;
   const satRv = b.sat_revisit_median_min;
   const covCls = b.coverage_pct >= 99.9 ? ' gain' : '';
+  const selSite = (d.sites || []).find(s => s.name === d.site_name);
+  const siteName = selSite ? siteLabel(selSite) : d.site_name;
 
   $id(id + '-out').innerHTML =
     '<div class="kpis">' +
-      kpi(b.coverage_pct.toFixed(2) + '%', '覆蓋率（' + hrs + ' h 內至少 1 顆在門檻之上）', covCls) +
-      kpi(noOutage ? '無中斷' : b.max_gap_min.toFixed(1) + ' 分', '最長無覆蓋空窗') +
-      kpi(satRv == null ? '—' : (satRv / 60).toFixed(1) + ' h', '單星重訪週期（中位數）') +
-      kpi(b.mean_revisit_min == null ? '—' : b.mean_revisit_min.toFixed(2) + ' 分', '星系級平均過頂間隔') +
-      kpi(b.max_simultaneous, '同時可見顆數峰值') +
+      kpi(b.coverage_pct.toFixed(2) + '%', tpl('rv_kpi_coverage', {h: hrs}), covCls) +
+      kpi(noOutage ? t('rv_no_outage') : b.max_gap_min.toFixed(1) + ' 分', t('rv_kpi_max_gap')) +
+      kpi(satRv == null ? '—' : (satRv / 60).toFixed(1) + ' h', t('rv_kpi_sat_revisit')) +
+      kpi(b.mean_revisit_min == null ? '—' : b.mean_revisit_min.toFixed(2) + ' 分', t('rv_kpi_mean_revisit')) +
+      kpi(b.max_simultaneous, t('rv_kpi_max_simul')) +
     '</div>' +
     '<div class="rvgrid">' +
-      '<div><div class="cap">覆蓋率 vs 仰角門檻（%）</div><canvas id="' + id + '-cov"></canvas></div>' +
-      '<div><div class="cap">最長無覆蓋空窗 vs 仰角門檻（分）</div><canvas id="' + id + '-gap"></canvas></div>' +
+      '<div><div class="cap">' + esc(t('rv_cap_cov')) + '</div><canvas id="' + id + '-cov"></canvas></div>' +
+      '<div><div class="cap">' + esc(t('rv_cap_gap')) + '</div><canvas id="' + id + '-gap"></canvas></div>' +
     '</div>' +
-    '<div class="cap">未來 ' + hrs + ' h 可見顆數時間帶（門檻 ' + m.toFixed(0) + '°；紅色＝完全無覆蓋）</div>' +
+    '<div class="cap">' + esc(tpl('rv_cap_timeline', {h: hrs, m: m.toFixed(0)})) + '</div>' +
     '<canvas id="' + id + '-tl"></canvas>' +
     (b.top_gaps.length
-      ? '<div class="cap">最長的無覆蓋空窗（門檻 ' + m.toFixed(0) + '°）</div><table class="data"><tr><th>#</th><th>空窗起始（UTC）</th><th>長度</th></tr>' +
+      ? '<div class="cap">' + esc(tpl('rv_cap_top_gaps', {m: m.toFixed(0)})) + '</div><table class="data"><tr><th>' + esc(t('th_rv_idx')) + '</th><th>' + esc(t('th_rv_start')) + '</th><th>' + esc(t('th_rv_len')) + '</th></tr>' +
         b.top_gaps.map((g, i) => '<tr><td>' + (i + 1) + '</td><td>' +
           g.start_utc.slice(5, 16).replace('T', ' ') + '</td><td>' + g.minutes.toFixed(1) + ' 分</td></tr>').join('') +
         '</table>'
       : '') +
-    '<div class="note">觀測點 ' + esc(d.site_name) + '；' + esc(d.label) + ' ' + fmtN(d.n_sats_propagated) +
-      ' 顆（TLE 可傳播）；時窗 ' + hrs + ' h、取樣 ' + d.window.step_sec + ' s。' +
-      '「單星重訪週期」為同一顆衛星再次過頂的間隔中位數（傳統 revisit period 定義）；' +
-      '「星系級平均過頂間隔」為任一顆衛星過頂的平均間隔，星系規模愈大此值愈小，兩者不可混用。' +
-      (b.gap_edge_censored_min > 0
-        ? '時窗頭尾另有被截斷之空窗（至少 ' + b.gap_edge_censored_min.toFixed(1) + ' 分），未計入統計。'
-        : '') +
-      '中位過頂長度 ' + (b.median_pass_min == null ? '—' : b.median_pass_min.toFixed(1) + ' 分') +
-      '，中位最大仰角 ' + (b.median_max_el_deg == null ? '—' : b.median_max_el_deg.toFixed(1) + '°') + '。</div>';
+    '<div class="note">' + tpl('rv_note', {
+      site: esc(siteName), label: esc(d.label), n: fmtN(d.n_sats_propagated), h: hrs, step: d.window.step_sec,
+      censored: (b.gap_edge_censored_min > 0 ? tpl('rv_censored', {n: b.gap_edge_censored_min.toFixed(1)}) : ''),
+      pmed: (b.median_pass_min == null ? '—' : b.median_pass_min.toFixed(1) + ' 分'),
+      emed: (b.median_max_el_deg == null ? '—' : b.median_max_el_deg.toFixed(1) + '°'),
+    }) + '</div>';
 
   drawBars($id(id + '-cov'), masks.map(x => x.toFixed(0) + '°'),
            masks.map(x => d.by_mask[String(Math.round(x))].coverage_pct),
@@ -695,7 +1201,7 @@ function drawTimeline(cv, arr, hours){
     ctx.fillText('+' + t + ' h', Math.min(w - 14, Math.max(14, x)), h - 6);
   }
   ctx.textAlign = 'left'; ctx.fillStyle = '#6e7681';
-  ctx.fillText('峰值 ' + mx + ' 顆', 4, 12);
+  ctx.fillText(tpl('tl_peak', {n: mx}), 4, 12);
 }
 
 async function initSkyplot(el){
@@ -705,7 +1211,7 @@ async function initSkyplot(el){
     if(!RADAR){ const r = await fetch('/api/story/radar_eval?group=' + el.dataset.group + '&n=30'); RADAR = await r.json(); }
     sats = (RADAR.sats || []).filter(x => x.arcs_taiwan > 0).slice(0, 4);
   }
-  if(!sats.length){ el.innerHTML = '<div class="ph">無可示範衛星</div>'; return; }
+  if(!sats.length){ el.innerHTML = '<div class="ph">' + esc(t('sky_no_sat')) + '</div>'; return; }
   el.innerHTML = '<div class="pm-seq" id="' + el.id + '-btn"></div>' +
     '<div class="skywrap"><canvas id="' + el.id + '-sky"></canvas><div id="' + el.id + '-info"></div></div>';
   const bar = $id(el.id + '-btn');
@@ -722,13 +1228,13 @@ async function loadTrack(el, norad){
   clearInterval(SKY_TIMER);
   const d = await (await fetch('/api/story/track?norad=' + norad)).json();
   const info = $id(el.id + '-info');
-  if(d.error || !d.passes.length){ info.innerHTML = '<div class="ph">' + esc(d.error || '24 h 內無過頂') + '</div>'; return; }
-  info.innerHTML = '<div class="kpis">' + kpi(esc(d.name), '衛星') + kpi(d.passes.length, '未來 24 h 過頂次數') +
-    kpi(Math.max(...d.passes.map(p => p.max_el)).toFixed(1) + '°', '最高仰角') + '</div>' +
-    '<table class="data"><tr><th>#</th><th>AOS（UTC）</th><th>LOS</th><th>最大仰角</th><th>時長</th></tr>' +
+  if(d.error || !d.passes.length){ info.innerHTML = '<div class="ph">' + esc(d.error || t('sky_no_pass_24h')) + '</div>'; return; }
+  info.innerHTML = '<div class="kpis">' + kpi(esc(d.name), t('sky_kpi_sat')) + kpi(d.passes.length, t('sky_kpi_passes')) +
+    kpi(Math.max(...d.passes.map(p => p.max_el)).toFixed(1) + '°', t('sky_kpi_max_el')) + '</div>' +
+    '<table class="data"><tr><th>' + esc(t('th_sky_idx')) + '</th><th>' + esc(t('th_sky_aos')) + '</th><th>' + esc(t('th_sky_los')) + '</th><th>' + esc(t('th_sky_maxel')) + '</th><th>' + esc(t('th_sky_dur')) + '</th></tr>' +
     d.passes.map((p, i) => '<tr><td>' + (i + 1) + '</td><td>' + p.aos.slice(5, 16).replace('T', ' ') + '</td><td>' +
       p.los.slice(11, 16) + '</td><td>' + p.max_el.toFixed(1) + '°</td><td>' + p.duration_min + ' 分</td></tr>').join('') + '</table>' +
-    '<div class="note" id="' + el.id + '-cur">站點：' + esc(d.station.name) + '（' + d.station.lat + '°N, ' + d.station.lon + '°E）；遮蔽 ' + d.mask_deg + '°。</div>';
+    '<div class="note" id="' + el.id + '-cur">' + esc(tpl('sky_note', {name: d.station.name, lat: d.station.lat, lon: d.station.lon, mask: d.mask_deg})) + '</div>';
   const cv = $id(el.id + '-sky'), dpr = window.devicePixelRatio || 1;
   const w = cv.clientWidth || 380;
   cv.width = w * dpr; cv.height = w * dpr; cv.style.height = w + 'px';
@@ -753,7 +1259,7 @@ async function loadTrack(el, norad){
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI); ctx.stroke();
     ctx.strokeStyle = 'rgba(255,215,71,.5)'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
     const cur = $id(el.id + '-cur');
-    if(cur) cur.textContent = '追蹤中（第 ' + (q.pi + 1) + ' 次過頂）' + q.t.slice(11, 19) + ' UTC · Az ' + q.az.toFixed(1) + '° · El ' + q.el.toFixed(1) + '° · 距離 ' + fmtN(Math.round(q.rng)) + ' km';
+    if(cur) cur.textContent = tpl('sky_tracking', {n: q.pi + 1, t: q.t.slice(11, 19), az: q.az.toFixed(1), el: q.el.toFixed(1), rng: fmtN(Math.round(q.rng))});
   };
   draw();
   SKY_TIMER = setInterval(() => { k++; draw(); }, 120);
@@ -779,18 +1285,19 @@ async function initHeroCards(cfg){
     const tl = b.timeline || [], binMin = rv.window.hours * 60 / tl.length;
     let nextTxt = '—';
     if(tl.length){
-      if(tl[0] > 0){ nextTxt = '現在即有幾何覆蓋'; }
+      if(tl[0] > 0){ nextTxt = t('hero_now_covered'); }
       else{
         const k = tl.findIndex(x => x > 0);
-        nextTxt = k < 0 ? rv.window.hours + ' h 內無窗口' : '約 ' + Math.round(k * binMin) + ' 分鐘後';
+        nextTxt = k < 0 ? tpl('hero_no_window', {h: rv.window.hours}) : tpl('hero_window_in', {m: Math.round(k * binMin)});
       }
     }
-    const age = (PROV && PROV.tle_age_days != null) ? 'TLE 資料齡 ' + PROV.tle_age_days + ' 天' : '';
+    const age = (PROV && PROV.tle_age_days != null) ? tpl('hero_tle_age', {n: PROV.tle_age_days}) : '';
+    const selSite = (rv.sites || []).find(s => s.name === rv.site_name);
     box.innerHTML =
-      card(esc(rv.site_name), esc(rv.label) + ' 備援觀測點', '可於第五部切換站點') +
-      card(nextTxt, '下一個候選備援窗口（門檻 ' + rv.masks[mi].toFixed(0) + '°）', '幾何層，非通聯保證') +
-      card(b.coverage_pct >= 99.999 ? '無中斷' : b.max_gap_min.toFixed(0) + ' 分', '最長覆蓋空窗（' + rv.window.hours + ' h 內）', age) +
-      card(cj && cj.count != null ? fmtN(cj.count) + ' 對' : '—', '空間接近關注事件（<' + thr + ' km）', '候選，需人工複核');
+      card(esc(selSite ? siteLabel(selSite) : rv.site_name), esc(tpl('hero_site_role', {label: rv.label})), t('hero_site_hint')) +
+      card(nextTxt, tpl('hero_next_window', {m: rv.masks[mi].toFixed(0)}), t('hero_geo_only')) +
+      card(b.coverage_pct >= 99.999 ? t('rv_no_outage') : b.max_gap_min.toFixed(0) + ' 分', tpl('hero_max_gap', {h: rv.window.hours}), age) +
+      card(cj && cj.count != null ? tpl('hero_pairs', {n: fmtN(cj.count)}) : '—', tpl('hero_conjunction', {thr}), t('hero_candidate_note'));
   }catch(e){ box.innerHTML = ''; }
 }
 
@@ -800,16 +1307,16 @@ async function initCdm(el){
   const pairs = (d.pairs || []).filter(p => p.miss_km > 0.05)   // 排除對接／共位（距離≈0）
     .sort((a, b) => (b.Pc || 0) - (a.Pc || 0) || a.miss_km - b.miss_km).slice(0, 10);
   const lv = l => l === 'RED' ? '#f85149' : (l === 'AMBER' ? '#d29922' : '#3fb950');
-  el.innerHTML = '<div class="kpis">' + kpi(fmtN(d.count), '<' + thr + ' km 幾何接近配對（TLE 傳播）') +
-    kpi(fmtN(d.total_scanned), '掃描物體數') + kpi((d.elapsed_sec || 0) + ' s', '向量化 SGP4 掃描耗時') +
-    kpi(pairs.filter(p => p.risk_level === 'RED').length + ' / ' + pairs.filter(p => p.risk_level === 'AMBER').length, 'RED / AMBER（前 10）') + '</div>' +
-    '<table class="data"><tr><th>主體</th><th>次體</th><th>最接近距離</th><th>接近關注參數</th><th>等級</th><th></th></tr>' +
+  el.innerHTML = '<div class="kpis">' + kpi(fmtN(d.count), tpl('cdm_kpi_pairs', {thr})) +
+    kpi(fmtN(d.total_scanned), t('cdm_kpi_scanned')) + kpi(tpl('cdm_kpi_elapsed', {s: d.elapsed_sec || 0}), t('cdm_kpi_elapsed_label')) +
+    kpi(pairs.filter(p => p.risk_level === 'RED').length + ' / ' + pairs.filter(p => p.risk_level === 'AMBER').length, t('cdm_kpi_red_amber')) + '</div>' +
+    '<table class="data"><tr><th>' + esc(t('th_cdm_primary')) + '</th><th>' + esc(t('th_cdm_secondary')) + '</th><th>' + esc(t('th_cdm_miss')) + '</th><th>' + esc(t('th_cdm_pc')) + '</th><th>' + esc(t('th_cdm_level')) + '</th><th></th></tr>' +
     pairs.map(p => '<tr><td>' + esc(p.primary_name) + '<br><span style="color:#6e7681">' + p.primary_norad + ' · ' + p.primary_alt_km + ' km</span></td>' +
       '<td>' + esc(p.secondary_name) + '<br><span style="color:#6e7681">' + p.secondary_norad + '</span></td>' +
       '<td>' + p.miss_km.toFixed(2) + ' km</td><td>' + p.Pc_str + '</td>' +
       '<td><b style="color:' + lv(p.risk_level) + '">' + p.risk_level + '</b></td>' +
-      '<td><button class="nbtn" data-p="' + p.primary_norad + '" data-s="' + p.secondary_norad + '">3D 展開</button></td></tr>').join('') +
-    '</table><div class="note">「接近關注參數」（Pc proxy）僅用於排序須人工複核的事件，非碰撞判定、非正式碰撞機率。幾何篩選（<' + thr + ' km）≠ 碰撞風險：其值為 Chan (2008) 2-D 近似，σ R/T/N 為固定假設值（' + (PROV ? PROV.pc_model.replace(/^.*σ/, 'σ') : '100/500/100 m') + '），非 CDM 協方差，僅供排序；已排除距離≈0 之對接／共位配對。</div>' +
+      '<td><button class="nbtn" data-p="' + p.primary_norad + '" data-s="' + p.secondary_norad + '">' + esc(t('cdm_expand_btn')) + '</button></td></tr>').join('') +
+    '</table><div class="note">' + esc(tpl('cdm_note', {thr, sigma: (PROV ? PROV.pc_model.replace(/^.*σ/, 'σ') : '100/500/100 m')})) + '</div>' +
     '<div class="frame" id="' + el.id + '-fr" style="display:none" data-h="820"></div>';
   el.querySelectorAll('button[data-p]').forEach(b => b.addEventListener('click', () => {
     const fr = $id(el.id + '-fr'); fr.style.display = ''; fr.querySelectorAll('iframe').forEach(f => f.remove());
@@ -825,29 +1332,29 @@ async function initReentry(el){
   if(d.error){ el.innerHTML = '<div class="ph">' + esc(d.error) + '</div>'; return; }
   const f = t => (t || '—').replace('T', ' ').replace('Z', 'Z');
   const T = Object.values(d.targets || {});
-  let h = '<div class="kpis">' + T.map(t => {
-    const mc = t.stage2_mc || {}, s1 = (t.stage1 || {}).reentry_pass || {};
-    return kpi(f(mc.t_median).slice(5, 16), t.name + '：數值 MC 中位再入時刻 [TLE-derived]') +
-           kpi((mc.lat_median != null ? mc.lat_median + '°, ' + mc.lon_median + '°' : '—'), t.name + '：MC 中位落點（5–95% 跨度 ' + (mc.spread_hours ?? '—') + ' h）') +
-           kpi(((t.stage2_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h', t.name + '：本系統 − ESA 預報');
+  let h = '<div class="kpis">' + T.map(tg => {
+    const mc = tg.stage2_mc || {}, s1 = (tg.stage1 || {}).reentry_pass || {};
+    return kpi(f(mc.t_median).slice(5, 16), tpl('re_kpi_mc_median', {name: tg.name})) +
+           kpi((mc.lat_median != null ? mc.lat_median + '°, ' + mc.lon_median + '°' : '—'), tpl('re_kpi_mc_pos', {name: tg.name, h: mc.spread_hours ?? '—'})) +
+           kpi(((tg.stage2_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h', tpl('re_kpi_vs_esa', {name: tg.name}));
   }).join('') + '</div>';
-  h += '<table class="data"><tr><th>衛星</th><th>最後 TLE</th><th>階段一 SGP4 近地點掠過</th><th>階段二 數值 MC 中位</th><th>ESA 預報 [ESA-reported]</th><th>Δ（S1／S2）</th></tr>' +
-    T.map(t => { const s1 = (t.stage1 || {}).reentry_pass || {}, mc = t.stage2_mc || {};
-      return '<tr><td style="text-align:left">' + esc(t.name) + '<br><span style="color:#6e7681">' + t.norad + '</span></td><td>' + (t.tle_epoch || '').slice(0, 10) + '</td>' +
+  h += '<table class="data"><tr><th>' + esc(t('th_re_sat')) + '</th><th>' + esc(t('th_re_last_tle')) + '</th><th>' + esc(t('th_re_s1')) + '</th><th>' + esc(t('th_re_s2')) + '</th><th>' + esc(t('th_re_esa')) + '</th><th>' + esc(t('th_re_delta')) + '</th></tr>' +
+    T.map(tg => { const s1 = (tg.stage1 || {}).reentry_pass || {}, mc = tg.stage2_mc || {};
+      return '<tr><td style="text-align:left">' + esc(tg.name) + '<br><span style="color:#6e7681">' + tg.norad + '</span></td><td>' + (tg.tle_epoch || '').slice(0, 10) + '</td>' +
         '<td style="text-align:left">' + f(s1.t) + '<br>' + (s1.lat ?? '') + '°, ' + (s1.lon ?? '') + '°（' + (s1.alt_km ?? '') + ' km）</td>' +
-        '<td style="text-align:left">' + f(mc.t_median) + '<br>' + (mc.lat_median ?? '') + '°, ' + (mc.lon_median ?? '') + '°（' + (mc.n_reentered ?? 0) + '/' + (mc.n ?? 0) + ' 次再入）</td>' +
-        '<td style="text-align:left">' + f(t.esa_t) + ' ±' + t.esa_unc_min + ' min<br>' + esc(t.esa_region || '') + '</td>' +
-        '<td>' + ((t.stage1_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h／' + ((t.stage2_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h</td></tr>'; }).join('') + '</table>';
+        '<td style="text-align:left">' + f(mc.t_median) + '<br>' + (mc.lat_median ?? '') + '°, ' + (mc.lon_median ?? '') + '°' + tpl('re_reentered', {n: mc.n_reentered ?? 0, total: mc.n ?? 0}) + '</td>' +
+        '<td style="text-align:left">' + f(tg.esa_t) + ' ±' + tg.esa_unc_min + ' min<br>' + esc(tg.esa_region || '') + '</td>' +
+        '<td>' + ((tg.stage1_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h／' + ((tg.stage2_vs_esa || {}).dt_hours_vs_esa ?? '—') + ' h</td></tr>'; }).join('') + '</table>';
   const hc = d.hindcast || {};
   if(hc.cases && hc.cases.length){
-    h += '<details class="evd" open><summary>Salsa 2024-09-08 18:47Z 回測（誤差＝本系統 − ESA 實際）與密度尺度校準</summary><table class="data"><tr><th>前置</th><th>TLE</th><th>S1 誤差</th><th>S2 誤差</th><th>MC 中位誤差</th><th>MC 跨度</th></tr>' +
-      hc.cases.map(c => '<tr><td>' + c.lead_days + ' 天</td><td>' + (c.tle_epoch || '').slice(0, 10) + '</td><td>' + (c.stage1_err_h ?? '—') + ' h</td><td>' + (c.stage2_err_h ?? '—') + ' h</td><td>' + (c.mc_err_h ?? '—') + ' h</td><td>' + (c.mc_spread_h ?? '—') + ' h</td></tr>').join('') + '</table>' +
-      (d.calibration ? '<div class="note">NRLMSIS 密度尺度校準值 ×' + d.calibration.best_scale + '（掃描 ' + (d.calibration.scales || []).join('/') + '，平均誤差 h：' + esc(JSON.stringify(d.calibration.mean_err_h_by_scale || {})) + '）</div>' : '') + '</details>';
+    h += '<details class="evd" open><summary>' + esc(t('re_hindcast_summary')) + '</summary><table class="data"><tr><th>' + esc(t('th_re_hc_lead')) + '</th><th>' + esc(t('th_re_hc_tle')) + '</th><th>' + esc(t('th_re_hc_s1err')) + '</th><th>' + esc(t('th_re_hc_s2err')) + '</th><th>' + esc(t('th_re_hc_mcerr')) + '</th><th>' + esc(t('th_re_hc_mcspread')) + '</th></tr>' +
+      hc.cases.map(c => '<tr><td>' + esc(tpl('re_lead_days', {n: c.lead_days})) + '</td><td>' + (c.tle_epoch || '').slice(0, 10) + '</td><td>' + (c.stage1_err_h ?? '—') + ' h</td><td>' + (c.stage2_err_h ?? '—') + ' h</td><td>' + (c.mc_err_h ?? '—') + ' h</td><td>' + (c.mc_spread_h ?? '—') + ' h</td></tr>').join('') + '</table>' +
+      (d.calibration ? '<div class="note">' + esc(tpl('re_calib_note', {scale: d.calibration.best_scale, scales: (d.calibration.scales || []).join('/'), err: JSON.stringify(d.calibration.mean_err_h_by_scale || {})})) + '</div>' : '') + '</details>';
   }
   const stf = d.spacetrack_forecast || {};
-  const stl = Object.entries(stf).filter(([k, v]) => Array.isArray(v) && v.length).map(([k, v]) => k + '：' + v[0]._class + ' ' + (v[0].DECAY_EPOCH || '') + '（' + v[0].SOURCE + '，訊息 ' + v[0].MSG_EPOCH + '）');
-  if(stl.length) h += '<div class="note">Space-Track 18 SDS 衰減預報（日級）：' + esc(stl.join('；')) + '</div>';
-  h += '<div class="note">' + esc((d.method || {}).stage1 || '') + '｜' + esc((d.method || {}).stage2 || '') + '｜' + esc((d.method || {}).caveat || '') + '｜產生 ' + f(d.generated_at) + '</div>';
+  const stl = Object.entries(stf).filter(([k, v]) => Array.isArray(v) && v.length).map(([k, v]) => k + '：' + v[0]._class + ' ' + (v[0].DECAY_EPOCH || '') + tpl('re_msg_suffix', {src: v[0].SOURCE, msg: v[0].MSG_EPOCH}));
+  if(stl.length) h += '<div class="note">' + esc(tpl('re_spacetrack_note', {s: stl.join('；')})) + '</div>';
+  h += '<div class="note">' + esc((d.method || {}).stage1 || '') + '｜' + esc((d.method || {}).stage2 || '') + '｜' + esc((d.method || {}).caveat || '') + esc(tpl('re_generated', {t: f(d.generated_at)})) + '</div>';
   el.innerHTML = h;
 }
 
@@ -858,16 +1365,18 @@ function initLazy(el){
   if(el.classList.contains('inited')) return;
   el.classList.add('inited');
   const fn = LAZY_INIT[el.dataset.kind];
-  if(fn) fn(el).catch(e => { el.innerHTML = '<div class="ph">載入失敗：' + esc(String(e)) + '</div>'; });
+  if(fn) fn(el).catch(e => { el.innerHTML = '<div class="ph">' + esc(tpl('err_load_fail', {err: String(e)})) + '</div>'; });
 }
 
 /* ── 單一故事 ── */
 async function renderStory(sid){
+  CUR_SID = sid;
   const wrap = $id('wrap');
   const r = await fetch('/api/story/' + encodeURIComponent(sid));
-  if(!r.ok){ wrap.innerHTML = '<div style="padding:60px 0">故事不存在。<a href="/story">回清單</a></div>'; return; }
+  if(!r.ok){ wrap.innerHTML = '<div style="padding:60px 0">' + esc(t('err_story_not_found')) + '<a href="/story">' + esc(t('err_story_back')) + '</a></div>'; return; }
   const st = await r.json();
   await loadProv();
+  applyStaticI18n();
   document.title = st.title + ' — Story';
   $id('hdr-title').textContent = st.title;
   $id('lnk-list').style.display = '';
@@ -875,7 +1384,7 @@ async function renderStory(sid){
   // 封面（標題／副標／說明）併入第一節上方，不再獨立佔一整頁（滿頁吸附下獨立封面會卡在第一頁）
   const heroHtml = '<div class="hero-in"><h2>' + esc(st.title) + '</h2>' +
           '<div class="sub">' + esc(st.subtitle || '') + '</div>' +
-          (st.hero_cards ? '<div class="hcards" id="hcards"><div class="ph">載入即時狀態…</div></div>' : '') +
+          (st.hero_cards ? '<div class="hcards" id="hcards"><div class="ph">' + esc(t('hero_loading')) + '</div></div>' : '') +
           (st.hero_note ? '<div class="note">' + esc(st.hero_note) + '</div>' : '') + provHtml() + '</div>';
   if(st.hero_cards) setTimeout(() => initHeroCards(st.hero_cards), 0);
   let h = '';
@@ -911,11 +1420,11 @@ async function renderStory(sid){
            (sec.ids ? ' data-ids="' + sec.ids.join(',') + '"' : '') +
            (sec.sequence ? ' data-seq="1"' : '') +
            (sec.globe ? ' data-globe="1"' : '') +
-           '><div class="ph">捲動至此載入位置分布…</div></div>' +
+           '><div class="ph">' + esc(t('ph_scroll_load_pos')) + '</div></div>' +
            '<div class="pm-cap"></div></div>';
     }else if(sec.type === 'embed'){
       h += '<div class="frame" data-src="' + esc(sec.url) + '" data-h="' +
-           (sec.height || 860) + '"><div class="ph">捲動至此載入…</div></div>';
+           (sec.height || 860) + '"><div class="ph">' + esc(t('ph_scroll_load')) + '</div></div>';
     }else if(LAZY_INIT[sec.type]){
       h += '<div class="lazy" id="lz' + i + '" data-kind="' + sec.type + '"' +
            (sec.group ? ' data-group="' + esc(sec.group) + '"' : '') +
@@ -924,7 +1433,7 @@ async function renderStory(sid){
            (sec.norads ? ' data-norads="' + sec.norads.join(',') + '"' : '') +
            (sec.threshold_km ? ' data-thr="' + sec.threshold_km + '"' : '') +
            (sec.site ? ' data-site="' + esc(sec.site) + '"' : '') +
-           '><div class="ph">捲動至此載入…</div></div>';
+           '><div class="ph">' + esc(t('ph_scroll_load')) + '</div></div>';
     }
     h += '</div></div>';
   });
@@ -996,5 +1505,6 @@ function startTour(totalSec){
   setTimeout(next, heroDur * 1000);
 }
 
+applyStaticI18n();
 if(window.STORY_ID) renderStory(window.STORY_ID);
 else renderList();

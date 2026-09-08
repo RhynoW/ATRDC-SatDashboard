@@ -30,50 +30,29 @@ h1{font-size:22px;margin:0}
 .howto b{color:var(--sec)}
 .note{color:var(--muted);font-size:11.5px;font-family:var(--mono);margin-top:10px}
 h3{font-size:13.5px;margin:14px 0 4px;color:var(--sec)}
+#lang-switcher{display:inline-flex;gap:4px;margin-left:auto}
+.lang-btn{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:6px;
+  padding:3px 9px;font-family:var(--mono);font-size:11px;cursor:pointer}
+.lang-btn.active{background:var(--sec);color:#03202b;border-color:var(--sec)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <h1>🛰 RPO 案例總覽</h1>
-    <a href="/">← 地球儀主頁</a>
-    <a href="/rpo">開啟 RPO 檢視器（任意配對）</a>
+    <h1>🛰 <span data-i18n="page_title">RPO 案例總覽</span></h1>
+    <a href="/" data-i18n="nav_home">← 地球儀主頁</a>
+    <a href="/rpo" data-i18n="nav_rpo_viewer">開啟 RPO 檢視器（任意配對）</a>
+    <span id="lang-switcher">
+      <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+      <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+      <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+    </span>
   </div>
-  <p class="sub">以公開 TLE + SGP4 獨立重建之交會/近接操作（RPO）案例。點「▶ 回放」直接進入
+  <p class="sub" data-i18n="page_sub">以公開 TLE + SGP4 獨立重建之交會/近接操作（RPO）案例。點「▶ 回放」直接進入
      3D 場景；距離為 TLE 級精度（km 級）幾何重建，Pc 為 Chan 首階排序代理、非作業級。</p>
 
   {% if featured %}
-  <div class="card feat">
-    <h2>特寫：神龍太空飛機（第 4 次任務）× Object H — 部署、訪問與回收全程回放</h2>
-    <div class="ids">primary 69673（OBJECT H，2026-024H）× secondary 67689（PRC TEST SPACECRAFT 4，2026-024A）</div>
-
-    <p><b>背景</b> — 中國第 4 架可重複使用試驗太空飛機（NORAD 67689，2026-024A，2026-02-07
-       酒泉發射，西方稱 Shenlong「神龍」）於 605 km / 49.99° 軌道運作。2026-06-22 釋放一顆
-       小型衛星 Object H（NORAD 69673，2026-024H）。H 隨後機動離開、前往「上一次任務（2023-195）
-       釋放的 Object G（59884）」繞行偵察，再折返太空飛機並於 7 月中旬被回收——
-       美國第 18 太空防禦中隊（18 SDS）與 LeoLabs 均作此評估，路透社 2026-08 報導即此事件。
-       本案例以 Space-Track 公開 TLE 逐日 SGP4 重建，時序與 LeoLabs 完全一致。</p>
-
-    <h3>逐段時序（回放時對照畫面右側時間軸）</h3>
-    <div class="tl">
-      <div class="tlrow"><div class="d">2026-06-22</div><div><b>部署</b>：H 自太空飛機釋放，兩者相距僅 ≈0.2 km、近乎共位。</div></div>
-      <div class="tlrow"><div class="d">06-24 ~ 07-06</div><div><b>離開</b>：H 沿軌道漸行漸遠，前往訪問 Object G（H–太空梭距離升至約 1,000 km）。</div></div>
-      <div class="tlrow"><div class="d">07-08 ~ 07-11</div><div><b>返回</b>：訪 G 結束後折返，H–太空梭 722 → 5 km——逆轉自然漂移需要推力，是「受控接近」的直接證據。</div></div>
-      <div class="tlrow"><div class="d">07-12 ~ 07-14</div><div><b>回收</b>：兩者距離 ≈0 km，地面感測器已無法分辨；18 SDS 評估 H 已被太空飛機收回。</div></div>
-      <div class="tlrow"><div class="d">07-14 之後</div><div><b>共位</b>：編目上 H 與太空飛機維持近乎相同軌道（≈0 km）。</div></div>
-    </div>
-
-    <div class="howto"><b>怎麼看回放</b>：
-      ① 右側浮動「相對軌跡投影」視窗是主線索：紅點沿粗趨勢線移動，靠向原點＝接近、貼原點＝回收；
-      ② 3D 視角預設「第三方遠景」綜觀整個事件（時間軸下方色帶＝部署/訪 G/返回/回收四階段），按「切換視角」可循 遠景 → H → 太空飛機 輪替；
-      ③ 紅線是兩者連線（越紅越近），紅點標最接近時刻；
-      ④ 播放速度已調為全程約 3 分鐘，時間軸可拖曳到 07-12 直接看回收段；
-      ⑤ 3σ 橢球代表 TLE 級不確定度——次公里距離落在雜訊底，回收段請看趨勢而非單點數值；
-      ⑥ 浮窗縱軸＝Δ高度、粗線＝單圈平均趨勢——衛星繞圈看不出的軌道升降在這裡一眼可見（可拖曳、⇄ 換中心）。</div>
-
-    <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ 回放：部署與回收（69673 × 67689）</a>
-    <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ 支線：H 訪問 Object G（69673 × 59884）</a>
-    <div class="note">獨立重現：verify_shenlong_2026_rpo.py（SGP4 逐日最小距離）；報告章：期末_RPO案例_神龍_20260807。</div>
+  <div class="card feat" id="featured-card" data-i18n-html="featured_html">
   </div>
   {% endif %}
 
@@ -89,12 +68,141 @@ h3{font-size:13.5px;margin:14px 0 4px;color:var(--sec)}
       {% endfor %}
     </div>
     {% endif %}
-    <a class="btn" href="/rpo?primary={{ c.primary }}&secondary={{ c.secondary }}">▶ 回放（{{ c.primary }} × {{ c.secondary }}）</a>
+    <a class="btn" href="/rpo?primary={{ c.primary }}&secondary={{ c.secondary }}"><span data-i18n="btn_replay">▶ 回放</span>（{{ c.primary }} × {{ c.secondary }}）</a>
   </div>
   {% endfor %}
 
-  <p class="note">方法學：兩物體各取最近 elset 以 SGP4 傳播至共同時鐘；已知案例載入 preset
+  <p class="note" data-i18n="method_note">方法學：兩物體各取最近 elset 以 SGP4 傳播至共同時鐘；已知案例載入 preset
      視窗與事件標註。GEO 案例可勾「COMSPOC 模式」看地固座標系定點保持迴圈。</p>
 </div>
+<script>
+"use strict";
+const RPO_I18N = {
+  zh: {
+    page_title: "RPO 案例總覽",
+    nav_home: "← 地球儀主頁",
+    nav_rpo_viewer: "開啟 RPO 檢視器（任意衛星配對）",
+    page_sub: "以公開 TLE 資料使用 SGP4 獨立重建之 RPO 相關近接案例。點「▶ 回放」直接進入\n     3D 場景；距離為 TLE 相當精度（km 級）的幾何重建，Pc 為基於 Chan 一階近似的排序代理指標，並非作業級碰撞機率。",
+    btn_replay: "▶ 回放",
+    method_note: "方法學：兩物體各自選取可取得的最近 elset，使用 SGP4 傳播至共同 epoch；已知案例載入預設\n     時間窗與事件標註。GEO 案例啟用「COMSPOC 模式」後，可檢視地固座標系下的定點保持軌跡。",
+    featured_html: `
+    <h2>特寫：神龍太空飛機（第 4 次任務）× Object H — 部署、訪問與回收全程回放</h2>
+    <div class="ids">primary 69673（OBJECT H，2026-024H）× secondary 67689（PRC TEST SPACECRAFT 4，2026-024A）</div>
+    <p><b>背景</b> — 中國第 4 架可重複使用試驗太空飛機（NORAD 67689，2026-024A，2026-02-07
+       酒泉發射，西方稱 Shenlong「神龍」）於 605 km / 49.99° 軌道運作。2026-06-22 釋放一顆
+       小型衛星 Object H（NORAD 69673，2026-024H）。H 隨後機動離開、前往「上一次任務（2023-195）
+       釋放的 Object G（59884）」繞行偵察，再折返太空飛機並於 7 月中旬被回收——
+       美國第 18 太空防禦中隊（18 SDS）與 LeoLabs 均作此評估，路透社 2026-08 報導即此事件。
+       本案例以 Space-Track 公開 TLE 逐日 SGP4 重建，時序與 LeoLabs 完全一致。</p>
+    <h3>逐段時序（回放時對照畫面右側時間軸）</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-06-22</div><div><b>部署</b>：H 自太空飛機釋放，兩者相距僅 ≈0.2 km、近乎共位。</div></div>
+      <div class="tlrow"><div class="d">06-24 ~ 07-06</div><div><b>離開</b>：H 沿軌道漸行漸遠，前往訪問 Object G（H–太空飛機距離升至約 1,000 km）。</div></div>
+      <div class="tlrow"><div class="d">07-08 ~ 07-11</div><div><b>返回</b>：訪 G 結束後折返，H–太空飛機 722 → 5 km——逆轉自然漂移需要推力，是「受控接近」的直接證據。</div></div>
+      <div class="tlrow"><div class="d">07-12 ~ 07-14</div><div><b>回收</b>：兩者距離 ≈0 km，地面感測器已無法分辨；18 SDS 評估 H 已被太空飛機收回。</div></div>
+      <div class="tlrow"><div class="d">07-14 之後</div><div><b>共位</b>：編目上 H 與太空飛機維持近乎相同軌道（≈0 km）。</div></div>
+    </div>
+    <div class="howto"><b>怎麼看回放</b>：
+      ① 右側浮動「相對軌跡投影」視窗是主線索：紅點沿粗趨勢線移動，靠向原點＝接近、貼原點＝回收；
+      ② 3D 視角預設「第三方遠景」綜觀整個事件（時間軸下方色帶＝部署/訪 G/返回/回收四階段），按「切換視角」可循 遠景 → H → 太空飛機 輪替；
+      ③ 紅線是兩者連線（越紅越近），紅點標最接近時刻；
+      ④ 播放速度已調為全程約 3 分鐘，時間軸可拖曳到 07-12 直接看回收段；
+      ⑤ 3σ 橢球代表 TLE 級不確定度——次公里距離落在雜訊底，回收段請看趨勢而非單點數值；
+      ⑥ 浮窗縱軸＝Δ高度、粗線＝單圈移動平均——衛星繞圈看不出的軌道升降在這裡一眼可見（可拖曳、⇄ 換中心）。</div>
+    <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ 回放：部署與回收（69673 × 67689）</a>
+    <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ 支線：H 訪問 Object G（69673 × 59884）</a>
+    <div class="note">獨立重現：verify_shenlong_2026_rpo.py（SGP4 逐日最小距離）；報告章：期末_RPO案例_神龍_20260807。</div>`,
+  },
+  ja: {
+    page_title: "RPO事例集",
+    nav_home: "← グローブホームへ",
+    nav_rpo_viewer: "RPOビューアーを開く（任意の衛星ペア）",
+    page_sub: "公開TLEデータをSGP4で独自に再構築した、RPO関連の近接事例です。「▶ 再生」をクリックすると\n     3Dシーンに直接移動します。距離はTLE相当の精度（km級）による幾何学的再構築であり、PcはChanの一次近似に基づく順位付け用の代理指標で、運用レベルの衝突確率ではありません。",
+    btn_replay: "▶ 再生",
+    method_note: "方法論：各物体について利用可能な直近のエレメントセット（elset）を選択し、SGP4で共通エポック\n     まで伝播します。既知事例では、プリセットされた時間窓とイベント注記を読み込みます。GEO事例では「COMSPOCモード」を有効にすると、地球固定座標系での定点保持軌跡を表示できます。",
+    featured_html: `
+    <h2>特集：神龍宇宙往還機（第4回ミッション）× Object H — 分離・訪問・回収の全過程再現</h2>
+    <div class="ids">primary 69673（OBJECT H、2026-024H）× secondary 67689（PRC TEST SPACECRAFT 4、2026-024A）</div>
+    <p><b>背景</b> — 中国の第4号再使用型実験宇宙往還機（NORAD 67689、2026-024A、2026-02-07に
+       酒泉から打上げ、西側では「神龍（Shenlong）」と呼称）は高度605km／傾斜角49.99°の軌道で運用。
+       2026-06-22に小型衛星Object H（NORAD 69673、2026-024H）を分離。Hはその後機動して離脱し、
+       「前回ミッション（2023-195）で分離されたObject G（59884）」を周回・観測した後、宇宙往還機へ折り返し、
+       7月中旬に回収されたと見られる——米宇宙軍第18宇宙防衛隊（18 SDS）とLeoLabsの双方がこの評価を示しており、
+       ロイター通信も2026年8月にこの事案を報じている。本事例はSpace-Track公開TLEを用いた日次SGP4再構築であり、
+       時系列はLeoLabsの評価と完全に一致する。</p>
+    <h3>段階別タイムライン（再生時、画面右側のタイムラインと対照）</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-06-22</div><div><b>分離</b>：Hが宇宙往還機から分離。両者の距離は≈0.2 kmのみでほぼ同一軌道。</div></div>
+      <div class="tlrow"><div class="d">06-24 ～ 07-06</div><div><b>離脱</b>：Hが軌道上を徐々に離れ、Object Gへの訪問に向かう（H–往還機間の距離は約1,000 kmまで増加）。</div></div>
+      <div class="tlrow"><div class="d">07-08 ～ 07-11</div><div><b>帰還</b>：Gへの訪問終了後に折り返し、H–往還機間の距離が722 → 5 kmに縮小——自然なドリフトを逆行させるには推力が必要であり、「制御された接近」の直接的証拠である。</div></div>
+      <div class="tlrow"><div class="d">07-12 ～ 07-14</div><div><b>回収</b>：両者の距離は≈0 kmとなり、地上センサーではもはや区別不能。18 SDSはHが宇宙往還機に回収されたと評価。</div></div>
+      <div class="tlrow"><div class="d">07-14以降</div><div><b>同一軌道保持</b>：カタログ上、Hと宇宙往還機の軌道はほぼ同一（≈0 km）のまま維持。</div></div>
+    </div>
+    <div class="howto"><b>再生の見方</b>：
+      ①右側に浮かぶ「相対軌跡投影」ウィンドウが主な手がかりです。赤い点が太い傾向線に沿って動き、原点に近づく＝接近、原点に張り付く＝回収を意味します。
+      ②3D視点は初期設定で「第三者俯瞰視点」となり事象全体を俯瞰します（タイムライン下部の色帯＝分離／G訪問／帰還／回収の4段階）。「視点切替」ボタンで 俯瞰 → H → 往還機 の順に切り替え可能です。
+      ③赤い線は両者を結ぶ連結線（近いほど赤くなる）、赤い点は最接近時刻を示します。
+      ④再生速度は全体で約3分になるよう調整済みです。タイムラインを07-12までドラッグすれば回収段階を直接確認できます。
+      ⑤3σ楕円体はTLE級の不確かさを表します——サブキロメートルの距離は雑音の下限に位置するため、回収段階は個々の値ではなく傾向として読み取ってください。
+      ⑥浮動ウィンドウの縦軸＝Δ高度、太線＝1周移動平均——衛星の周回運動だけでは分からない軌道の上昇・降下がここで一目で分かります（ドラッグ可能、⇄で基準衛星を切替）。</div>
+    <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ 再生：分離と回収（69673 × 67689）</a>
+    <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ 支線：HによるObject G訪問（69673 × 59884）</a>
+    <div class="note">独立再現：verify_shenlong_2026_rpo.py（SGP4による日次最小距離計算）；報告章：期末_RPO案例_神龍_20260807。</div>`,
+  },
+  en: {
+    page_title: "RPO Case Overview",
+    nav_home: "← Globe Home",
+    nav_rpo_viewer: "Open RPO Viewer (Any Satellite Pair)",
+    page_sub: "RPO-related proximity cases independently reconstructed from public TLE data using SGP4. Click \"▶ Replay\" to open\n     the 3D scene; distances are km-level geometric reconstructions based on TLE-quality data, and Pc is a Chan first-order approximation used as a ranking proxy, not an operational-grade probability of collision.",
+    btn_replay: "▶ Replay",
+    method_note: "Methodology: each object is propagated with SGP4 from its nearest available element set (elset) to a common epoch;\n     known cases load preset time windows and event annotations. For GEO cases, enable \"COMSPOC mode\" to view the station-keeping trajectory in an Earth-fixed frame.",
+    featured_html: `
+    <h2>Featured: Shenlong Spaceplane (4th Mission) × Object H — Full Replay of Deployment, Approach and Recovery</h2>
+    <div class="ids">primary 69673 (OBJECT H, 2026-024H) × secondary 67689 (PRC TEST SPACECRAFT 4, 2026-024A)</div>
+    <p><b>Background</b> — China's 4th reusable experimental spaceplane (NORAD 67689, 2026-024A, launched
+       from Jiuquan on 2026-02-07, referred to in the West as "Shenlong") operates in a 605 km / 49.99°
+       orbit. On 2026-06-22 it released a small satellite, Object H (NORAD 69673, 2026-024H). H then
+       maneuvered away to approach and observe "Object G (59884), released during the previous mission
+       (2023-195)," before returning to the spaceplane and apparently being recovered in mid-July —
+       an assessment made by both U.S. Space Force's 18th Space Defense Squadron (18 SDS) and LeoLabs;
+       this is the event reported by Reuters in August 2026. This case is reconstructed day-by-day with
+       SGP4 from public Space-Track TLEs, and the timeline matches LeoLabs' assessment exactly.</p>
+    <h3>Timeline by Phase (compare against the timeline on the right during replay)</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-06-22</div><div><b>Deployment</b>: H is released from the spaceplane; the two are only ≈0.2 km apart, nearly co-located.</div></div>
+      <div class="tlrow"><div class="d">06-24 ~ 07-06</div><div><b>Departure</b>: H gradually drifts away along its orbit to visit Object G (H–spaceplane distance grows to about 1,000 km).</div></div>
+      <div class="tlrow"><div class="d">07-08 ~ 07-11</div><div><b>Return</b>: After the visit to G, H turns back; H–spaceplane distance shrinks from 722 → 5 km — reversing natural drift requires thrust, direct evidence of a "controlled approach."</div></div>
+      <div class="tlrow"><div class="d">07-12 ~ 07-14</div><div><b>Recovery</b>: The two objects' distance is ≈0 km, no longer distinguishable by ground sensors; 18 SDS assesses that H has been recovered by the spaceplane.</div></div>
+      <div class="tlrow"><div class="d">After 07-14</div><div><b>Co-location</b>: In the catalog, H and the spaceplane remain in nearly identical orbits (≈0 km).</div></div>
+    </div>
+    <div class="howto"><b>How to read the replay</b>:
+      ① The floating "relative trajectory projection" panel on the right is the main clue: the red dot moves along a thick trend line — approaching the origin means closing in, sitting on the origin means recovery;
+      ② The 3D view defaults to a "third-party overview" of the whole event (the color band below the timeline marks the 4 phases: deployment / visit to G / return / recovery); use "Switch View" to cycle overview → H → spaceplane;
+      ③ The red line connects the two objects (redder = closer), with a red dot marking the closest-approach moment;
+      ④ Playback speed is tuned to about 3 minutes end-to-end; drag the timeline to 07-12 to jump straight to the recovery phase;
+      ⑤ The 3σ ellipsoid represents TLE-grade uncertainty — sub-kilometer distances sit at the noise floor, so read the recovery phase as a trend rather than individual values;
+      ⑥ The floating panel's vertical axis is Δaltitude, and the thick line is the per-orbit moving average — altitude changes invisible from watching the satellite orbit are visible here at a glance (draggable, ⇄ to switch reference object).</div>
+    <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ Replay: Deployment &amp; Recovery (69673 × 67689)</a>
+    <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ Side story: H visits Object G (69673 × 59884)</a>
+    <div class="note">Independently reproduced: verify_shenlong_2026_rpo.py (day-by-day SGP4 minimum distance); report chapter: 期末_RPO案例_神龍_20260807.</div>`,
+  },
+};
+let LANG = localStorage.getItem('rpo_cases_lang') || 'zh';
+if (!RPO_I18N[LANG]) LANG = 'zh';
+function t(key) {
+  const d = RPO_I18N[LANG] || RPO_I18N.zh;
+  return (key in d) ? d[key] : (RPO_I18N.zh[key] !== undefined ? RPO_I18N.zh[key] : key);
+}
+function setLang(lang) {
+  if (!RPO_I18N[lang]) return;
+  LANG = lang;
+  localStorage.setItem('rpo_cases_lang', lang);
+  document.documentElement.lang = {zh: 'zh-Hant', en: 'en-US', ja: 'ja-JP'}[lang] || 'zh-Hant';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+}
+document.addEventListener('DOMContentLoaded', () => setLang(LANG));
+</script>
 </body>
 </html>

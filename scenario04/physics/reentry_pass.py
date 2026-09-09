@@ -65,7 +65,7 @@ def perigee_passes(line1: str, line2: str, t_start: datetime, t_end: datetime,
         lst = (tp.hour + tp.minute / 60.0 + llh[1] / 15.0) % 24.0
         out.append({"t": tp.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
                     "alt_km": round(float(llh[2]), 1), "lat": round(float(llh[0]), 2), "lon": round(float(llh[1]), 2),
-                    "speed_kms": round(float(np.linalg.norm(v)), 2), "local_solar_time_h": round(lst, 1)})
+                    "speed_kms": round(float(np.linalg.norm(v)), 2), "local_solar_time_h": round(float(lst), 1)})
     return out
 
 

@@ -23,6 +23,7 @@ from ..config import settings
 from ..ingestion.index import get_sat_index
 from .coords import observer_ecef
 from .propagate import HAS_SATREC_ARRAY
+from .starlink_census import deorbiting_norad_ids, starlink_ids_by_generation
 
 if HAS_SATREC_ARRAY:
     from sgp4.api import SatrecArray as _SatrecArray
@@ -41,8 +42,11 @@ _computing_lock  = threading.Lock()
 C_KM_MS = 299792.458 / 1000.0   # km / ms（光速換算）
 
 
-def _cache_key(lat: float, lon: float, mask_deg: float, hours: int, step_min: int) -> tuple:
-    return (round(lat, 3), round(lon, 3), round(mask_deg, 1), hours, step_min)
+def _cache_key(lat: float, lon: float, mask_deg: float, hours: int, step_min: int,
+               generation: str = "all", dropout_pct: float = 0.0,
+               exclude_deorbiting: bool = True) -> tuple:
+    return (round(lat, 3), round(lon, 3), round(mask_deg, 1), hours, step_min,
+            generation, round(dropout_pct, 1), exclude_deorbiting)
 
 
 # ── 公開 API ──────────────────────────────────────────────────────────────────
@@ -53,12 +57,22 @@ def compute_starlink_visibility(
     mask_deg: float = 25.0,
     hours:    int   = 24,
     step_min: int   = 15,
+    generation: str = "all",
+    dropout_pct: float = 0.0,
+    exclude_deorbiting: bool = True,
 ) -> tuple[dict[str, Any] | None, bool]:
     """
     非同步計算並快取結果。
     Returns (result, ready)；ready=False 代表背景計算中，呼叫方回 202 即可。
+
+    generation: "all"｜"v1.0"｜"v1.5"｜"v2mini"｜"v3" — 世代篩選（啟發式，見
+        starlink_census.py 之 GENERATION_BANDS 說明）。
+    dropout_pct: 0–90，模擬隨機失去 N% 衛星後的備援情境（每次呼叫用固定亂數種子，
+        同一組參數重跑結果一致，方便前端快取/重現）。
+    exclude_deorbiting: 是否排除目前正在離軌的衛星（與 /starlink-deorbit 同一套判定
+        口徑）——這些衛星即使還在目錄裡也已接近失效，預設排除以求更貼近實際服務能力。
     """
-    key = _cache_key(lat, lon, mask_deg, hours, step_min)
+    key = _cache_key(lat, lon, mask_deg, hours, step_min, generation, dropout_pct, exclude_deorbiting)
 
     with _cache_lock:
         if key in _main_cache:
@@ -73,7 +87,8 @@ def compute_starlink_visibility(
 
     def _run() -> None:
         try:
-            result, occ_data = _do_compute(lat, lon, mask_deg, hours, step_min)
+            result, occ_data = _do_compute(lat, lon, mask_deg, hours, step_min,
+                                           generation, dropout_pct, exclude_deorbiting)
             now = datetime.now(timezone.utc)
             with _cache_lock:
                 _main_cache[key] = (result, now)
@@ -98,13 +113,18 @@ def compute_obstruction_analysis(
     hours:         int,
     step_min:      int,
     blocked_cells: list[list[float]],
+    generation:    str = "all",
+    dropout_pct:   float = 0.0,
+    exclude_deorbiting: bool = True,
 ) -> tuple[dict[str, Any] | None, bool]:
     """
     套用使用者定義的水平線遮蔽（horizon mask）後，回傳修正後的可見性時間序列。
     blocked_cells: [[az_center, el_center], ...] 每格 10°×5°
     不需重跑 SGP4，直接由 _occ_cache 計算差值（O(T×B)，毫秒級）。
+    generation/dropout_pct/exclude_deorbiting 須與先前呼叫 compute_starlink_visibility()
+    時的參數一致，才能命中同一份快取（見 _cache_key()）。
     """
-    key = _cache_key(lat, lon, mask_deg, hours, step_min)
+    key = _cache_key(lat, lon, mask_deg, hours, step_min, generation, dropout_pct, exclude_deorbiting)
 
     with _cache_lock:
         if key not in _main_cache or key not in _occ_cache:
@@ -184,26 +204,55 @@ def _do_compute(
     mask_deg: float,
     hours:    int,
     step_min: int,
+    generation: str = "all",
+    dropout_pct: float = 0.0,
+    exclude_deorbiting: bool = True,
 ) -> tuple[dict[str, Any], tuple]:
     """
     Returns (result_dict, occ_tuple).
     occ_tuple = (occupancy, n_az_bins, n_el_bins, n_steps, el_min_f)
     """
     idx = get_sat_index()
-    starlink_nids = [
+    all_starlink_nids = {
         nid for nid, info in idx.items()
         if "STARLINK" in info["name"].upper()
-    ]
+    }
+
+    # 世代篩選（啟發式，依發射日期區間；見 starlink_census.py）
+    gen_ids = starlink_ids_by_generation(generation) if generation not in ("", "all") else all_starlink_nids
+    candidate_nids = sorted(all_starlink_nids & gen_ids) if generation not in ("", "all") else sorted(all_starlink_nids)
+
+    # 排除目前正在離軌的衛星（與 /starlink-deorbit 同一套判定口徑）
+    excluded_deorbiting_count = 0
+    if exclude_deorbiting:
+        deorbiting = deorbiting_norad_ids()
+        before = len(candidate_nids)
+        candidate_nids = [n for n in candidate_nids if n not in deorbiting]
+        excluded_deorbiting_count = before - len(candidate_nids)
+
+    # 備援情境模擬：隨機排除 dropout_pct% 衛星（固定種子，同參數可重現）
+    dropout_pct = max(0.0, min(float(dropout_pct), 90.0))
+    dropped_count = 0
+    if dropout_pct > 0 and candidate_nids:
+        rng = np.random.default_rng(20260909)  # 固定種子：同一批候選清單每次抽樣結果一致
+        keep_mask = rng.random(len(candidate_nids)) >= (dropout_pct / 100.0)
+        dropped_count = int((~keep_mask).sum())
+        candidate_nids = [n for n, keep in zip(candidate_nids, keep_mask) if keep]
+
+    starlink_nids = candidate_nids
 
     empty_occ = (np.zeros((36, 13, 1), dtype=np.int16), 36, 13, 1, float(mask_deg))
-    if not starlink_nids:
+    if not all_starlink_nids:
         return {"error": "資料庫中無 STARLINK 衛星", "timeline": [], "stats": {}}, empty_occ
+    if not starlink_nids:
+        return {"error": "篩選條件（世代／備援情境）後無剩餘衛星，請放寬條件", "timeline": [], "stats": {}}, empty_occ
     if not HAS_SATREC_ARRAY:
         return {"error": "SatrecArray 不可用", "timeline": [], "stats": {}}, empty_occ
 
     logger.info(
-        "Starlink 計算開始：(%.3f,%.3f) mask=%.1f° %dh@%dmin N=%d",
+        "Starlink 計算開始：(%.3f,%.3f) mask=%.1f° %dh@%dmin N=%d（世代=%s 排除離軌=%d 備援丟棄=%d）",
         lat, lon, mask_deg, hours, step_min, len(starlink_nids),
+        generation, excluded_deorbiting_count, dropped_count,
     )
 
     t0 = datetime.now(timezone.utc)
@@ -348,6 +397,11 @@ def _do_compute(
         "sky_density": sky_density,
         "stats": {
             "total_sats":        len(starlink_nids),
+            "total_known_starlink": len(all_starlink_nids),
+            "generation_filter": generation,
+            "excluded_deorbiting_count": excluded_deorbiting_count,
+            "dropout_pct":       dropout_pct,
+            "dropped_count":     dropped_count,
             "mean_visible":      round(float(vc.mean()), 1),
             "min_visible":       int(vc.min()),
             "max_visible":       int(vc.max()),

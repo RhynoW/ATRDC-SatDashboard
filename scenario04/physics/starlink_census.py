@@ -284,6 +284,92 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
         return {"error": str(exc)}
 
 
+# ── Starlink 世代分類（啟發式，依公開已知的發射日期區間切分）─────────────────
+# Space-Track／CelesTrak 目錄不含硬體世代標記，這裡完全依 sat_metadata.csv 的
+# launch_date（官方編目日期，可靠）對照「公開已知的世代量產時期」做近似切分。
+# 世代交界日期為近似值（實際交接通常有數週到數月的重疊過渡期，並非某天硬切換），
+# 僅供教學/展示用的粗略篩選，不是逐顆硬體序號比對的精確分類。
+GENERATION_BANDS: list[tuple[str, str | None, str | None]] = [
+    # (代號, 起始日期含, 結束日期含；None 表示不設下限/上限)
+    ("v1.0",   None,          "2021-05-31"),
+    ("v1.5",   "2021-06-01",  "2022-12-31"),
+    ("v2mini", "2023-01-01",  None),   # 結束日在下方以 V3_ERA_START 動態代入
+]
+GENERATION_LABELS = {"v1.0": "v1.0", "v1.5": "v1.5", "v2mini": "v2 Mini", "v3": "V3"}
+
+
+def _generation_of(launch_date_str: str | None) -> str:
+    if not launch_date_str:
+        return "unknown"
+    if launch_date_str >= V3_ERA_START:
+        return "v3"
+    for gen, start, end in GENERATION_BANDS:
+        if start and launch_date_str < start:
+            continue
+        if end and launch_date_str > end:
+            continue
+        return gen
+    return "unknown"
+
+
+def starlink_ids_by_generation(generation: str) -> set[int]:
+    """回傳指定世代（"all"｜"v1.0"｜"v1.5"｜"v2mini"｜"v3"）的 Starlink NORAD 集合。"""
+    all_ids = _starlink_norad_ids()
+    if generation in ("", "all"):
+        return all_ids
+    meta = load_sat_metadata_csv()
+    return {nid for nid in all_ids
+            if _generation_of((meta.get(nid, {}) or {}).get("launch_date")) == generation}
+
+
+def generation_breakdown() -> dict[str, int]:
+    """各世代目前已知顆數（即時，依 sat_metadata.csv 現況）。"""
+    meta = load_sat_metadata_csv()
+    counts: dict[str, int] = {}
+    for nid in _starlink_norad_ids():
+        gen = _generation_of((meta.get(nid, {}) or {}).get("launch_date"))
+        counts[gen] = counts.get(gen, 0) + 1
+    return counts
+
+
+def deorbiting_norad_ids() -> set[int]:
+    """目前正在離軌的 Starlink NORAD 集合（與 list_deorbiting_starlinks() 同一套判定口徑，
+    但不含 limit、不算 est_days，供其他計算（如可見性分析）用來排除失效衛星）。"""
+    db = resolve_db()
+    if db is None:
+        return set()
+    ids = _starlink_norad_ids()
+    if not ids:
+        return set()
+    try:
+        with duckdb.connect(str(db), read_only=True) as con:
+            _register_starlink_ids(con, ids)
+            sql = f"""
+                WITH base AS (
+                    SELECT r.norad_id, r.epoch_utc, r.sma_km - 6378.137 AS alt_km
+                    FROM {settings.RAW_TABLE} r
+                    JOIN starlink_ids s ON s.norad_id = r.norad_id
+                ), cur AS (
+                    SELECT norad_id, epoch_utc, alt_km FROM base
+                    QUALIFY ROW_NUMBER() OVER (PARTITION BY norad_id ORDER BY epoch_utc DESC) = 1
+                ), past30 AS (
+                    SELECT norad_id, alt_km AS alt_km_30d_ago FROM base
+                    QUALIFY ROW_NUMBER() OVER (
+                        PARTITION BY norad_id
+                        ORDER BY abs(date_diff('hour', epoch_utc, now() - INTERVAL 30 DAY))
+                    ) = 1
+                )
+                SELECT cur.norad_id FROM cur JOIN past30 USING (norad_id)
+                WHERE cur.epoch_utc >= now() - INTERVAL {DEORBIT_FRESH_DAYS} DAY
+                  AND (past30.alt_km_30d_ago - cur.alt_km) >= {DEORBIT_DA30_KM}
+                  AND cur.alt_km < {DEORBIT_ALT_MAX_KM}
+            """
+            return {int(r[0]) for r in con.execute(sql).fetchall()}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("deorbiting_norad_ids 失敗：%s", exc)
+        return set()
+
+
 # ── Starlink V3 部署統計（啟發式，見 count_v3_candidates() 說明）──────────────
 # V3 規格與部署時程為公開報導/申請文件之已知資訊（非本系統可獨立驗證），截至本檔案
 # 撰寫時 Starship Flight 14（首次嘗試搭載約 20 顆 V3 進入正式軌道）尚未發射，目標日期

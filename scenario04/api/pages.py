@@ -39,6 +39,24 @@ def constellations_page():
     return render_template("constellations.html")
 
 
+@bp.get("/starlink-census")
+def starlink_census_page():
+    """Starlink 顆數普查：本系統 vs keeptrack.space 公開數字（資料源 /api/starlink/census）。"""
+    return render_template("starlink_census.html")
+
+
+@bp.get("/starlink-deorbit")
+def starlink_deorbit_page():
+    """即時離軌中的 Starlink 名單（資料源 /api/starlink/deorbiting、/api/starlink/reentry_detail）。"""
+    return render_template("starlink_deorbit.html")
+
+
+@bp.get("/starlink-v3")
+def starlink_v3_page():
+    """Starlink V3 佈署數量統計（啟發式；資料源 /api/starlink/v3_census）。"""
+    return render_template("starlink_v3.html")
+
+
 @bp.get("/orbit")
 def orbit_page():
     """軌道要素歷史（Spiral Polar + SMA 圓形圖）；資料源 /api/orbit/history。"""

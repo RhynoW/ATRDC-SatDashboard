@@ -35,6 +35,8 @@ const I18N = {
     stat_total: '資料庫衛星數', stat_mean: '平均可見顆數', stat_min: '最低可見顆數',
     stat_avail: '幾何可用率', stat_rtt_mean: '平均 RTT 下限', stat_rtt_range: 'RTT 下限範圍',
     stat_gaps: '覆蓋空窗次數',
+    stat_excluded: '已排除離軌中衛星', stat_excluded_link: '查看即時離軌名單 →',
+    lbl_generation: '世代篩選', lbl_dropout: '備援折損模擬', gen_all: '全部',
     timeline_title: '可見衛星數量時間軸（24 小時）',
     rtt_title: '傳播延遲下限（RTT floor，ms）',
     rtt_note: '純幾何傳播延遲（光速 × 斜距 × 2）；不含地面基礎設施，台灣無本地閘道時估計額外加 30~50 ms',
@@ -78,9 +80,9 @@ const I18N = {
     card2_3_desc: 'Ku/Ka 頻段在台灣強降雨衰減顯著，低仰角鏈路穿越更長雨層路徑，結合即時天氣提供精確服務品質預警。',
     layer3_title: '第三層 — 台灣情境韌性分析（SSA / 通訊韌性）',
     card3_1_title: '備援情境模擬',
-    card3_1_desc: '模擬衛星折損 X% 或特定殼層不可用時台灣覆蓋的退化程度（呼應 2024 東部強震海纜受損議題）。',
+    card3_1_desc: '隨機折損 0～90% 衛星，觀察台灣可見數與可用率的退化程度（呼應 2024 東部強震海纜受損、單一路徑失效的韌性議題；可與海纜頁 /cable 對照）。',
     card3_2_title: '世代 / 機型篩選',
-    card3_2_desc: '區分 v1.5、v2 Mini、DTC 衛星子集合；DTC 過頂統計對手機直連服務有獨立評估價值。',
+    card3_2_desc: '依發射日期啟發式區分 v1.0／v1.5／v2 Mini／V3 世代子集合分析可用性；並自動排除近期偵測為離軌中的衛星（詳見 /starlink-deorbit 即時名單）。',
     status_note_label: '現況說明',
     status_note_body: '《電信管理法》第 36 條修正案已於 2026 年 7 月 21 日三讀通過，取消外資持股上限，改由主管機關依國家安全等 7 項標準逐案審核核准；惟截至目前 Starlink 尚未取得正式核准、也還未在台灣商轉。本工具基於公開 TLE 資料計算純幾何可用性，供技術評估與政策討論參考。',
   },
@@ -103,6 +105,8 @@ const I18N = {
     stat_total: 'Satellites in Database', stat_mean: 'Mean Visible Count', stat_min: 'Min Visible Count',
     stat_avail: 'Geometric Availability', stat_rtt_mean: 'Mean RTT Floor', stat_rtt_range: 'RTT Floor Range',
     stat_gaps: 'Coverage Gap Count',
+    stat_excluded: 'Deorbiting Excluded', stat_excluded_link: 'View live deorbit list →',
+    lbl_generation: 'Generation', lbl_dropout: 'Redundancy Loss Sim', gen_all: 'All',
     timeline_title: 'Visible Satellite Count Timeline (24h)',
     rtt_title: 'Propagation Latency Floor (RTT floor, ms)',
     rtt_note: 'Pure geometric propagation delay (speed of light × slant range × 2); excludes ground infrastructure — without a local gateway in Taiwan, add an estimated 30–50 ms',
@@ -146,9 +150,9 @@ const I18N = {
     card2_3_desc: "Ku/Ka band signals attenuate significantly in Taiwan's heavy rainfall; low-elevation links traverse a longer path through the rain layer. Combined with real-time weather data, this provides precise service-quality warnings.",
     layer3_title: 'Layer 3 — Taiwan Scenario Resilience Analysis (SSA / Communication Resilience)',
     card3_1_title: 'Redundancy Scenario Simulation',
-    card3_1_desc: 'Simulates the degree of coverage degradation over Taiwan if X% of satellites are lost or a specific shell becomes unavailable (echoing the 2024 eastern Taiwan earthquake submarine cable damage issue).',
+    card3_1_desc: 'Randomly drops 0–90% of satellites to show how visible count and availability over Taiwan degrade (echoing the resilience lessons of the 2024 eastern Taiwan earthquake submarine cable damage — see also the /cable page).',
     card3_2_title: 'Generation / Model Filtering',
-    card3_2_desc: 'Distinguishes v1.5, v2 Mini, and DTC satellite subsets; DTC overpass statistics have independent evaluation value for direct-to-cell service.',
+    card3_2_desc: 'Splits the constellation into v1.0 / v1.5 / v2 Mini / V3 subsets by a launch-date heuristic, and automatically excludes satellites currently detected as deorbiting (see the live list at /starlink-deorbit).',
     status_note_label: 'Current Status',
     status_note_body: "An amendment to Article 36 of the Telecommunications Management Act passed its third reading on July 21, 2026, removing the foreign-ownership cap and replacing it with a case-by-case review against 7 criteria (including national security) by the competent authority; however, as of now Starlink has not yet obtained formal approval or launched commercial service in Taiwan. This tool computes pure geometric availability from public TLE data, for technical evaluation and policy discussion reference only.",
   },
@@ -171,6 +175,8 @@ const I18N = {
     stat_total: 'データベース衛星数', stat_mean: '平均可視衛星数', stat_min: '最小可視衛星数',
     stat_avail: '幾何学的可用率', stat_rtt_mean: '平均RTT下限', stat_rtt_range: 'RTT下限範囲',
     stat_gaps: 'カバレッジギャップ回数',
+    stat_excluded: '離軌中除外数', stat_excluded_link: 'リアルタイム離軌リストを見る →',
+    lbl_generation: '世代フィルタ', lbl_dropout: '冗長性損失シミュレーション', gen_all: 'すべて',
     timeline_title: '可視衛星数タイムライン（24時間）',
     rtt_title: '伝搬遅延下限（RTT floor、ms）',
     rtt_note: '純粋な幾何学的伝搬遅延（光速 × スラントレンジ × 2）。地上インフラを含まず、台湾にローカルゲートウェイがない場合は推定30〜50ms追加',
@@ -214,9 +220,9 @@ const I18N = {
     card2_3_desc: 'Ku/Ka帯は台湾の豪雨で減衰が顕著。低仰角リンクは雨層をより長く通過する。リアルタイム気象データと組み合わせて精密なサービス品質警告を提供。',
     layer3_title: 'レイヤー3 — 台湾シナリオ・レジリエンス分析（SSA・通信レジリエンス）',
     card3_1_title: '冗長性シナリオシミュレーション',
-    card3_1_desc: '衛星がX%損失、または特定シェルが利用不可となった場合の台湾カバレッジ劣化度をシミュレート（2024年台湾東部地震での海底ケーブル損傷問題を踏まえて）。',
+    card3_1_desc: '衛星を0～90%ランダムに損失させ、台湾上空の可視数と可用率の劣化度をシミュレート（2024年台湾東部地震での海底ケーブル損傷問題を踏まえたレジリエンス検討。/cableページも参照）。',
     card3_2_title: '世代・機種フィルタリング',
-    card3_2_desc: 'v1.5、v2 Mini、DTC衛星のサブセットを区別。DTC通過統計は携帯直接接続サービスの評価に独自の価値を持つ。',
+    card3_2_desc: '打ち上げ日による推定でv1.0／v1.5／v2 Mini／V3世代のサブセットに分けて可用性を分析し、直近で離軌中と判定された衛星を自動的に除外（リアルタイムリストは /starlink-deorbit を参照）。',
     status_note_label: '現状説明',
     status_note_body: '電信管理法第36条の改正案は2026年7月21日に第三読会を通過し、外資持株比率の上限が撤廃され、国家安全保障など7つの基準に基づく主務官庁による個別審査・承認制に変更された。ただし現時点でStarlinkはまだ正式な認可を取得しておらず、台湾での商用サービスも開始していない。本ツールは公開TLEデータに基づく純粋な幾何学的可用性を計算するものであり、技術評価および政策議論の参考情報として提供する。',
   },
@@ -306,10 +312,16 @@ document.addEventListener('click',e=>{
 
 // ── 取得輸入參數 ──────────────────────────────────────────────────────────────
 function getParams(){
-  const lat     = parseFloat(document.getElementById('sf-lat').value)  || 25.033;
-  const lon     = parseFloat(document.getElementById('sf-lon').value)  || 121.565;
-  const mask    = parseFloat(document.getElementById('sf-mask').value) || 25;
-  return {lat, lon, mask};
+  const lat        = parseFloat(document.getElementById('sf-lat').value)  || 25.033;
+  const lon        = parseFloat(document.getElementById('sf-lon').value)  || 121.565;
+  const mask       = parseFloat(document.getElementById('sf-mask').value) || 25;
+  const genEl      = document.getElementById('sf-generation');
+  const generation = genEl ? genEl.value : 'all';
+  const dropoutEl  = document.getElementById('sf-dropout');
+  let dropout_pct  = dropoutEl ? parseFloat(dropoutEl.value) : 0;
+  if(!Number.isFinite(dropout_pct)) dropout_pct = 0;
+  dropout_pct = Math.max(0, Math.min(dropout_pct, 90));
+  return {lat, lon, mask, generation, dropout_pct};
 }
 
 // ── Loading 狀態 ──────────────────────────────────────────────────────────────
@@ -333,10 +345,11 @@ function triggerCompute(){
   updateBlockCount();
   document.getElementById('obst-result').style.display = 'none';
   showResultPanels(false);
-  const {lat, lon, mask} = getParams();
+  const {lat, lon, mask, generation, dropout_pct} = getParams();
   _maskDeg = mask;
   setLoading(true, tpl('loading_msg_compute', {lat: lat.toFixed(3), lon: lon.toFixed(3), mask}));
-  const url = `/api/starlink/visibility?lat=${lat}&lon=${lon}&mask=${mask}&hours=24&step=15`;
+  const url = `/api/starlink/visibility?lat=${lat}&lon=${lon}&mask=${mask}&hours=24&step=15`
+            + `&generation=${encodeURIComponent(generation)}&dropout_pct=${dropout_pct}`;
   _poll(url);
 }
 
@@ -398,6 +411,12 @@ function renderStats(s){
       s.min_rtt_floor_ms != null
         ? `${s.min_rtt_floor_ms.toFixed(1)}–${s.max_rtt_floor_ms.toFixed(1)} ms`
         : '—');
+  const excludedEl = document.getElementById('st-excluded');
+  if(excludedEl){
+    const excluded = s.excluded_deorbiting_count || 0;
+    const dropped  = s.dropped_count || 0;
+    excludedEl.textContent = dropped > 0 ? `${excluded} (+${dropped})` : String(excluded);
+  }
 }
 
 // ── 空窗列表 ──────────────────────────────────────────────────────────────────
@@ -689,7 +708,7 @@ function applyObstruction(){
   if(!_data || _blocked.size === 0){
     alert(t('alert_no_cells')); return;
   }
-  const {lat, lon, mask} = getParams();
+  const {lat, lon, mask, generation, dropout_pct} = getParams();
   const blocked_cells = [..._blocked].map(k=>{ const [a,e]=k.split(','); return [parseFloat(a),parseFloat(e)]; });
   const btn = document.getElementById('apply-obst-btn');
   _obstBtnBusy = true;
@@ -698,7 +717,7 @@ function applyObstruction(){
   fetch('/api/starlink/obstruction',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({lat,lon,mask,hours:24,step:15,blocked_cells}),
+    body:JSON.stringify({lat,lon,mask,hours:24,step:15,blocked_cells,generation,dropout_pct}),
   })
   .then(r=>r.json())
   .then(data=>{

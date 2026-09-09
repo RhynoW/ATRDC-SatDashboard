@@ -82,7 +82,7 @@ const I18N = {
     card3_2_title: '世代 / 機型篩選',
     card3_2_desc: '區分 v1.5、v2 Mini、DTC 衛星子集合；DTC 過頂統計對手機直連服務有獨立評估價值。',
     status_note_label: '現況說明',
-    status_note_body: 'Starlink 截至 2026 年 7 月仍未在台灣正式商轉，主要受限於《電信管理法》第 36 條外資持股上限。立法院已於本月審議修正草案，是否為衛星通信業者增訂例外，被視為 Starlink 登台關鍵。本工具基於公開 TLE 資料計算純幾何可用性，供技術評估與政策討論參考。',
+    status_note_body: '《電信管理法》第 36 條修正案已於 2026 年 7 月 21 日三讀通過，取消外資持股上限，改由主管機關依國家安全等 7 項標準逐案審核核准；惟截至目前 Starlink 尚未取得正式核准、也還未在台灣商轉。本工具基於公開 TLE 資料計算純幾何可用性，供技術評估與政策討論參考。',
   },
   en: {
     doc_title: 'Starlink Taiwan Service Availability Analysis',
@@ -150,7 +150,7 @@ const I18N = {
     card3_2_title: 'Generation / Model Filtering',
     card3_2_desc: 'Distinguishes v1.5, v2 Mini, and DTC satellite subsets; DTC overpass statistics have independent evaluation value for direct-to-cell service.',
     status_note_label: 'Current Status',
-    status_note_body: "As of July 2026, Starlink has still not officially launched commercial service in Taiwan, primarily due to the foreign-ownership cap under Article 36 of the Telecommunications Management Act. The Legislative Yuan is reviewing an amendment this month; whether an exception is added for satellite communication operators is seen as the key to Starlink's entry into Taiwan. This tool computes pure geometric availability from public TLE data, for technical evaluation and policy discussion reference only.",
+    status_note_body: "An amendment to Article 36 of the Telecommunications Management Act passed its third reading on July 21, 2026, removing the foreign-ownership cap and replacing it with a case-by-case review against 7 criteria (including national security) by the competent authority; however, as of now Starlink has not yet obtained formal approval or launched commercial service in Taiwan. This tool computes pure geometric availability from public TLE data, for technical evaluation and policy discussion reference only.",
   },
   ja: {
     doc_title: 'Starlink 台湾サービス可用性分析',
@@ -218,7 +218,7 @@ const I18N = {
     card3_2_title: '世代・機種フィルタリング',
     card3_2_desc: 'v1.5、v2 Mini、DTC衛星のサブセットを区別。DTC通過統計は携帯直接接続サービスの評価に独自の価値を持つ。',
     status_note_label: '現状説明',
-    status_note_body: '2026年7月時点で、StarlinkはまだTaiwanで正式な商用サービスを開始していない。主な要因は電信管理法第36条の外資持株比率上限。立法院は今月改正案を審議中で、衛星通信事業者に例外規定を設けるかどうかがStarlink台湾参入の鍵とされる。本ツールは公開TLEデータに基づく純粋な幾何学的可用性を計算するものであり、技術評価および政策議論の参考情報として提供する。',
+    status_note_body: '電信管理法第36条の改正案は2026年7月21日に第三読会を通過し、外資持株比率の上限が撤廃され、国家安全保障など7つの基準に基づく主務官庁による個別審査・承認制に変更された。ただし現時点でStarlinkはまだ正式な認可を取得しておらず、台湾での商用サービスも開始していない。本ツールは公開TLEデータに基づく純粋な幾何学的可用性を計算するものであり、技術評価および政策議論の参考情報として提供する。',
   },
 };
 const LOCALE_MAP = {zh:'zh-TW', en:'en-US', ja:'ja-JP'};

@@ -24,6 +24,9 @@ def starlink_visibility():
         mask (float)  仰角遮蔽（度），預設 25（Starlink 終端建議值）
         hours (int)   預報時數 1–72，預設 24
         step  (int)   時間步長（分）1–60，預設 15
+        generation (str) 世代篩選："all"｜"v1.0"｜"v1.5"｜"v2mini"｜"v3"，預設 "all"
+        dropout_pct (float) 備援情境模擬：隨機排除 N% 衛星，0–90，預設 0
+        exclude_deorbiting (0/1) 是否排除目前正在離軌的衛星，預設 1（排除）
 
     Returns:
         200 + JSON  — 計算完成
@@ -37,8 +40,14 @@ def starlink_visibility():
         step_min = max(1, min(int(request.args.get("step",  15)), 60))
     except (TypeError, ValueError):
         hours, step_min = 24, 15
+    generation = request.args.get("generation", "all").strip() or "all"
+    if generation not in ("all", "v1.0", "v1.5", "v2mini", "v3"):
+        generation = "all"
+    dropout_pct = parse_float_arg(request.args, "dropout_pct", 0.0, 0.0, 90.0)
+    exclude_deorbiting = request.args.get("exclude_deorbiting", "1") not in ("0", "false", "False")
 
-    result, ready = compute_starlink_visibility(lat, lon, mask_deg, hours, step_min)
+    result, ready = compute_starlink_visibility(
+        lat, lon, mask_deg, hours, step_min, generation, dropout_pct, exclude_deorbiting)
     if not ready:
         return json_response({"status": "computing"}), 202
     return json_response(result)
@@ -66,6 +75,11 @@ def starlink_obstruction():
         mask_deg = float(body.get("mask", 25.0))
         hours    = max(1, min(int(body.get("hours", 24)), 72))
         step_min = max(1, min(int(body.get("step",  15)), 60))
+        generation = str(body.get("generation", "all")).strip() or "all"
+        if generation not in ("all", "v1.0", "v1.5", "v2mini", "v3"):
+            generation = "all"
+        dropout_pct = max(0.0, min(float(body.get("dropout_pct", 0.0)), 90.0))
+        exclude_deorbiting = bool(body.get("exclude_deorbiting", True))
         raw_cells = body.get("blocked_cells", [])
         if not isinstance(raw_cells, list):
             raw_cells = []
@@ -79,6 +93,7 @@ def starlink_obstruction():
 
     result, ready = compute_obstruction_analysis(
         lat, lon, mask_deg, hours, step_min, blocked_cells,
+        generation, dropout_pct, exclude_deorbiting,
     )
     if not ready:
         return json_response({"error": "基礎資料尚未就緒，請先呼叫 /api/starlink/visibility"}), 409

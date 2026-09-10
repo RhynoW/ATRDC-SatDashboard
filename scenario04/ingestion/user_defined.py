@@ -14,12 +14,27 @@ from __future__ import annotations
 
 import csv
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
+
+# tle_catnr.py（Alpha-5 六位數 NORAD 解碼共用模組）位於主專案根目錄（BASE_DIR）；
+# 本模組原本自帶一份獨立的 Alpha-5 解碼邏輯（見下方 _A5/_tle_norad_id），
+# 與 download_TLE_unified.py／prc_maneuver/detect_maneuvers.py 共用的 tle_catnr.decode_catnr()
+# 各自維護、容易日後改一邊漏改另一邊。這裡改為優先呼叫共用模組；但本應用（scenario-advanced01）
+# 設計上可獨立部署（見 update_slim_publish_hf.bat，只打包 DB 檔、不含主專案根目錄的 .py 模組），
+# 獨立部署時 BASE_DIR 下不會有 tle_catnr.py，故保留下方本地實作作為 ImportError 時的備援，
+# 而非直接假設一定匯入得到（仿 spacetrack.py 的降級寫法）。
+if str(settings.BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(settings.BASE_DIR))
+try:
+    from tle_catnr import decode_catnr as _shared_decode_catnr
+except ImportError:
+    _shared_decode_catnr = None
 
 _TLE_PATTERNS = ("*.tle", "*.txt")
 
@@ -43,9 +58,19 @@ _A5 = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 
 def _tle_norad_id(line: str) -> int | None:
-    """取 TLE line1/line2 第 3–7 欄的 NORAD ID（Alpha-5 相容，支援 6 位數 100000+）。"""
+    """取 TLE line1/line2 第 3–7 欄的 NORAD ID（Alpha-5 相容，支援 6 位數 100000+）。
+
+    優先呼叫主專案共用之 `tle_catnr.decode_catnr()`（單一事實來源）；
+    僅在該模組不可匯入時（本應用獨立部署、無主專案根目錄可用），退回本地實作。
+    """
+    field = line[2:7]
+    if _shared_decode_catnr is not None:
+        try:
+            return _shared_decode_catnr(field)
+        except ValueError:
+            return None
     try:
-        s = line[2:7].strip().upper()
+        s = field.strip().upper()
         if s[0].isdigit():
             return int(s)                       # 傳統 ≤99999
         tens = _A5.find(s[0])                    # Alpha-5：首字母 → 萬千位

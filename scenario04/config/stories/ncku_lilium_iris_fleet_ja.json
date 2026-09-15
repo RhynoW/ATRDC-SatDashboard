@@ -85,7 +85,7 @@
           "56221",
           "2023-054AU",
           "2023-04-15",
-          "TLE記録なし（カタログ情報の最終確認 2026-03-29）"
+          "TLE記録なし（カタログ情報の最終確認 2026-03-29）；智探太空（SATORO Space）公式サイトによれば大気圏に再突入済み（正確な日付は未記載）"
         ],
         [
           "IRIS-C2",
@@ -198,6 +198,10 @@
         [
           "IRIS-A軌道詳細と再突入",
           "[Gunter's Space Page](https://space.skyrocket.de/doc_sdat/iris-a.htm)"
+        ],
+        [
+          "IRIS-Cの再突入状況",
+          "[智探太空(SATORO Space)公式サイト Space Heritage](https://www.satoro.space/Space_heritage)"
         ],
         [
           "台湾百合1号の打ち上げと運用",

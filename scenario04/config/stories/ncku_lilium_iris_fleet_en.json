@@ -85,7 +85,7 @@
           "56221",
           "2023-054AU",
           "2023-04-15",
-          "No TLE on record (catalog metadata last checked 2026-03-29)"
+          "No TLE on record (catalog metadata last checked 2026-03-29); SATORO Space's own website reports it has re-entered the atmosphere, with no exact date given"
         ],
         [
           "IRIS-C2",
@@ -198,6 +198,10 @@
         [
           "IRIS-A orbital details and re-entry",
           "[Gunter's Space Page](https://space.skyrocket.de/doc_sdat/iris-a.htm)"
+        ],
+        [
+          "IRIS-C re-entry status",
+          "[SATORO Space official website — Space Heritage](https://www.satoro.space/Space_heritage)"
         ],
         [
           "Lilium-1 launch and operation",

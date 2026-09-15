@@ -478,20 +478,18 @@ async function getStoryList(){
   catch(e){ STORY_LIST_CACHE = []; }
   return STORY_LIST_CACHE;
 }
+function _storyBaseId(sid){
+  if(sid.endsWith('-ja') || sid.endsWith('-en')) return sid.slice(0, -3);
+  return sid;
+}
 async function findLangVariant(sid, targetLang){
   if(!sid) return null;
   const list = await getStoryList();
   const ids = new Set(list.map(s => s.id));
-  if(targetLang === 'ja'){
-    if(sid.endsWith('-ja')) return null;
-    const cand = sid + '-ja';
-    return ids.has(cand) ? cand : null;
-  }
-  if(sid.endsWith('-ja')){
-    const cand = sid.slice(0, -3);
-    return ids.has(cand) ? cand : null;
-  }
-  return null;
+  const base = _storyBaseId(sid);
+  const cand = (targetLang === 'zh') ? base : (base + '-' + targetLang);
+  if(cand === sid) return null;
+  return ids.has(cand) ? cand : null;
 }
 
 // ── 語言切換：更新殼層文字，並在有對應 {id}-ja／去 -ja 版本時自動改載入 ──────

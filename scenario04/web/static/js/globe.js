@@ -95,6 +95,38 @@ let activeTab='country', activeFtype=null, activeFval=null;
 let panelMode='tabs';
 const entMap=new Map();
 let _statsPayload=null;
+
+// 單顆／多顆手動選取（flyToSat／showMultiSats，多為 URL 帶 norad 參數）之週期性位置更新：
+// 這兩個路徑先前僅在載入當下取一次靜態位置，此後不會隨時間推移而移動；
+// 與大量篩選瀏覽（renderEntities，可能上萬顆）共用同一 entMap 但走各自獨立的更新節奏，
+// 避免對大量衛星逐顆呼叫 /api/position/<norad>（那條路徑已有自己的批次自適應更新機制）。
+let _selRefreshTimer=null;
+let _selNorads=[];
+const SEL_REFRESH_MS=10000;
+function _stopSelRefresh(){
+  if(_selRefreshTimer){ clearInterval(_selRefreshTimer); _selRefreshTimer=null; }
+  _selNorads=[];
+}
+function _startSelRefresh(norads){
+  _stopSelRefresh();
+  _selNorads=(norads||[]).slice();
+  if(!_selNorads.length) return;
+  _selRefreshTimer=setInterval(_refreshSelPositions,SEL_REFRESH_MS);
+}
+async function _refreshSelPositions(){
+  if(!_selNorads.length) return;
+  await Promise.all(_selNorads.map(async nid=>{
+    const ent=entMap.get(nid);
+    if(!ent) return;   // 已被其他操作（如切換篩選）清除，略過
+    try{
+      const r=await fetch('/api/position/'+nid);
+      if(!r.ok) return;
+      const d=await r.json();
+      if(d.error||d.lat==null) return;
+      ent.position=Cesium.Cartesian3.fromDegrees(d.lon,d.lat,d.alt_km*1000);
+    }catch(e){}
+  }));
+}
 const _payloadOnly={};
 const PAYLOAD_TABS=new Set(['country','era','constellation']);
 let borderDs=null, ssnDs=null;
@@ -589,6 +621,7 @@ async function filterGlobe(ftype,fval,color){
 }
 
 function renderEntities(sats,ftype){
+  _stopSelRefresh();
   satDs.entities.removeAll(); entMap.clear();
   sats.forEach(s=>{
     const pos=Cesium.Cartesian3.fromDegrees(s.lon,s.lat,s.alt_km*1000);
@@ -898,6 +931,7 @@ async function fetchSatDetail(nid){
 
 function flyToSat(s){
   if(s.lat==null) return;
+  _stopSelRefresh();
   _clearOrbit();
   satDs.entities.removeAll(); entMap.clear();
   const pos=Cesium.Cartesian3.fromDegrees(s.lon,s.lat,s.alt_km*1000);
@@ -907,12 +941,14 @@ function flyToSat(s){
     point:{pixelSize:10,color:col,outlineColor:Cesium.Color.WHITE,outlineWidth:2},
     description:new Cesium.ConstantProperty(_buildDesc(s)),
   });
+  entMap.set(s.norad_id,ent);
   viewer.flyTo(ent,{duration:2});
   viewer.selectedEntity=ent;
   document.getElementById('filter-status').textContent=s.name+' (#'+s.norad_id+')';
   activeFtype=activeFval=null;
   showOrbitArc(s.norad_id, getColor('country',s.country));
   fetchSatDetail(s.norad_id);
+  _startSelRefresh([s.norad_id]);
 }
 
 async function toggleLayer(type,cb){
@@ -1092,6 +1128,7 @@ async function _resolveSat(token){
 }
 
 async function showMultiSats(tokens){
+  _stopSelRefresh();
   _clearOrbit();
   satDs.entities.removeAll(); entMap.clear();
   activeFtype=activeFval=null;
@@ -1144,6 +1181,7 @@ async function showMultiSats(tokens){
   const found=results.length, req=tokens.length;
   statusEl.textContent='顯示 '+found+(found<req?' / '+req:'')
     +' 顆：'+results.map(s=>s.name).join('、');
+  _startSelRefresh(results.map(s=>s.norad_id));
 }
 
 async function autoSelectFromUrl(){

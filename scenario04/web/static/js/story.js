@@ -14,9 +14,9 @@ function esc(s){
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* 表格儲存格：先 esc，再把 markdown 連結 [文字](https://…) 轉為 <a>（僅限表格用） */
+/* 表格儲存格：先 esc，再把 markdown 連結 [文字](https://… 或 /站內路徑) 轉為 <a>（僅限表格用） */
 function mdCell(s){
-  return esc(s).replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+  return esc(s).replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^\s)]+)\)/g,
     '<a href="$2" target="_blank" rel="noopener">$1</a>');
 }
 function $id(i){ return document.getElementById(i); }

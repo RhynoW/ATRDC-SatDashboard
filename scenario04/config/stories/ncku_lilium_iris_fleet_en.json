@@ -1,15 +1,15 @@
 {
   "id": "ncku-lilium-iris-fleet-en",
-  "title": "NCKU Mechatronics Lab's CubeSat Fleet: Lilium-3 and Its Electric Propulsion Experiment",
-  "subtitle": "Nine CubeSats in the \"Mechatronics Laboratory\" IRIS/Lilium series — focused on Lilium-3's arc thruster and secure-comms payload",
-  "hero_note": "National Cheng Kung University's Department of Electrical Engineering \"Mechatronics Laboratory\" has launched a series of IRIS/Lilium CubeSats since 2022. This story presents the fleet's current orbital status using public TLE history retrieved from this system's own database; descriptions of payloads, mission goals, and technical progress are compiled from public reporting, with the full source list on the last page. Public TLEs can only show orbital trends — they cannot independently confirm payload operation, ignition events, or mission details.",
+  "title": "NCKU Mechatronic Lab's CubeSat Fleet: Lilium-3 and Its Electric Propulsion Experiment",
+  "subtitle": "Nine CubeSats in the \"Mechatronic Lab\" IRIS/Lilium series — focused on Lilium-3's arc thruster and secure-comms payload",
+  "hero_note": "National Cheng Kung University's Department of Electrical Engineering \"Mechatronic Lab\" has launched a series of IRIS/Lilium CubeSats since 2022. This story presents the fleet's current orbital status using public TLE history retrieved from this system's own database; descriptions of payloads, mission goals, and technical progress are compiled from public reporting, with the full source list on the last page. Public TLEs can only show orbital trends — they cannot independently confirm payload operation, ignition events, or mission details.",
   "updated": "2026-09-15",
   "sections": [
     {
       "type": "text",
       "title": "Introduction: One Lab, Nine Satellites, Four Years of Launches",
       "dur": 5,
-      "body": "NCKU's Department of Electrical Engineering \"Mechatronics Laboratory\" focuses its research on two tracks: space technology (LEO and CubeSats) and smart driving. Starting with IRIS-A (launched 2022-01-13), the lab's team has successively sent up IRIS-C/C2, IRIS-F1/F2/F3, and Lilium 1 through 3 — nine CubeSat catalog objects in all, one of Taiwan's densest runs of self-built CubeSat launches over the past four years. Lilium-2 and Lilium-3, launched together on 2025-11-28 (2025-11-29 Taiwan time), represent the newest generation: Lilium-3 carries, as a hosted payload, a secure-communications module built by SATORO Taiwan Inc. (SATORO Space), alongside a vacuum arc thruster developed in-house by the NCKU team — Taiwan's first electric-propulsion experiment conducted in space. This story focuses on the four newest satellites that still produce TLEs and remain trackable today: Lilium-2, Lilium-3, IRIS-F2, and IRIS-F3.",
+      "body": "NCKU's Department of Electrical Engineering \"Mechatronic Lab\" focuses its research on two tracks: space technology (LEO and CubeSats) and smart driving. Starting with IRIS-A (launched 2022-01-13), the lab's team has successively sent up IRIS-C/C2, IRIS-F1/F2/F3, and Lilium 1 through 3 — nine CubeSat catalog objects in all, one of Taiwan's densest runs of self-built CubeSat launches over the past four years. Lilium-2 and Lilium-3, launched together on 2025-11-28 (2025-11-29 Taiwan time), represent the newest generation: Lilium-3 carries, as a hosted payload, a secure-communications module built by SATORO Taiwan Inc. (SATORO Space), alongside a vacuum arc thruster developed in-house by the NCKU team — Taiwan's first electric-propulsion experiment conducted in space. This story focuses on the four newest satellites that still produce TLEs and remain trackable today: Lilium-2, Lilium-3, IRIS-F2, and IRIS-F3.",
       "anchor": "intro"
     },
     {
@@ -187,6 +187,10 @@
         "Source"
       ],
       "rows": [
+        [
+          "Mechatronic Lab faculty page (source for the lab's official English name)",
+          "[NCKU EE faculty listing](https://www.ee.ncku.edu.tw/teacher/index2.php?teacher_id=58)"
+        ],
         [
           "IRIS-A satellite overview",
           "[NCKU satellite program website](https://satellite.ncku.edu.tw/iris_a.html)"

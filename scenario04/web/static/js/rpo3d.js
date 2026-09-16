@@ -15,16 +15,386 @@
   var _pcSpheres = [], _pcSphereOn = true;   // 碰撞機率球 entities（兩顆衛星各一）+ 開關
   // COMSPOC 模式：全期地固座標系（ECEF）長軌跡（GEO 定點保持迴圈／東西換位）+ 外側定鏡頭 + Ranges 讀數
   var _comspocOn = false, _trailEnts = [], _trailData = null, _rangeLabel = null;
+  // 雙語 UI 狀態（供 setLang 重新渲染動態內容用）
+  var _hasTrail = false, _trailInfo = null;    // COMSPOC 全期軌跡資訊文字
+  var _pcDims = null;                          // 碰撞機率球尺寸文字
+  var _lastStat = null;                        // { key, vars, err } — #pstat 最後一次狀態訊息
+  var _loadingIsDefault = true;                // #loading 是否仍為預設載入文字（尚無錯誤訊息覆蓋）
+
+  // ── 雙語字典（zh / ja）──────────────────────────────────────────────────
+  var I18N = {
+    zh: {
+      doc_title: "RPO 3D — 兩衛星相對接近與衝突機率 Pc",
+      nav_cases: "案例總覽",
+      nav_globe_home: "地球儀主頁",
+      loading_scene: "載入 3D 場景中 …",
+      default_title: "RPO 3D 場景",
+      picker_label: "近距離配對（選擇即切換該對衛星視角）",
+      thr_title: "篩選閾值 km",
+      rescan_btn: "重新掃描",
+      kpi_range: "目前距離",
+      kpi_pc: "Pc（近似值）",
+      kpi_alt_suffix: "{name} 高度",
+      legend_tca: "最接近 (TCA)",
+      vp_toggle_default: "🎥 切換視角",
+      vp_label_default: "目前視角：—",
+      vp_label: "目前視角：{name}",
+      vp_third_person: "第三人稱總覽",
+      vp_switch_view: "🎥 切換到 {name} 視角",
+      vp_switch_plain: "🎥 切換到 {name}",
+      pc_sphere_chk: "🔴 衝突機率橢球（3σ R/T/N 三軸）",
+      relwin_chk: "🧭 相對軌跡投影浮動視窗（以對方為中心之 LVLH T–R 平面）",
+      comspoc_chk: "🛰 COMSPOC 模式（全期地固座標軌跡迴圈＋外側固定鏡頭＋Ranges）",
+      cam_toggle_default: "📷 鏡頭 ⇄",
+      cam_toggle: "📷 鏡頭：{mode} ⇄",
+      cam_mode_wide: "全景（地球＋軌跡）",
+      cam_mode_close: "近景（迴圈）",
+      timeline_h2: "事件時間軸",
+      note_html: "<b>方法</b>：兩物體以最近 elset SGP4 傳播至共同時鐘；Pc = Chan (2008) 各向同性首階近似"
+        + "（σr={sr}、σt={st} km），為<b>排序代理（proxy）</b>、非作業級碰撞機率。<br>"
+        + "TLE/SGP4 位置含約 1–5 km 不確定度，次公里距離落於雜訊底——幾何重建、非精密交會判定。",
+      comspoc_trail_info: "全期 {from} ~ {to} · {n} 點 @ {step} min · 地固座標系（ECEF）",
+      comspoc_no_trail: "此案例未產生全期軌跡（preset 需設 trail_step_min）；模式僅套用鏡頭與 Ranges。",
+      pc_sphere_info: "3σ 橢球（三軸）· R {rR} / T {rT} / N {rN} m　（σ R {sr} / T {st} / N {sn} km）"
+        + "· 顏色隨 Pc：綠<1e-6 / 琥珀 / 紅>1e-4",
+      rel_swap_title: "切換中心物體",
+      rel_swap_label: "⇄ 中心",
+      rel_close_title: "關閉",
+      rel_title: "相對軌跡投影 — 中心：{name}",
+      axis_t: "沿軌 T (km) →",
+      axis_dh: "Δ高度 (km) ↑=軌道較高",
+      rel_foot: "{name}：沿軌 T {t} km、Δ高度 {dh} km（>0=軌道較高） · 粗線=單圈移動平均、細線=逐點 · 拖曳標題移動、⇄ 換中心",
+      stat_summary: "TCA {dmin} km · Pc(proxy) {pc} · {n} 點",
+      loading_scene_pair: "計算場景中 … ({p} × {s})",
+      load_fail: "無法載入：{error}",
+      no_valid_orbit: "此配對無有效軌道取樣（TLE 歷史不足或無重疊）",
+      fetch_fail: "讀取失敗：{error}",
+      scanning_pairs: "掃描近距離配對 …",
+      cur_pair: "★ 目前：{p} × {s}",
+      preset_case: "◎ 案例：{title}",
+      no_pairs: "（無近距離配對）",
+      pairs_summary: "{presets} 個精選案例 + {pairs} 個近距離配對（閾值 {thr} km）",
+      pair_list_fail: "配對清單載入失敗：{error}",
+      cesium_init_fail: "Cesium 初始化失敗：{error}",
+      bc_become_host: "🔴 開始直播",
+      bc_live_self: "🔴 直播中",
+      bc_end_host: "⏹ 結束直播",
+      bc_following: "👁 跟隨主播中",
+      bc_detach: "解除跟隨",
+      bc_detached: "🔓 已解除跟隨（手動操作中）",
+      bc_reattach: "重新跟隨",
+      bc_live_none: "尚無直播",
+      bc_claim_failed: "已有其他主播，無法搶下主播位",
+      bc_host_lost: "主播連線逾時或已被接管，已退回一般模式",
+    },
+    ja: {
+      doc_title: "RPO 3D — 2衛星の近接運用と衝突確率（Pc）",
+      nav_cases: "事例一覧",
+      nav_globe_home: "地球儀ホーム",
+      loading_scene: "3D シーンを読み込み中 …",
+      default_title: "RPO 3D シーン",
+      picker_label: "近接ペア（選択するとそのペアの視点に切替）",
+      thr_title: "フィルタ閾値 km",
+      rescan_btn: "再スキャン",
+      kpi_range: "現在の距離",
+      kpi_pc: "Pc（近似値）",
+      kpi_alt_suffix: "{name} の高度",
+      legend_tca: "最接近時刻 (TCA)",
+      vp_toggle_default: "🎥 視点切替",
+      vp_label_default: "現在の視点：—",
+      vp_label: "現在の視点：{name}",
+      vp_third_person: "第三者視点の俯瞰",
+      vp_switch_view: "🎥 {name} 視点に切替",
+      vp_switch_plain: "🎥 {name} に切替",
+      pc_sphere_chk: "🔴 衝突確率楕円体（3σ R/T/Nの3軸）",
+      relwin_chk: "🧭 相対軌跡投影（フローティングウィンドウ、相手中心の LVLH T–R 平面）",
+      comspoc_chk: "🛰 COMSPOCモード（全期間の地球固定座標系による軌跡ループ＋外側固定視点＋Ranges）",
+      cam_toggle_default: "📷 カメラ ⇄",
+      cam_toggle: "📷 カメラ：{mode} ⇄",
+      cam_mode_wide: "全景（地球＋軌跡）",
+      cam_mode_close: "近接視点（ループ）",
+      timeline_h2: "イベントタイムライン",
+      note_html: "<b>手法</b>：両物体は直近の elset により SGP4 伝播で共通時刻系に揃える。"
+        + "Pc = Chan (2008) の等方性一次近似（σr={sr}、σt={st} km）であり、"
+        + "<b>順位付けのための代理指標（proxy）</b>であって運用級の衝突確率ではない。<br>"
+        + "TLE/SGP4 位置には約 1–5 km の不確かさがあり、サブキロメートルの距離はノイズフロア内"
+        + "——幾何学的再構成であり、精密な近接判定ではない。",
+      comspoc_trail_info: "全期間 {from} ～ {to} ・ {n} 点 ・ {step}分間隔 ・ 地球固定座標系（ECEF）",
+      comspoc_no_trail: "この事例は全期間軌跡が生成されていません（preset に trail_step_min の設定が必要）。モードはカメラと Ranges のみ適用されます。",
+      pc_sphere_info: "3σ 楕円体（三軸）・ R {rR} / T {rT} / N {rN} m　（σ R {sr} / T {st} / N {sn} km）"
+        + "・ 色は Pc に連動：緑<1e-6 / 琥珀色 / 赤>1e-4",
+      rel_swap_title: "中心天体を切替",
+      rel_swap_label: "⇄ 中心",
+      rel_close_title: "閉じる",
+      rel_title: "相対軌跡投影 — 中心：{name}",
+      axis_t: "沿軌方向 T (km) →",
+      axis_dh: "Δ高度 (km) ↑=軌道がより高い",
+      rel_foot: "{name}：沿軌方向 T {t} km、Δ高度 {dh} km（>0＝軌道が高い） ・ 太線＝1周移動平均、細線＝各サンプル ・ タイトルをドラッグで移動、⇄ で中心切替",
+      stat_summary: "TCA {dmin} km ・ Pc(proxy) {pc} ・ {n} 点",
+      loading_scene_pair: "シーンを計算中 … ({p} × {s})",
+      load_fail: "読み込み失敗：{error}",
+      no_valid_orbit: "このペアには有効な軌道サンプルがありません（TLE 履歴不足または重複期間なし）",
+      fetch_fail: "取得失敗：{error}",
+      scanning_pairs: "近接ペアをスキャン中 …",
+      cur_pair: "★ 現在：{p} × {s}",
+      preset_case: "◎ 事例：{title}",
+      no_pairs: "（近接ペアなし）",
+      pairs_summary: "{presets} 件の厳選事例 + {pairs} 件の近接ペア（閾値 {thr} km）",
+      pair_list_fail: "ペア一覧の読み込み失敗：{error}",
+      cesium_init_fail: "Cesiumの初期化に失敗しました：{error}",
+      bc_become_host: "🔴 配信を開始",
+      bc_live_self: "🔴 配信中",
+      bc_end_host: "⏹ 配信を終了",
+      bc_following: "👁 ホストに追従中",
+      bc_detach: "追従を解除",
+      bc_detached: "🔓 追従解除中（手動操作）",
+      bc_reattach: "追従を再開",
+      bc_live_none: "配信なし",
+      bc_claim_failed: "既に他のホストが配信中です",
+      bc_host_lost: "ホスト接続がタイムアウトまたは引き継がれたため、通常モードに戻りました",
+    },
+    en: {
+      doc_title: "RPO 3D — Two-Satellite Proximity and Probability of Collision (Pc)",
+      nav_cases: "Case Library",
+      nav_globe_home: "Globe Home",
+      loading_scene: "Loading 3D scene …",
+      default_title: "RPO 3D Scene",
+      picker_label: "Close-approach pair (select to switch to that pair's viewpoint)",
+      thr_title: "Filter threshold km",
+      rescan_btn: "Rescan",
+      kpi_range: "Current Range",
+      kpi_pc: "Pc (approximate)",
+      kpi_alt_suffix: "{name} Altitude",
+      legend_tca: "Closest Approach (TCA)",
+      vp_toggle_default: "🎥 Switch View",
+      vp_label_default: "Current view: —",
+      vp_label: "Current view: {name}",
+      vp_third_person: "Third-person overview",
+      vp_switch_view: "🎥 Switch to {name} view",
+      vp_switch_plain: "🎥 Switch to {name}",
+      pc_sphere_chk: "🔴 Probability-of-collision ellipsoid (3σ R/T/N axes)",
+      relwin_chk: "🧭 Relative trajectory projection floating window (LVLH T–R plane, centered on the other object)",
+      comspoc_chk: "🛰 COMSPOC mode (full-span Earth-fixed trajectory loop + external fixed camera + Ranges)",
+      cam_toggle_default: "📷 Camera ⇄",
+      cam_toggle: "📷 Camera: {mode} ⇄",
+      cam_mode_wide: "Wide (Earth + trajectory)",
+      cam_mode_close: "Close (orbit loop)",
+      timeline_h2: "Event Timeline",
+      note_html: "<b>Method</b>: both objects are propagated by SGP4 from their nearest elsets to a common clock; "
+        + "Pc = Chan (2008) isotropic first-order approximation (σr={sr}, σt={st} km) — a <b>ranking proxy</b>, "
+        + "not an operational-grade collision probability.<br>"
+        + "TLE/SGP4 positions carry roughly 1–5 km of uncertainty; sub-kilometer ranges sit within the noise floor "
+        + "— this is a geometric reconstruction, not a precision conjunction assessment.",
+      comspoc_trail_info: "Full span {from} ~ {to} · {n} points @ {step} min · Earth-fixed frame (ECEF)",
+      comspoc_no_trail: "No full-span trajectory was generated for this case (preset needs trail_step_min set); this mode applies only the camera and Ranges.",
+      pc_sphere_info: "3σ ellipsoid (3 axes) · R {rR} / T {rT} / N {rN} m (σ R {sr} / T {st} / N {sn} km)"
+        + " · color is mapped to Pc: green<1e-6 / amber / red>1e-4",
+      rel_swap_title: "Swap center object",
+      rel_swap_label: "⇄ Center",
+      rel_close_title: "Close",
+      rel_title: "Relative Trajectory Projection — Center: {name}",
+      axis_t: "Along-track T (km) →",
+      axis_dh: "Δ Altitude (km) ↑ = higher orbit",
+      rel_foot: "{name}: along-track T {t} km, Δaltitude {dh} km (>0 = higher orbit) · thick line = one-orbit moving average, thin line = per-sample · drag title to move, ⇄ to swap center",
+      stat_summary: "TCA {dmin} km · Pc(proxy) {pc} · {n} points",
+      loading_scene_pair: "Computing scene … ({p} × {s})",
+      load_fail: "Failed to load: {error}",
+      no_valid_orbit: "No valid orbit samples for this pair (insufficient TLE history or no overlap)",
+      fetch_fail: "Fetch failed: {error}",
+      scanning_pairs: "Scanning close-approach pairs …",
+      cur_pair: "★ Current: {p} × {s}",
+      preset_case: "◎ Case: {title}",
+      no_pairs: "(No close-approach pairs)",
+      pairs_summary: "{presets} curated cases + {pairs} close-approach pairs (threshold {thr} km)",
+      pair_list_fail: "Failed to load pair list: {error}",
+      cesium_init_fail: "Cesium initialization failed: {error}",
+      bc_become_host: "🔴 Start broadcast",
+      bc_live_self: "🔴 Broadcasting",
+      bc_end_host: "⏹ Stop broadcast",
+      bc_following: "👁 Following host",
+      bc_detach: "Detach",
+      bc_detached: "🔓 Detached (manual control)",
+      bc_reattach: "Resume following",
+      bc_live_none: "No live host",
+      bc_claim_failed: "Someone else is already hosting",
+      bc_host_lost: "Host session timed out or was taken over — back to normal mode",
+    },
+  };
+  var LOCALE_MAP = { zh: "zh-Hant", en: "en-US", ja: "ja-JP" };
+  var LANG = (function () {
+    try { return localStorage.getItem("rpo3d_lang") || "zh"; } catch (e) { return "zh"; }
+  })();
+  if (!I18N[LANG]) LANG = "zh";
+
+  function t(key) {
+    var d = I18N[LANG] || I18N.zh;
+    return (key in d) ? d[key] : (I18N.zh[key] !== undefined ? I18N.zh[key] : key);
+  }
+  function tpl(key, vars) {
+    var s = t(key);
+    Object.keys(vars || {}).forEach(function (k) {
+      s = s.replace(new RegExp("\\{" + k + "\\}", "g"), vars[k]);
+    });
+    return s;
+  }
+
+  // ── 動態內容重新渲染（語言切換時呼叫，避免用字面量寫死中文）──────────────
+  function renderNote(meta) {
+    var el = document.getElementById("note");
+    if (el) el.innerHTML = tpl("note_html", { sr: meta.sigma_r, st: meta.sigma_t });
+  }
+  function renderAltLabels(meta) {
+    var a = document.getElementById("k_pname"), b = document.getElementById("k_sname");
+    if (a) a.textContent = tpl("kpi_alt_suffix", { name: meta.primName });
+    if (b) b.textContent = tpl("kpi_alt_suffix", { name: meta.secName });
+  }
+  function renderVpTexts() {
+    if (!_meta) return;
+    var names = { t: t("vp_third_person"), p: _meta.primName, s: _meta.secName };
+    var next = { t: "p", p: "s", s: "t" }[_vp];
+    var lab = document.getElementById("vpLabel");
+    if (lab) lab.textContent = tpl("vp_label", { name: names[_vp] });
+    var btn = document.getElementById("vpToggle");
+    if (btn) btn.textContent = (next === "t")
+      ? tpl("vp_switch_plain", { name: names[next] })
+      : tpl("vp_switch_view", { name: names[next] });
+  }
+  function renderCamToggleText() {
+    var b = document.getElementById("camToggle");
+    if (b) b.textContent = tpl("cam_toggle", { mode: _camMode === "wide" ? t("cam_mode_wide") : t("cam_mode_close") });
+  }
+  function refreshDynamicUI() {
+    var titleEl = document.getElementById("title");
+    if (titleEl && !_meta) titleEl.textContent = t("default_title");
+    if (_loadingIsDefault) {
+      var loadEl = document.getElementById("loading");
+      if (loadEl) loadEl.textContent = t("loading_scene");
+    }
+    if (_meta) {
+      renderNote(_meta);
+      renderAltLabels(_meta);
+      renderVpTexts();
+      var ci = document.getElementById("comspocInfo");
+      if (ci) ci.textContent = _hasTrail ? tpl("comspoc_trail_info", _trailInfo) : t("comspoc_no_trail");
+    }
+    if (_pcDims) {
+      var pi = document.getElementById("pcSphereInfo");
+      if (pi) pi.textContent = tpl("pc_sphere_info", _pcDims);
+    }
+    renderCamToggleText();
+    if (_lastStat) stat(_lastStat.key, _lastStat.vars, _lastStat.err);
+  }
+
+  // ── 語言切換 ──────────────────────────────────────────────────────────
+  function setLang(lang) {
+    if (!I18N[lang]) return;
+    LANG = lang;
+    try { localStorage.setItem("rpo3d_lang", lang); } catch (e) {}
+    document.documentElement.lang = LOCALE_MAP[lang] || "zh-Hant";
+    document.title = t("doc_title");
+
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    document.querySelectorAll(".lang-btn").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.lang === lang);
+    });
+
+    refreshDynamicUI();
+    if (window.SatBroadcast) window.SatBroadcast.refreshLabels();
+  }
+  window.setLang = setLang;
+
+  function broadcastLabels() {
+    return {
+      become_host: t("bc_become_host"), live_self: t("bc_live_self"), end_host: t("bc_end_host"),
+      following: t("bc_following"), detach: t("bc_detach"), detached: t("bc_detached"),
+      reattach: t("bc_reattach"), live_none: t("bc_live_none"),
+      claim_failed: t("bc_claim_failed"), host_lost: t("bc_host_lost"),
+    };
+  }
+
+  // ── 群播：收集目前狀態（主播端）／套用收到的狀態（觀眾端）────────────
+  function collectBroadcastState() {
+    var thrEl = document.getElementById("thr");
+    return {
+      pair: (_curP != null) ? { primary: _curP, secondary: _curS } : null,
+      hud: {
+        thr: thrEl ? parseFloat(thrEl.value) : undefined,
+        pcSphereChk: _pcSphereOn, relwinChk: _relOn, comspocChk: _comspocOn,
+      },
+      view: { vp: _vp, camMode: _camMode },
+      clock: (viewer && _meta) ? {
+        iso: C.JulianDate.toIso8601(viewer.clock.currentTime),
+        multiplier: viewer.clock.multiplier,
+        shouldAnimate: viewer.clock.shouldAnimate,
+      } : null,
+    };
+  }
+
+  function applyBroadcastRest(payload) {
+    if (payload.hud) {
+      var thrEl = document.getElementById("thr");
+      if (thrEl && payload.hud.thr != null && +thrEl.value !== +payload.hud.thr) thrEl.value = payload.hud.thr;
+      var pcChk = document.getElementById("pcSphereChk");
+      if (pcChk && payload.hud.pcSphereChk != null && pcChk.checked !== payload.hud.pcSphereChk) {
+        pcChk.checked = payload.hud.pcSphereChk;
+        _pcSphereOn = pcChk.checked;
+        _pcSpheres.forEach(function (e) { e.show = _pcSphereOn; });
+      }
+      var rwChk = document.getElementById("relwinChk");
+      if (rwChk && payload.hud.relwinChk != null && rwChk.checked !== payload.hud.relwinChk) {
+        rwChk.checked = payload.hud.relwinChk;
+        _relOn = rwChk.checked;
+        if (_relwin && _relwin.el) _relwin.el.style.display = _relOn ? "" : "none";
+      }
+      var ccChk = document.getElementById("comspocChk");
+      if (ccChk && payload.hud.comspocChk != null && ccChk.checked !== payload.hud.comspocChk) {
+        ccChk.checked = payload.hud.comspocChk;
+        setComspoc(ccChk.checked);
+      }
+    }
+    if (payload.view) {
+      if (payload.view.camMode && payload.view.camMode !== _camMode && _comspocOn) comspocCamera(payload.view.camMode);
+      if (payload.view.vp && payload.view.vp !== _vp) setViewpoint(payload.view.vp);
+    }
+    if (payload.clock && viewer && C) {
+      try {
+        var jd = C.JulianDate.fromIso8601(payload.clock.iso);
+        // 僅在偏差 > 2s 才校正時間，避免持續小幅跳動打斷播放動畫
+        if (Math.abs(C.JulianDate.secondsDifference(jd, viewer.clock.currentTime)) > 2) {
+          viewer.clock.currentTime = jd;
+        }
+        if (payload.clock.multiplier) viewer.clock.multiplier = payload.clock.multiplier;
+        if (typeof payload.clock.shouldAnimate === "boolean") viewer.clock.shouldAnimate = payload.clock.shouldAnimate;
+      } catch (e) {}
+    }
+  }
+
+  function applyBroadcastState(payload) {
+    if (!payload) return;
+    var pr = payload.pair;
+    if (pr && pr.primary != null && (pr.primary !== _curP || pr.secondary !== _curS)) {
+      loadScene(pr.primary, pr.secondary, function () { applyBroadcastRest(payload); });
+    } else {
+      applyBroadcastRest(payload);
+    }
+  }
 
   function warn(m) {
+    _loadingIsDefault = false;
     var w = document.getElementById("warn");
     if (w) { w.textContent = m; w.style.display = "block"; }
     var l = document.getElementById("loading");
     if (l) l.textContent = m;
   }
-  function stat(m, err) {
+  function stat(key, vars, err) {
+    _lastStat = { key: key, vars: vars, err: !!err };
     var s = document.getElementById("pstat");
-    if (s) { s.textContent = m || ""; s.className = "stat" + (err ? " err" : ""); }
+    if (s) { s.textContent = key ? tpl(key, vars) : ""; s.className = "stat" + (err ? " err" : ""); }
   }
   function fmtRange(km) {
     if (km == null || isNaN(km)) return "—";
@@ -88,16 +458,12 @@
     document.getElementById("subtitle").innerHTML = meta.subtitle;
     document.getElementById("lg_p").textContent = meta.primId + " · " + meta.primName;
     document.getElementById("lg_s").textContent = meta.secId + " · " + meta.secName;
-    document.getElementById("k_pname").textContent = meta.primName + " 高度";
-    document.getElementById("k_sname").textContent = meta.secName + " 高度";
+    renderAltLabels(meta);
     var tl = meta.timeline || [];
     document.getElementById("timeline").innerHTML = tl.map(function (r) {
       return '<div class="tlrow"><div class="d">' + r.d + '</div><div class="t">' + r.t + "</div></div>";
     }).join("");
-    document.getElementById("note").innerHTML =
-      "<b>方法</b>：兩物體以最近 elset SGP4 傳播至共同時鐘；Pc = Chan (2008) 各向同性首階近似"
-      + "（σr=" + meta.sigma_r + "、σt=" + meta.sigma_t + " km），為<b>排序代理（proxy）</b>、非作業級碰撞機率。<br>"
-      + "TLE/SGP4 位置含約 1–5 km 不確定度，次公里距離落於雜訊底——幾何重建、非精密交會判定。";
+    renderNote(meta);
   }
 
   function clearScene() {
@@ -131,9 +497,10 @@
       viewer.entities.add({ show: _comspocOn, polyline: { positions: upto(S), width: 1.6,
         material: C.Color.fromCssColorString(SEC).withAlpha(0.85), arcType: C.ArcType.NONE } }),
     ];
+    _hasTrail = true;
+    _trailInfo = { from: trail.t[0].slice(0, 10), to: trail.t[trail.t.length - 1].slice(0, 10), n: ms.length, step: trail.step_min };
     var info = document.getElementById("comspocInfo");
-    if (info) info.textContent = "全期 " + trail.t[0].slice(0, 10) + " ~ " + trail.t[trail.t.length - 1].slice(0, 10)
-      + " · " + ms.length + " 點 @ " + trail.step_min + " min · 地固座標系（ECEF）";
+    if (info) info.textContent = tpl("comspoc_trail_info", _trailInfo);
   }
 
   // Ranges 讀數：仿 COMSPOC「Ranges ⊗  A (SSN) … B (SSN) = xx km」，掛在連線中點
@@ -203,8 +570,7 @@
       up = basis.N;
     }
     viewer.camera.flyTo({ destination: dest, orientation: { direction: dir, up: up }, duration: 1.0 });
-    var b = document.getElementById("camToggle");
-    if (b) b.textContent = "📷 鏡頭：" + (_camMode === "wide" ? "全景（地球＋軌跡）" : "近景（迴圈）") + " ⇄";
+    renderCamToggleText();
   }
   window.__rpoCam = comspocCamera;   // 測試／除錯用
 
@@ -225,18 +591,13 @@
   function setViewpoint(which) {
     if (!_eP || !_eS || !_meta) return;
     _vp = which;
-    var names = { t: "第三方遠景", p: _meta.primName, s: _meta.secName };
-    var next  = { t: "p", p: "s", s: "t" }[which];
     if (which === "t") {
       try { viewer.trackedEntity = undefined; } catch (e) {}
       comspocCamera("wide");                 // 遠景構圖：地球在側、兩物體與軌道全入鏡
     } else {
       try { viewer.trackedEntity = (which === "p") ? _eP : _eS; } catch (e) {}
     }
-    var lab = document.getElementById("vpLabel");
-    if (lab) lab.textContent = "目前視角：" + names[which];
-    var btn = document.getElementById("vpToggle");
-    if (btn) btn.textContent = "🎥 切換到 " + names[next] + (next === "t" ? "" : " 視角");
+    renderVpTexts();
   }
 
   // Cesium 時間軸醒目色帶：meta.phases = [{from,to,label,color}]（部署/訪G/返回/回收）
@@ -268,8 +629,8 @@
     var el = document.createElement("div");
     el.id = "relwin";
     el.innerHTML = '<div class="hd">\ud83e\udded <span id="relTitle"></span>'
-      + '<span class="x" id="relSwap" title="切換中心物體">\u21c4 中心</span>'
-      + '<span class="x" id="relClose" title="關閉">\u2715</span></div>'
+      + '<span class="x" id="relSwap" data-i18n="rel_swap_label" data-i18n-title="rel_swap_title" title="' + t("rel_swap_title") + '">' + t("rel_swap_label") + '</span>'
+      + '<span class="x" id="relClose" data-i18n-title="rel_close_title" title="' + t("rel_close_title") + '">\u2715</span></div>'
       + '<canvas id="relCanvas"></canvas>'
       + '<div class="ft" id="relFoot"></div>';
     document.body.appendChild(el);
@@ -320,7 +681,7 @@
     var hsgn = _relCenterSec ? 1 : -1;  // Δ高度：dh = primary−secondary，中心=secondary 時同號   // 中心=secondary → 畫 primary 相對位置（取負）
     var cName = _relCenterSec ? meta.secName : meta.primName;
     var mName = _relCenterSec ? meta.primName : meta.secName;
-    document.getElementById("relTitle").textContent = "相對軌跡投影 — 中心：" + cName;
+    document.getElementById("relTitle").textContent = tpl("rel_title", { name: cName });
     var Ts = w.pts.map(function (p) { return sgn * p.T; });
     var Rs = w.pts.map(function (p) { return hsgn * p.dh; });
     var tmin = Math.min.apply(null, Ts), tmax = Math.max.apply(null, Ts);
@@ -348,9 +709,9 @@
     g.fillStyle = "#dfe6f0"; g.font = "10px monospace";
     g.fillText(cName, Math.min(X(0) + 7, CW - 96), Y(0) - 6);
     g.fillStyle = "#8b96a8";
-    g.fillText("沿軌 T (km) \u2192", CW - 104, CH - 8);
+    g.fillText(t("axis_t"), CW - 104, CH - 8);
     g.save(); g.translate(11, 190); g.rotate(-Math.PI / 2);
-    g.fillText("\u0394高度 (km) \u2191=軌道較高", 0, 0); g.restore();
+    g.fillText(t("axis_dh"), 0, 0); g.restore();
     g.fillText(tr[0].toFixed(0), padL, CH - 18);
     g.fillText(tr[1].toFixed(0), CW - padR - 34, CH - 18);
     g.fillText(rr[1].toFixed(1), 22, padT + 10);
@@ -376,9 +737,7 @@
       g.strokeStyle = "rgba(255,92,78,.5)"; g.lineWidth = 1;
       g.beginPath(); g.moveTo(X(0), Y(0)); g.lineTo(cx, cy); g.stroke();
       var ft = document.getElementById("relFoot");
-      if (ft) ft.textContent = mName + "\uff1a沿軌 T " + (sgn * cur.T).toFixed(1) + " km\u3001\u0394高度 "
-        + (hsgn * cur.dh).toFixed(2) + " km\uff08>0\uff1d軌道較高\uff09"
-        + " \u00b7 粗線\uff1d單圈平均趨勢\u3001細線\uff1d逐點 \u00b7 拖曳標題移動\u3001\u21c4 換中心";
+      if (ft) ft.textContent = tpl("rel_foot", { name: mName, t: (sgn * cur.T).toFixed(1), dh: (hsgn * cur.dh).toFixed(2) });
     }
     g.restore();
   }
@@ -386,6 +745,7 @@
 
   function buildScene(data) {
     clearScene();
+    _hasTrail = false; _trailInfo = null; _pcDims = null;
     var meta = data.meta, orbit = data.orbit, summary = data.summary;
     _meta = meta;
     buildHUD(meta);
@@ -461,12 +821,13 @@
     buildTrails(data.trail, meta);
     buildRelWindow(orbit, meta, summary.fine_step_s || 600);
     buildRangeLabel(pPos, sPos, meta, sampleAt);
-    var ccInfo = document.getElementById("comspocInfo");
-    if (!data.trail && ccInfo) ccInfo.textContent = "此案例未產生全期軌跡（preset 需設 trail_step_min）；模式僅套用鏡頭與 Ranges。";
+    if (!data.trail) {
+      var ccInfo = document.getElementById("comspocInfo");
+      if (ccInfo) ccInfo.textContent = t("comspoc_no_trail");
+    }
+    _pcDims = { rR: rR.toFixed(0), rT: rT.toFixed(0), rN: rN.toFixed(0), sr: sr, st: st, sn: sn };
     var info = document.getElementById("pcSphereInfo");
-    if (info) info.textContent = "3σ 橢球（三軸）· R " + rR.toFixed(0) + " / T " + rT.toFixed(0)
-      + " / N " + rN.toFixed(0) + " m　（σ R " + sr + " / T " + st + " / N " + sn
-      + " km）· 顏色隨 Pc：綠<1e-6 / 琥珀 / 紅>1e-4";
+    if (info) info.textContent = tpl("pc_sphere_info", _pcDims);
 
     var dmin = summary.d_min, dmax = orbit.reduce(function (m, o) { return Math.max(m, o.d); }, 0);
     viewer.entities.add({
@@ -521,24 +882,24 @@
     setViewpoint("t");
     if (_comspocOn) setComspoc(true);
 
-    stat("TCA " + fmtRange(summary.d_min) + " km · Pc(proxy) " + fmtPc(summary.pc_max).replace("&lt;", "<")
-      + " · " + summary.n_orbit + " 點");
+    stat("stat_summary", { dmin: fmtRange(summary.d_min), pc: fmtPc(summary.pc_max).replace("&lt;", "<"), n: summary.n_orbit });
   }
 
-  function loadScene(primary, secondary) {
+  function loadScene(primary, secondary, onDone) {
     var seq = ++_loadSeq;
     _curP = primary; _curS = secondary;
-    stat("計算場景中 … (" + primary + " × " + secondary + ")");
+    stat("loading_scene_pair", { p: primary, s: secondary });
     try { history.replaceState(null, "", "/rpo?primary=" + primary + "&secondary=" + secondary); } catch (e) {}
     fetch("/api/rpo/" + primary + "/" + secondary).then(function (r) { return r.json(); }).then(function (data) {
       if (seq !== _loadSeq) return;                       // 已被更新的請求取代
-      if (data.error) { stat("無法載入：" + data.error, true); return; }
-      if (!data.orbit || !data.orbit.length) { stat("此配對無有效軌道取樣（TLE 歷史不足或無重疊）", true); return; }
+      if (data.error) { stat("load_fail", { error: data.error }, true); return; }
+      if (!data.orbit || !data.orbit.length) { stat("no_valid_orbit", null, true); return; }
       buildScene(data);
       var sel = document.getElementById("pairSel");
       if (sel) sel.value = primary + "," + secondary;
+      if (onDone) onDone();
     }).catch(function (e) {
-      if (seq === _loadSeq) stat("讀取失敗：" + e.message, true);
+      if (seq === _loadSeq) stat("fetch_fail", { error: e.message }, true);
     });
   }
 
@@ -550,7 +911,7 @@
 
   function populatePairs(threshold) {
     var sel = document.getElementById("pairSel");
-    stat("掃描近距離配對 …");
+    stat("scanning_pairs");
     // 先取精選案例（歷史 RPO，如神龍系列），再併入即時近距離配對
     fetch("/api/rpo/presets").then(function (r) { return r.json(); }).catch(function () { return { presets: [] }; })
       .then(function (pd) {
@@ -560,13 +921,13 @@
           var html = "";
           var cur = _curP != null ? (_curP + "," + _curS) : null;
           // 保留目前（預設/深連結）配對於清單頂端
-          if (cur) html += '<option value="' + cur + '">★ 目前：' + _curP + " × " + _curS + "</option>";
+          if (cur) html += '<option value="' + cur + '">' + tpl("cur_pair", { p: _curP, s: _curS }) + "</option>";
           // 精選案例（置於即時配對之前）
           for (var j = 0; j < presets.length; j++) {
             var pr = presets[j];
             var pv = pr.primary + "," + pr.secondary;
             if (pv === cur) continue;
-            html += '<option value="' + pv + '">◎ 案例：' + pr.title + "</option>";
+            html += '<option value="' + pv + '">' + tpl("preset_case", { title: pr.title }) + "</option>";
           }
           for (var i = 0; i < pairs.length && i < 150; i++) {
             var p = pairs[i];
@@ -574,15 +935,15 @@
             if (v === cur) continue;   // 避免重複
             html += '<option value="' + v + '">' + optionLabel(p) + "</option>";
           }
-          sel.innerHTML = html || '<option value="">（無近距離配對）</option>';
+          sel.innerHTML = html || '<option value="">' + t("no_pairs") + '</option>';
           if (cur) sel.value = cur;
-          stat(presets.length + " 個精選案例 + " + pairs.length + " 個近距離配對（閾值 " + (threshold || 10) + " km）");
-        }).catch(function (e) { stat("配對清單載入失敗：" + e.message, true); });
+          stat("pairs_summary", { presets: presets.length, pairs: pairs.length, thr: threshold || 10 });
+        }).catch(function (e) { stat("pair_list_fail", { error: e.message }, true); });
       });
   }
 
   window.startRPO = function () {
-    try { initCesium(); } catch (e) { warn("Cesium 初始化失敗：" + e.message); return; }
+    try { initCesium(); } catch (e) { warn(tpl("cesium_init_fail", { error: e.message })); return; }
     var initP = window.RPO_PRIMARY || 58573, initS = window.RPO_SECONDARY || 59884;
     _curP = initP; _curS = initS;
 
@@ -628,5 +989,16 @@
 
     populatePairs(parseFloat((document.getElementById("thr") || {}).value) || 10);
     loadScene(initP, initS);
+
+    if (window.SatBroadcast) {
+      window.SatBroadcast.init({
+        getState: collectBroadcastState,
+        applyState: applyBroadcastState,
+        getLabels: broadcastLabels,
+        throttleMs: 400,
+      });
+    }
   };
+
+  setLang(LANG);
 })();

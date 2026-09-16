@@ -76,67 +76,82 @@
   a.back{position:absolute;top:14px;right:14px;z-index:10;background:var(--panel);border:1px solid var(--line);
     border-radius:8px;padding:8px 12px;color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:12px}
   a.back:hover{color:var(--ink)}
+  #lang-switcher{position:absolute;top:52px;right:14px;z-index:12;display:flex;gap:4px}
+  .lang-btn{padding:4px 9px;background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:6px;
+    font-family:var(--mono);font-size:11px;cursor:pointer;backdrop-filter:blur(6px)}
+  .lang-btn:hover{color:var(--ink)}
+  .lang-btn.active{background:var(--prim);color:#1a1205;border-color:var(--prim)}
 </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
-  <a class="back" href="/rpo/cases">≡ 案例總覽</a>
-  <a class="back" href="/">← 地球儀主頁</a>
+  <a class="back" href="/rpo/cases">≡ <span data-i18n="nav_cases">案例總覽</span></a>
+  <a class="back" href="/">← <span data-i18n="nav_globe_home">地球儀主頁</span></a>
+  <div id="lang-switcher">
+    <button type="button" class="lang-btn" data-lang="zh" onclick="setLang('zh')">中</button>
+    <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+  </div>
   <div id="warn"></div>
   <div id="loading">載入 3D 場景中 …</div>
   <div id="hud">
     <h1 id="title">RPO 3D 場景</h1>
     <p class="sub" id="subtitle"></p>
     <div class="picker">
-      <label>近距離配對（選擇即切換該對衛星視角）</label>
+      <label data-i18n="picker_label">近距離配對（選擇即切換該對衛星視角）</label>
       <select id="pairSel"></select>
       <div class="row">
-        <input id="thr" type="number" min="1" max="500" step="1" value="10" title="篩選閾值 km">
-        <button id="rescan">重新掃描</button>
+        <input id="thr" type="number" min="1" max="500" step="1" value="10" data-i18n-title="thr_title" title="篩選閾值 km">
+        <button id="rescan" data-i18n="rescan_btn">重新掃描</button>
       </div>
       <div class="stat" id="pstat"></div>
     </div>
     <div class="kpis">
-      <div class="kpi crit"><div class="k">目前距離</div><div class="v"><span id="k_range">—</span> <small>km</small></div></div>
-      <div class="kpi ok"><div class="k">Pc（proxy）</div><div class="v" id="k_pc">—</div></div>
+      <div class="kpi crit"><div class="k" data-i18n="kpi_range">目前距離</div><div class="v"><span id="k_range">—</span> <small>km</small></div></div>
+      <div class="kpi ok"><div class="k" data-i18n="kpi_pc">Pc（proxy）</div><div class="v" id="k_pc">—</div></div>
       <div class="kpi prim"><div class="k" id="k_pname">Primary 高度</div><div class="v"><span id="k_palt">—</span> <small>km</small></div></div>
       <div class="kpi sec"><div class="k" id="k_sname">Secondary 高度</div><div class="v"><span id="k_salt">—</span> <small>km</small></div></div>
     </div>
     <div class="legend">
       <span class="it"><span class="sw" style="background:var(--prim)"></span><span id="lg_p">primary</span></span>
       <span class="it"><span class="sw" style="background:var(--sec)"></span><span id="lg_s">secondary</span></span>
-      <span class="it"><span class="sw" style="background:var(--crit)"></span>最接近 (TCA)</span>
+      <span class="it"><span class="sw" style="background:var(--crit)"></span><span data-i18n="legend_tca">最接近 (TCA)</span></span>
     </div>
     <div class="vpctl">
       <button id="vpToggle">🎥 切換視角</button>
       <span id="vpLabel">目前視角：—</span>
     </div>
     <div class="pcctl">
-      <label><input type="checkbox" id="pcSphereChk" checked> 🔴 碰撞機率球（3σ R/T/N 橢球）</label>
+      <label><input type="checkbox" id="pcSphereChk" checked> <span data-i18n="pc_sphere_chk">🔴 碰撞機率球（3σ R/T/N 橢球）</span></label>
       <span id="pcSphereInfo"></span>
-      <label style="margin-top:6px"><input type="checkbox" id="relwinChk" checked> 🧭 相對軌跡投影浮動視窗（以對方為中心之 LVLH T–R 平面）</label>
-      <label style="margin-top:6px"><input type="checkbox" id="comspocChk"> 🛰 COMSPOC 模式（全期地固軌跡迴圈 + 外側定鏡頭 + Ranges）</label>
+      <label style="margin-top:6px"><input type="checkbox" id="relwinChk" checked> <span data-i18n="relwin_chk">🧭 相對軌跡投影浮動視窗（以對方為中心之 LVLH T–R 平面）</span></label>
+      <label style="margin-top:6px"><input type="checkbox" id="comspocChk"> <span data-i18n="comspoc_chk">🛰 COMSPOC 模式（全期地固軌跡迴圈 + 外側定鏡頭 + Ranges）</span></label>
       <span id="comspocInfo" style="display:block;color:var(--muted);font-size:10px;margin:5px 0 0 22px"></span>
       <button id="camToggle" class="vpctl-btn" style="display:none;margin:6px 0 0 22px;background:var(--sec);color:#03202b;border:0;border-radius:7px;padding:6px 10px;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer">📷 鏡頭 ⇄</button>
     </div>
-    <div class="tl"><h2>事件時間軸</h2><div id="timeline"></div></div>
+    <div class="tl"><h2 data-i18n="timeline_h2">事件時間軸</h2><div id="timeline"></div></div>
     <div class="note" id="note"></div>
   </div>
 
   <script>window.RPO_PRIMARY={{ default_primary }};window.RPO_SECONDARY={{ default_secondary }};</script>
   <script>
   (function(){
+    function tt(zh,ja,en){ var l='zh'; try{ l=localStorage.getItem('rpo3d_lang')||'zh'; }catch(e){} if(l==='ja')return ja; if(l==='en')return en; return zh; }
     function fail(m){var w=document.getElementById('warn');w.textContent=m;w.style.display='block';
       var l=document.getElementById('loading');if(l)l.textContent=m;}
     var s=document.createElement('script');
     s.src='/cesium/Cesium.js';
-    s.onload=function(){ if(window.startRPO) window.startRPO(); else fail('rpo3d.js 未載入'); };
-    s.onerror=function(){ fail('本機 Cesium 未安裝（請將 CesiumJS 解壓至 data/cesium/）'); };
+    s.onload=function(){ if(window.startRPO) window.startRPO(); else fail(tt('rpo3d.js 未載入','rpo3d.js が読み込まれていません','rpo3d.js failed to load')); };
+    s.onerror=function(){ fail(tt('本機 Cesium 未安裝（請將 CesiumJS 解壓至 data/cesium/）','ローカル Cesium が未インストールです（CesiumJS を data/cesium/ に展開してください）','Local Cesium is not installed (please extract CesiumJS into data/cesium/)')); };
     var app=document.createElement('script');
     app.src="{{ url_for('static', filename='js/rpo3d.js') }}";
     app.onload=function(){ document.head.appendChild(s); };
-    app.onerror=function(){ fail('前端腳本 rpo3d.js 載入失敗'); };
-    document.head.appendChild(app);
+    app.onerror=function(){ fail(tt('前端腳本 rpo3d.js 載入失敗','フロントエンドスクリプト rpo3d.js の読み込みに失敗しました','Failed to load frontend script rpo3d.js')); };
+    var bc=document.createElement('script');
+    bc.src="{{ url_for('static', filename='js/broadcast.js') }}";
+    bc.onload=function(){ document.head.appendChild(app); };
+    bc.onerror=function(){ document.head.appendChild(app); };  // 群播元件載入失敗不影響主場景
+    document.head.appendChild(bc);
   })();
   </script>
 </body>

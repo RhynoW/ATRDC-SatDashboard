@@ -86,4 +86,5 @@ if __name__ == "__main__":
     _debug = True
     if not _debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         get_cache().start(get_sat_index, interval=60)
-    app.run(host=settings.HOST, port=settings.PORT, debug=_debug)
+    # threaded=True：/api/broadcast/stream 為長連線 SSE，須並行處理其餘請求，否則會卡住整個開發伺服器
+    app.run(host=settings.HOST, port=settings.PORT, debug=_debug, threaded=True)

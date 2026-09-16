@@ -23,6 +23,27 @@ const GLOBE_I18N = {
     loading_text: '正在初始化地球...',
     sec_basemap: '底圖', sec_layers: '向量圖層',
     chk_borders: '全球國界', chk_ssn: 'SSN 地面觀測站',
+    btn_orbit6: '軌道六參數', tip_orbit6: '互動調整克卜勒軌道六參數，即時看軌道形狀變化（仿 AGI Orbit Tuner）',
+    o6_title: '軌道六參數調整器',
+    o6_presets: '預設案例',
+    o6_preset_iss: 'ISS 國際太空站', o6_preset_gps: 'GPS 中軌', o6_preset_geo: '地球同步軌道', o6_preset_molniya: 'Molniya 大橢圓',
+    o6_show: '顯示於地球', o6_focus: '視角對準',
+    o6_stat_apogee: '遠地點高度', o6_stat_perigee: '近地點高度', o6_stat_period: '軌道週期',
+    o6_min: '分鐘',
+    o6_lbl_a: '半長軸 a', o6_lbl_e: '離心率 e', o6_lbl_i: '傾角 i',
+    o6_lbl_raan: '升交點赤經 Ω', o6_lbl_argp: '近地點幅角 ω', o6_lbl_nu: '真近點角 ν',
+    o6_help_a: '衛星橢圓軌道最長半徑，決定軌道大小與週期；數值越大，軌道越高、繞地球一圈時間越長。',
+    o6_help_e: '軌道偏離正圓的程度，0＝正圓、越接近1＝越扁的橢圓；e 越大，近地點與遠地點高度差越懸殊。',
+    o6_help_i: '軌道面與地球赤道面的夾角；0°＝赤道軌道，90°＝極軌，可決定衛星覆蓋的緯度範圍。',
+    o6_help_raan: '軌道面與春分點方向的夾角，決定軌道面在慣性空間中朝哪個方向展開（軌道「面朝哪」）。',
+    o6_help_argp: '近地點在軌道面內、相對升交點的角度，決定橢圓軌道最近點朝向地球的哪個方位。',
+    o6_help_nu: '衛星目前在軌道上的位置角度（相對近地點量測），拖動可模擬衛星沿軌道移動。',
+    o6_connect_title: 'STK Connect 指令',
+    o6_connect_hint: '對應目前六參數自動產生，可直接貼到 STK Connect 主控台執行',
+    o6_connect_sat: '衛星物件名稱',
+    o6_connect_copy: '複製指令', o6_connect_copied: '已複製！',
+    o6_connect_now: '使用目前 UTC 時間',
+    o6_about: 'ℹ️ 關於此功能',
   },
   en: {
     doc_title: 'Space Situational Awareness Dashboard — Advanced 04-adv01 (Vectorized SGP4 + Proximity Scan + Search)',
@@ -43,6 +64,27 @@ const GLOBE_I18N = {
     loading_text: 'Initializing globe...',
     sec_basemap: 'Basemap', sec_layers: 'Vector Layers',
     chk_borders: 'Global Borders', chk_ssn: 'SSN Ground Stations',
+    btn_orbit6: 'Orbit Tuner', tip_orbit6: 'Interactively adjust the six classical Keplerian elements and see the orbit shape change in real time (inspired by AGI Orbit Tuner)',
+    o6_title: 'Classical Orbital Elements Tuner',
+    o6_presets: 'Presets',
+    o6_preset_iss: 'ISS', o6_preset_gps: 'GPS (MEO)', o6_preset_geo: 'Geostationary', o6_preset_molniya: 'Molniya (HEO)',
+    o6_show: 'Show on Globe', o6_focus: 'Look At Orbit',
+    o6_stat_apogee: 'Apogee Altitude', o6_stat_perigee: 'Perigee Altitude', o6_stat_period: 'Orbital Period',
+    o6_min: 'min',
+    o6_lbl_a: 'Semi-major Axis a', o6_lbl_e: 'Eccentricity e', o6_lbl_i: 'Inclination i',
+    o6_lbl_raan: 'RAAN Ω', o6_lbl_argp: 'Argument of Perigee ω', o6_lbl_nu: 'True Anomaly ν',
+    o6_help_a: 'Half of the longest diameter of the elliptical orbit; determines orbit size and period — larger means a higher, slower orbit.',
+    o6_help_e: 'How much the orbit deviates from a perfect circle. 0 = circular, closer to 1 = more elongated ellipse; larger e means a bigger gap between perigee and apogee altitude.',
+    o6_help_i: 'The angle between the orbital plane and Earth\'s equatorial plane. 0° = equatorial orbit, 90° = polar orbit; determines the latitude range the satellite can cover.',
+    o6_help_raan: 'The angle between the orbital plane and the vernal equinox direction; determines which way the orbital plane faces in inertial space.',
+    o6_help_argp: 'The angle, measured within the orbital plane, from the ascending node to perigee; determines which side of Earth the closest point of the ellipse faces.',
+    o6_help_nu: 'The satellite\'s current position angle along the orbit, measured from perigee; drag it to simulate the satellite moving along its orbit.',
+    o6_connect_title: 'STK Connect Command',
+    o6_connect_hint: 'Auto-generated from the current six elements — paste directly into the STK Connect console',
+    o6_connect_sat: 'Satellite Object Name',
+    o6_connect_copy: 'Copy Command', o6_connect_copied: 'Copied!',
+    o6_connect_now: 'Use Current UTC Time',
+    o6_about: 'ℹ️ About This Feature',
   },
   ja: {
     doc_title: 'スペース・シチュエーショナル・アウェアネス・ダッシュボード — 進化版 04-adv01（ベクトル化SGP4＋近接スキャン＋検索）',
@@ -53,7 +95,7 @@ const GLOBE_I18N = {
     btn_track: 'NORAD 監視',
     tip_track: 'NORAD監視（user_defined_tracking_NORADリスト、複数衛星を同時追跡可能）',
     nav_taipei: '台北カバレッジ分析', nav_starlink: 'Starlink 分析', nav_rpo: 'RPO機能テスト',
-    nav_constel: '星座ランキング',
+    nav_constel: 'コンステレーションランキング',
     tip_rpo: '近接ペアの相対接近3Dシーン＋Chan Pc（2衛星視点切替可能）',
     nav_story: 'StoryMap', tip_story: 'StoryMap ナラティブページ：星系・マヌーバ・地上追跡・衝突警報の統合展示',
     dbi_db: 'DB:', dbi_update: '更新：', dbi_valid: '有効衛星：', dbi_epoch: 'TLE日付：', dbi_size: 'サイズ：',
@@ -63,6 +105,27 @@ const GLOBE_I18N = {
     loading_text: '地球を初期化中...',
     sec_basemap: 'ベースマップ', sec_layers: 'ベクターレイヤー',
     chk_borders: '世界の国境', chk_ssn: 'SSN地上観測局',
+    btn_orbit6: '軌道六要素', tip_orbit6: '古典軌道六要素をインタラクティブに調整し、軌道形状の変化をリアルタイムに確認（AGI Orbit Tuner ライク）',
+    o6_title: '軌道六要素チューナー',
+    o6_presets: 'プリセット',
+    o6_preset_iss: 'ISS 国際宇宙ステーション', o6_preset_gps: 'GPS（中軌道）', o6_preset_geo: '静止軌道', o6_preset_molniya: 'モルニヤ軌道（大楕円）',
+    o6_show: '地球儀に表示', o6_focus: '視点を合わせる',
+    o6_stat_apogee: '遠地点高度', o6_stat_perigee: '近地点高度', o6_stat_period: '公転周期',
+    o6_min: '分',
+    o6_lbl_a: '軌道長半径 a', o6_lbl_e: '離心率 e', o6_lbl_i: '軌道傾斜角 i',
+    o6_lbl_raan: '昇交点赤経 Ω', o6_lbl_argp: '近地点引数 ω', o6_lbl_nu: '真近点角 ν',
+    o6_help_a: '楕円軌道の最長半径。軌道の大きさと周期を決める。値が大きいほど軌道は高く、公転周期は長くなる。',
+    o6_help_e: '軌道が正円からどれだけ外れているかを示す指標。0＝正円、1に近いほど扁平な楕円になり、近地点と遠地点の高度差が大きくなる。',
+    o6_help_i: '軌道面と地球赤道面のなす角。0°＝赤道軌道、90°＝極軌道。衛星がカバーできる緯度範囲を決める。',
+    o6_help_raan: '軌道面と春分点方向のなす角。軌道面が慣性空間内でどちらを向いているかを決める。',
+    o6_help_argp: '昇交点から近地点までを軌道面内で測った角度。楕円軌道の最も低い点が地球のどちら側を向くかを決める。',
+    o6_help_nu: '衛星が軌道上で現在どこにいるかを示す角度（近地点からの角度）。動かすと軌道上を移動する様子を模擬できる。',
+    o6_connect_title: 'STK Connect コマンド',
+    o6_connect_hint: '現在の六要素から自動生成。STK Connect コンソールに直接貼り付け可能',
+    o6_connect_sat: '衛星オブジェクト名',
+    o6_connect_copy: 'コマンドをコピー', o6_connect_copied: 'コピーしました！',
+    o6_connect_now: '現在のUTC時刻を使用',
+    o6_about: 'ℹ️ この機能について',
   },
 };
 const GLOBE_LOCALE_MAP = {zh:'zh-TW', en:'en-US', ja:'ja-JP'};
@@ -86,6 +149,8 @@ function setLang(lang){
 }
 document.addEventListener('DOMContentLoaded', () => setLang(GLOBE_LANG));
 window.setLang = setLang;
+window.t = t;
+window.getGlobeLang = () => GLOBE_LANG;
 
 function startApp(){
 
@@ -181,6 +246,7 @@ async function initCesium(){
     homeButton:true, navigationHelpButton:false, selectionIndicator:true,
   };
   viewer=new Cesium.Viewer('cesiumContainer',opts);
+  window.__cesiumViewer=viewer; // 供 orbit6_tuner.js 等外部模組疊加繪製使用
   viewer.cesiumWidget.creditContainer.style.display='none';
   viewer.scene.globe.enableLighting=true;
   viewer.scene.globe.depthTestAgainstTerrain=false;
@@ -393,7 +459,27 @@ function backToTabs(){
   document.getElementById('conj-card').classList.remove('active-card');
   const tb=document.getElementById('track-btn');
   if(tb) tb.classList.remove('active');
+  const ob=document.getElementById('orbit6-btn');
+  if(ob) ob.classList.remove('active');
+  if(window.OrbitTuner) window.OrbitTuner.clear();
   setPanelMode('tabs');
+}
+
+function toggleOrbit6Panel(){
+  const btn=document.getElementById('orbit6-btn');
+  if(panelMode==='orbit6'){
+    btn.classList.remove('active');
+    if(window.OrbitTuner) window.OrbitTuner.clear();
+    setPanelMode('tabs');
+    return;
+  }
+  document.getElementById('conj-card').classList.remove('active-card');
+  const tb=document.getElementById('track-btn');
+  if(tb) tb.classList.remove('active');
+  btn.classList.add('active');
+  clearSearchUI();
+  setPanelMode('orbit6');
+  if(window.OrbitTuner) window.OrbitTuner.render(document.getElementById('panel-body'));
 }
 
 function switchTab(tab){
@@ -1484,6 +1570,13 @@ async function init(){
   loadDbInfo();
   loadTrackingList();
   await autoSelectFromUrl();
+  autoOpenPanelFromUrl();
+}
+
+function autoOpenPanelFromUrl(){
+  // 支援 /?open=orbit6 從 /orbit-tuner 介紹頁 CTA 連結直接開啟軌道六參數面板
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('open') === 'orbit6') toggleOrbit6Panel();
 }
 
 init().catch(e=>{
@@ -1498,5 +1591,6 @@ window.clearSearch=clearSearch;
 window.backToTabs=backToTabs;
 window.toggleTrackPanel=toggleTrackPanel;
 window.addTrackManual=addTrackManual;
+window.toggleOrbit6Panel=toggleOrbit6Panel;
 
 } // end startApp

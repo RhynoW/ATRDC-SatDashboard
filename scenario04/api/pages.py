@@ -63,6 +63,12 @@ def orbit_page():
     return render_template("orbit.html")
 
 
+@bp.get("/orbit-tuner")
+def orbit_tuner_page():
+    """軌道六參數調整器介紹頁（仿 AGI Orbit Tuner）；CTA 連回 /?open=orbit6 開啟互動面板。"""
+    return render_template("orbit_tuner.html")
+
+
 @bp.get("/cesium/<path:filename>")
 def cesium_static(filename: str):
     safe = (settings.CESIUM_LOCAL_DIR / filename).resolve()

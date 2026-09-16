@@ -12,7 +12,9 @@ from pathlib import Path
 from huggingface_hub import HfApi
 
 DATASET = "RhynoWu/satdashboard-db"
-SPACE = "RhynoWu/ATRDC-SatDashboard"
+# 兩個 Space 共用同一個 Dataset 做 resolve_db()（見 scenario04/ingestion/db.py），
+# 舊版與新版 i18n 都需要重啟才會拿到新 DB，缺一會讓其中一個 Space 資料卡在舊快照
+SPACES = ["RhynoWu/ATRDC-SatDashboard", "RhynoWu/ATRDC-SatDashboard-i18n"]
 DB = Path(__file__).resolve().parents[1] / "DB" / "space_db_slim.duckdb"
 
 
@@ -27,8 +29,9 @@ def main() -> int:
                     commit_message=f"slim DB update ({DB.stat().st_size/1e6:.0f} MB)")
     print("壓縮 Dataset 歷史（只留最新版，控制儲存額度）…")
     api.super_squash_history(repo_id=DATASET, repo_type="dataset")
-    print(f"重啟 Space {SPACE}（開機時自動下載新 DB）…")
-    api.restart_space(SPACE)
+    for space in SPACES:
+        print(f"重啟 Space {space}（開機時自動下載新 DB）…")
+        api.restart_space(space)
     print("[OK] 發布完成")
     return 0
 

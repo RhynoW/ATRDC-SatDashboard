@@ -167,7 +167,7 @@
       "type": "text",
       "title": "⑤ 補充：智探太空自製衛星 SATORO-T2 與 SATORO-T3",
       "dur": 6,
-      "body": "智探太空（SATORO Space）除了在台灣百合三號中以酬載方身分參與外，依該公司管理階層向本系統之說明，SATORO-T2 與 SATORO-T3 兩顆衛星是智探自行製造的立方衛星。這項歸屬說明與第三方公開資料一致：Gunter's Space Page 記載 SATORO-T2 為 SATORO 建造之 3U 技術驗證立方衛星、T3 與其相似；SatelliteMap 引用 Jonathan McDowell（planet4589）資料，T3 之製造商為 SATORO、3U、質量約 4 kg、擁有者／國別標示 SATORO/TW；智探於台灣太空聯盟講稿中列出之在軌服務紀錄，亦包含商業任務 Taurus-1（IRIS-C2）與 Taurus-2（SATORO-T2）。需注意：T2 在智探的說法中屬「商業服務任務」（Taurus-2），因此較精確的描述是「由智探製造、整合並操作」，酬載內容可能屬於客戶，本系統無法查證。本系統對兩顆衛星的歸屬說明均未取得書面證明文件（如 ITU 申報或公司出具之證明），以上皆為公司說明加第三方公開資料之交叉比對，非獨立驗證。",
+      "body": "智探太空（SATORO Space）除了在台灣百合三號中以酬載方身分參與外，依該公司管理階層向本系統之說明，SATORO-T2 與 SATORO-T3 兩顆衛星是智探自行製造的立方衛星。這項歸屬說明與第三方公開資料一致：Gunter's Space Page 記載 SATORO-T2 為 SATORO 建造之 3U 技術驗證立方衛星、T3 與其相似；SatelliteMap 引用 Jonathan McDowell（planet4589）資料，T3 之製造商為 SATORO、3U、質量約 4 kg、擁有者／國別標示 SATORO/TW；台灣太空聯盟第六場工作坊講者摘要（2024-11-24 發布，講者黃源聖，智探太空）表示智探成立三年內成功執行 5 次在軌實驗與技術驗證服務，包含成大 IRIS-C、LILIUM-1、IRIS-F1 三次學研服務，以及商業任務 Taurus-1（IRIS-C2）與 Taurus-2（SATORO-T2）；該摘要早於 T3 發射，故未提及 T3。需注意：T2 在智探的說法中屬「商業服務任務」（Taurus-2），因此較精確的描述是「由智探製造、整合並操作」，酬載內容可能屬於客戶，本系統無法查證。本系統對兩顆衛星的歸屬說明均未取得書面證明文件（如 ITU 申報或公司出具之證明），以上皆為公司說明加第三方公開資料之交叉比對，非獨立驗證。",
       "anchor": "satoro-own-sats"
     },
     {
@@ -357,8 +357,8 @@
           "Gunter's Space Page（skyrocket.de；連結待補）"
         ],
         [
-          "智探在軌服務紀錄（Taurus-1／Taurus-2）",
-          "台灣太空聯盟（Taiwan Space Union）講稿（連結待補）"
+          "智探在軌服務紀錄（5 次任務：IRIS-C、LILIUM-1、IRIS-F1、Taurus-1、Taurus-2）",
+          "[台灣太空聯盟第六場工作坊講者摘要（智探太空，2024-11-24）](https://twspaceunion.org/tsu-workshop6-1129-abstract_satoro/)"
         ],
         [
           "SATORO-T3 搭乘 Transporter-14／Maverick 承攬",

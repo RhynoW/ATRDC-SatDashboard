@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 _OVERPASS_CATS_DEFAULT: dict[str, dict] = {
     "US_EO": {
         "label":    "美國商用光學衛星",
-        "sublabel": "Vantor/Maxar · Planet SkySat/Pelican",
+        "sublabel": "Vantor/Maxar · Planet SkySat/Pelican · BlackSky",
         "color":    "#4488FF",
-        "kw":       ["WORLDVIEW", "GEOEYE", "LEGION", "SKYSAT", "PELICAN"],
+        "kw":       ["WORLDVIEW", "GEOEYE", "LEGION", "SKYSAT", "PELICAN", "GLOBAL-"],
     },
     "CN_COMM": {
         "label":    "中國商用光學衛星",
-        "sublabel": "SuperView · 高分 · 吉林",
+        "sublabel": "SuperView · 高分 · 吉林 · 北京三號",
         "color":    "#FF9800",
-        "kw":       ["SUPERVIEW", "JILIN", "ZHUHAI", "GAOFEN"],
+        "kw":       ["SUPERVIEW", "JILIN", "ZHUHAI", "GAOFEN", "BEIJING 3", "BEIJING-3"],
     },
     "CN_MIL": {
         "label":    "中國軍用偵察衛星",
@@ -40,14 +40,9 @@ _OVERPASS_CATS_DEFAULT: dict[str, dict] = {
     },
     "TW_TASA": {
         "label":    "台灣 TASA 衛星",
-        "sublabel": "Formosat-5 / -7 / -8",
+        "sublabel": "Formosat-2/-3(已退役)/-5/-7/-8",
         "color":    "#00E5FF",
-        "kw":       [
-            "FORMOSAT-5", "FORMOSAT 5", "FORMOSAT5",
-            "FORMOSAT-7", "FORMOSAT 7", "FORMOSAT7",
-            "FORMOSAT-8", "FORMOSAT 8", "FORMOSAT8",
-            "COSMIC-2", "COSMIC2",
-        ],
+        "kw":       ["FORMOSAT", "福爾摩沙", "ROCSAT", "COSMIC-2", "COSMIC2"],
     },
     "STARLINK": {
         "label":    "Starlink 星鏈",
@@ -88,10 +83,15 @@ def reload_overpass_cats() -> list[str]:
 TAIPEI_OBS = observer_ecef(settings.TAIPEI_LAT, settings.TAIPEI_LON, settings.TAIPEI_H_KM)
 
 
+_NON_SAT_TAGS = (" DEB", " R/B")      # 碎片與火箭體不計入衛星數量
+
+
 def get_overpass_candidates(idx: dict) -> dict[str, list[int]]:
     result: dict[str, list[int]] = {cat: [] for cat in OVERPASS_CATS}
     for nid, info in idx.items():
         name_up = info["name"].upper()
+        if any(tag in name_up for tag in _NON_SAT_TAGS):
+            continue
         for cat, cfg in OVERPASS_CATS.items():
             if any(kw in name_up for kw in cfg["kw"]):
                 result[cat].append(nid)

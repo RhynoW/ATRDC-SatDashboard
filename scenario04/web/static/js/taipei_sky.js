@@ -49,6 +49,15 @@ const SKY_I18N = {
     credit: '星表 d3-celestial（BSD-3）· 星曆 astronomy-engine（MIT）· TLE/SGP4',
     cat_all: '全部', mask: '仰角遮蔽',
     view_cycle: '切換視角', auto_cycle: '自動輪播', auto_sec: '{n} 秒', tz_label: '台北時間 UTC+8',
+    layout_lunar: '衛星凌月', sec_lunar: '凌月事件時間表', lunar_hours: '凌月時窗',
+    lunar_loading: '計算凌月事件中（掃描全部類別，約 20–60 秒）…', lunar_none: '此時窗內沒有凌月／擦邊事件',
+    lunar_fail: '凌月計算失敗：{msg}', lk_transit: '凌月', lk_near: '擦邊', lunar_kind: '事件', lf_all: '全部', lf_transit: '僅凌月',
+    ln_sep: '最小角距', ln_chord: '遮蔽月面', ln_omega: '相對角速度', ln_sat: '衛星仰角／方位', ln_moon: '月球仰角／方位',
+    ln_range: '衛星距離', ln_ring: '擦邊範圍 ±{m}°', ln_pic: '月面示意（月相與朝向依實際位置；紋理為示意，未含天平動）',
+    ln_note: 'TLE 沿軌誤差（低軌約 0.2–0.5°）與月面視半徑（約 0.26°）同量級，屬事件預報；凌月帶僅數公里寬，觀測前請以最新 TLE 重算。',
+    ln_events: '凌月事件：{n}（凌月 {t}）', ln_tl: '事件時間軸（月球在地平線上為亮帶）', ln_replay: '重播選取事件',
+    ln_none_sel: '尚無事件', ln_dt_before: '距事件 {t}', ln_dt_now: 'T{s} 秒', ln_transit_word: '凌月', ln_near_word: '擦邊',
+    ph_new: '新月', ph_wax_cres: '眉月', ph_fq: '上弦月', ph_wax_gib: '盈凸月', ph_full: '滿月', ph_wan_gib: '虧凸月', ph_lq: '下弦月', ph_wan_cres: '殘月',
   },
   en: {
     view_sky: 'Sky', view_map: 'Map',
@@ -76,6 +85,15 @@ const SKY_I18N = {
     credit: 'Stars: d3-celestial (BSD-3) · Ephemeris: astronomy-engine (MIT) · TLE/SGP4',
     cat_all: 'All', mask: 'Elevation mask',
     view_cycle: 'Cycle view', auto_cycle: 'Auto-rotate', auto_sec: '{n} s', tz_label: 'Taipei time UTC+8',
+    layout_lunar: 'Satellite–Moon transit', sec_lunar: 'Lunar transit schedule', lunar_hours: 'Lunar window',
+    lunar_loading: 'Scanning lunar transits (all categories, ~20–60 s)…', lunar_none: 'No transit / near-miss events in this window',
+    lunar_fail: 'Lunar transit scan failed: {msg}', lk_transit: 'Transit', lk_near: 'Near', lunar_kind: 'Events', lf_all: 'All', lf_transit: 'Transits only',
+    ln_sep: 'Min separation', ln_chord: 'Disc crossing', ln_omega: 'Relative rate', ln_sat: 'Sat elev / az', ln_moon: 'Moon elev / az',
+    ln_range: 'Satellite range', ln_ring: 'Near-miss range ±{m}°', ln_pic: 'Moon picture (phase and orientation follow the real geometry; surface texture is schematic, no libration)',
+    ln_note: 'TLE along-track error (~0.2–0.5° for LEO) is comparable to the Moon\'s 0.26° radius, so this is an event forecast; the transit path is only a few km wide — recompute with fresh TLEs before observing.',
+    ln_events: 'Lunar events: {n} ({t} transits)', ln_tl: 'Event timeline (bright band: Moon above horizon)', ln_replay: 'Replay selected event',
+    ln_none_sel: 'No event', ln_dt_before: 'Event in {t}', ln_dt_now: 'T{s} s', ln_transit_word: 'Transit', ln_near_word: 'Near miss',
+    ph_new: 'New Moon', ph_wax_cres: 'Waxing crescent', ph_fq: 'First quarter', ph_wax_gib: 'Waxing gibbous', ph_full: 'Full Moon', ph_wan_gib: 'Waning gibbous', ph_lq: 'Last quarter', ph_wan_cres: 'Waning crescent',
   },
   ja: {
     view_sky: '天球', view_map: '地図',
@@ -103,6 +121,15 @@ const SKY_I18N = {
     credit: '星表 d3-celestial（BSD-3）· 天体暦 astronomy-engine（MIT）· TLE/SGP4',
     cat_all: 'すべて', mask: '仰角マスク',
     view_cycle: '表示切替', auto_cycle: '自動切替', auto_sec: '{n} 秒', tz_label: '台北時間 UTC+8',
+    layout_lunar: '衛星の月面通過', sec_lunar: '月面通過スケジュール', lunar_hours: '月面通過の時間窓',
+    lunar_loading: '月面通過を計算中（全カテゴリ・約20〜60秒）…', lunar_none: 'この時間窓に月面通過／接近イベントはありません',
+    lunar_fail: '月面通過の計算に失敗：{msg}', lk_transit: '通過', lk_near: '接近', lunar_kind: 'イベント', lf_all: 'すべて', lf_transit: '通過のみ',
+    ln_sep: '最小角距離', ln_chord: '月面を横切る時間', ln_omega: '相対角速度', ln_sat: '衛星 仰角／方位', ln_moon: '月 仰角／方位',
+    ln_range: '衛星までの距離', ln_ring: '接近範囲 ±{m}°', ln_pic: '月の図（月相と向きは実際の位置関係に基づく。表面模様は模式図で秤動は含まない）',
+    ln_note: 'TLEの軌道方向誤差（低軌道で約0.2〜0.5°）は月の視半径（約0.26°）と同程度のため、イベント予報です。通過帯の幅は数kmのみ。観測前に最新のTLEで再計算してください。',
+    ln_events: '月面通過イベント：{n}（通過 {t}）', ln_tl: 'イベントタイムライン（明るい帯＝月が地平線上）', ln_replay: '選択イベントを再生',
+    ln_none_sel: 'イベントなし', ln_dt_before: 'イベントまで {t}', ln_dt_now: 'T{s} 秒', ln_transit_word: '通過', ln_near_word: '接近',
+    ph_new: '新月', ph_wax_cres: '三日月', ph_fq: '上弦の月', ph_wax_gib: '十三夜月', ph_full: '満月', ph_wan_gib: '十八夜月', ph_lq: '下弦の月', ph_wan_cres: '有明月',
   },
 };
 function lang(){ return (typeof LANG !== 'undefined' && SKY_I18N[LANG]) ? LANG : 'zh'; }
@@ -430,7 +457,7 @@ function drawSky(ctx, cx, cy, R, ms, u, opt){
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.lineWidth = 2 * u; ctx.strokeStyle = 'rgba(160,190,230,.85)'; ctx.stroke();
   [['N', 0], ['E', 90], ['S', 180], ['W', 270]].forEach(([k, a]) => {
     const p = skyXY(a, opt.inside ? 7 : -7, cx, cy, R);
-    if(opt.inside && k === 'N') p[1] = Math.max(p[1], 68 * u);
+    if(opt.inside && k === 'N') p[1] = Math.max(p[1], 94 * u);
     text(ctx, st(k), p[0], p[1], 13 * u, k === 'N' ? '#ff8a80' : '#c9d1d9', 'center', 'bold');
   });
   return cel;
@@ -496,7 +523,7 @@ function drawGround(ctx, cx, cy, R, ms, u, opt){
   text(ctx, st('taipei'), cx + 9 * u, cy + 10 * u, 10.5 * u, '#FFD600', 'left', 'bold');
   [['N', 0, -1], ['E', 1, 0], ['S', 0, 1], ['W', -1, 0]].forEach(([k, dx, dy]) => {
     const rr = opt.inside ? R - 14 * u : R + 11 * u;
-    const ly = (opt.inside && k === 'N') ? Math.max(cy + dy * rr, 68 * u) : cy + dy * rr;
+    const ly = (opt.inside && k === 'N') ? Math.max(cy + dy * rr, 94 * u) : cy + dy * rr;
     text(ctx, st(k), cx + dx * rr, ly, 13 * u, k === 'N' ? '#ff8a80' : '#c9d1d9', 'center', 'bold');
   });
   if(S.bordersState === 'loading') text(ctx, '…', cx, cy + R * 0.6, 14 * u, '#8b949e', 'center');
@@ -536,51 +563,333 @@ function ledDot(ctx, x, y, r, color, glow){
   ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
   ctx.fillStyle = color; ctx.shadowColor = glow ? color : 'transparent'; ctx.shadowBlur = glow ? r * 3 : 0; ctx.fill();
 }
+function ledDash(ctx, x, y, w, h, t, on, off){
+  segPoly(ctx, x, y + h / 2, w, t, true);
+  ctx.fillStyle = on; ctx.shadowColor = on; ctx.shadowBlur = t * 2.2; ctx.fill(); ctx.shadowBlur = 0;
+}
+// 台北本地時間：上列日期 YYYY-MM-DD、下列時間 HH:MM:SS，兩列皆為同尺寸 LED 七段數字
 function drawLedClock(ctx, cx, top, u, ms){
-  const d = new Date(ms + 8 * 3600e3);
-  const H = d.getUTCHours(), M = d.getUTCMinutes(), Sx = d.getUTCSeconds() + d.getUTCMilliseconds() / 1000;
-  const AMBER = '#ffb020', RED = '#ff3b30', DIM = 'rgba(255,176,32,.10)';
-  const dw = 15 * u, dh = 28 * u, t = 3.4 * u, gap = 6 * u, dial = 23 * u;
-  const digW = 6 * (dw + gap) + 2 * 11 * u, total = dial * 2 + 14 * u + digW, x0 = cx - total / 2;
-  // 背板
+  const d = new Date(ms + 8 * 3600e3), pad2 = v => String(v).padStart(2, '0');
+  const dateStr = d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  const timeStr = pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()) + ':' + pad2(d.getUTCSeconds());
+  const AMBER = '#ffb020', DIM = 'rgba(255,176,32,.10)';
+  const dw = 15 * u, dh = 28 * u, t = 3.4 * u, gap = 6 * u, sepW = 11 * u, pad = 10 * u, rowGap = 8 * u;
+  const rowWidth = str => {
+    let w = 0;
+    for(const ch of str) w += /\d/.test(ch) ? dw + gap : sepW;
+    return w - gap;                                  // 最後一位數字後不留間距
+  };
+  const wMax = Math.max(rowWidth(dateStr), rowWidth(timeStr));
+  const plateW = wMax + 2 * pad, plateH = 2 * dh + rowGap + 2 * pad - 2 * u;
+  const px = cx - plateW / 2;
   ctx.save();
   ctx.fillStyle = 'rgba(8,10,16,.92)'; ctx.strokeStyle = 'rgba(255,176,32,.35)'; ctx.lineWidth = 1.2 * u;
-  const pad = 8 * u, by = top - 2 * u, bh = dh + 24 * u;
-  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0 - pad, by, total + 2 * pad, bh, 8 * u) : ctx.rect(x0 - pad, by, total + 2 * pad, bh);
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(px, top, plateW, plateH, 8 * u) : ctx.rect(px, top, plateW, plateH);
   ctx.fill(); ctx.stroke();
-  // LED 點陣指針錶盤（60 顆刻度點，整點加大；時/分/秒針以點鏈組成）
-  const dcx = x0 + dial, dcy = by + bh / 2;
-  for(let i = 0; i < 60; i++){
-    const a = i * Math.PI / 30, r = dial - 2 * u, major = i % 5 === 0;
-    ledDot(ctx, dcx + r * Math.sin(a), dcy - r * Math.cos(a), (major ? 1.7 : 0.9) * u, major ? AMBER : 'rgba(255,176,32,.35)', major);
-  }
-  const hand = (ang, len, n, r, color) => {
-    for(let k = 1; k <= n; k++){
-      const rr = len * k / n;
-      ledDot(ctx, dcx + rr * Math.sin(ang), dcy - rr * Math.cos(ang), r, color, true);
+  const drawRow = (str, y) => {
+    let x = cx - rowWidth(str) / 2;
+    for(const ch of str){
+      if(/\d/.test(ch)){ ledDigit(ctx, x, y, dw, dh, t, ch, AMBER, DIM); x += dw + gap; }
+      else if(ch === ':'){
+        ledDot(ctx, x + sepW / 2, y + dh * 0.32, 2 * u, AMBER, true);
+        ledDot(ctx, x + sepW / 2, y + dh * 0.68, 2 * u, AMBER, true);
+        x += sepW;
+      } else { ledDash(ctx, x + 1 * u, y, sepW - 1 * u, dh, t * 0.9, AMBER, DIM); x += sepW; }
     }
   };
-  hand(((H % 12) + M / 60) * Math.PI / 6, dial * 0.5, 5, 1.7 * u, AMBER);
-  hand((M + Sx / 60) * Math.PI / 30, dial * 0.78, 7, 1.4 * u, AMBER);
-  hand(Sx * Math.PI / 30, dial * 0.86, 8, 1.0 * u, RED);
-  ledDot(ctx, dcx, dcy, 2 * u, RED, true);
-  // 七段數字 HH:MM:SS
-  let x = x0 + dial * 2 + 14 * u;
-  const y = by + 7 * u, str = [H, M, Math.floor(Sx)].map(v => String(v).padStart(2, '0'));
-  str.forEach((two, gi) => {
-    for(let k = 0; k < 2; k++){ ledDigit(ctx, x, y, dw, dh, t, two[k], AMBER, DIM); x += dw + gap; }
-    if(gi < 2){
-      ledDot(ctx, x + 1 * u, y + dh * 0.32, 2 * u, AMBER, true);
-      ledDot(ctx, x + 1 * u, y + dh * 0.68, 2 * u, AMBER, true);
-      x += 11 * u;
-    }
-  });
+  drawRow(dateStr, top + pad - 1 * u);
+  drawRow(timeStr, top + pad - 1 * u + dh + rowGap);
   ctx.shadowBlur = 0;
-  const cap = st('tz_label') + '   ' + d.toISOString().slice(0, 10);
-  ctx.font = (9.5 * u) + 'px ' + FONT;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(255,176,32,.75)';
-  ctx.fillText(cap, x0 + dial * 2 + 14 * u + digW / 2, by + bh - 8 * u);
   ctx.restore();
+}
+
+
+/* ═══ 衛星凌月：事件預報（/api/taipei_lunar）＋月面示意圖＋事件時間軸 ═══════════════ */
+const LUNAR = {data: null, events: [], t0: 0, span: 0, loading: false, ctrl: null, hours: 24, kind: 'all', selKey: null, replay: true};
+function winStart(){ return (S.layout === 'lunar' && LUNAR.data) ? LUNAR.t0 : S.t0; }
+function winSpan(){ return (S.layout === 'lunar' && LUNAR.data) ? LUNAR.span : S.span; }
+function syncSlider(){
+  const sl = $('#sk-slider'); if(!sl) return;
+  sl.max = Math.round(winSpan() / 1000); sl.value = Math.round((S.simMs - winStart()) / 1000);
+}
+function cstDT(ms){ return new Date(ms + 8 * 3600e3).toISOString().slice(5, 19).replace('T', ' '); }
+function lunarVisible(){
+  return LUNAR.events.filter(e => !S.hiddenCats.has(e.cat) && (LUNAR.kind === 'all' || e.kind === 'transit'));
+}
+function lunarHalf(e){ const t = e.track; return t.length ? Math.max(Math.abs(t[0][0]), Math.abs(t[t.length - 1][0])) : 2; }
+function lunarSel(ms){
+  const vis = lunarVisible();
+  let e = vis.find(x => x.key === LUNAR.selKey);
+  if(!e) e = vis.find(x => x.tms >= ms - 5000) || vis[vis.length - 1] || null;
+  return e || null;
+}
+async function loadLunar(startMs){
+  if(LUNAR.ctrl) LUNAR.ctrl.abort();
+  const ctrl = LUNAR.ctrl = new AbortController();
+  LUNAR.loading = true; setMsg(st('lunar_loading'));
+  if(startMs == null){
+    const v = $('#sk-start') && $('#sk-start').value;
+    startMs = v ? Date.parse(v + ':00+08:00') : Date.now();
+  }
+  const url = '/api/taipei_lunar?ts=' + encodeURIComponent(new Date(startMs).toISOString()) + '&hours=' + LUNAR.hours;
+  try{
+    const r = await fetch(url, {signal: ctrl.signal});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    LUNAR.data = d; LUNAR.t0 = Date.parse(d.timestamp); LUNAR.span = d.hours * 3600e3;
+    LUNAR.events = d.events.map(e => Object.assign(e, {tms: Date.parse(e.t_utc), key: e.norad_id + '|' + e.t_utc}));
+    if(S.layout === 'lunar'){
+      if(S.simMs < LUNAR.t0 || S.simMs > LUNAR.t0 + LUNAR.span) S.simMs = clamp(Date.now(), LUNAR.t0, LUNAR.t0 + LUNAR.span);
+      setMsg(LUNAR.events.length ? '' : st('lunar_none'));
+      buildCats(); refreshList(); syncSlider();
+    }
+  }catch(e){
+    if(e.name === 'AbortError') return;
+    LUNAR.data = null; LUNAR.events = [];
+    if(S.layout === 'lunar') setMsg(st('lunar_fail', {msg: e.message}));
+  }finally{
+    if(LUNAR.ctrl === ctrl){ LUNAR.loading = false; LUNAR.ctrl = null; }
+    S.dirty = true;
+  }
+}
+function selectLunar(e, jump){
+  LUNAR.selKey = e ? e.key : null;
+  if(e && jump){
+    S.speed = 1; const sp = $('#sk-speed'); if(sp) sp.value = '1';
+    S.simMs = clamp(e.tms - (lunarHalf(e) + 6) * 1000, LUNAR.t0, LUNAR.t0 + LUNAR.span);
+    S.playing = true; syncPlayBtn();
+  }
+  S.dirty = true; updateListStates(true); showDetail(); syncSlider();
+}
+function lunarDetail(){
+  const el = $('#sk-detail'); if(!el) return;
+  const e = lunarSel(S.simMs);
+  if(!LUNAR.data){ el.textContent = st('sel_hint'); return; }
+  if(!e){ el.textContent = st('ln_none_sel'); return; }
+  el.innerHTML = '<b style="color:' + e.color + '">' + e.name + '</b> · ' + st('norad') + ' ' + e.norad_id +
+    ' · <b>' + st(e.kind === 'transit' ? 'lk_transit' : 'lk_near') + '</b><br>' + cstDT(e.tms) + ' CST · ' +
+    st('ln_sep') + ' ' + e.sep_deg.toFixed(3) + '°' + (e.kind === 'transit' ? ' · ' + st('ln_chord') + ' ' + e.chord_s.toFixed(2) + ' ' + st('sec') : '');
+}
+function buildLunarList(){
+  const box = $('#sk-list'); box.innerHTML = '';
+  LUNAR.events.forEach(e => {
+    const d = document.createElement('div'); d.className = 'sk-pass'; d.dataset.key = e.key;
+    d.innerHTML = '<span class="sk-dot" style="background:' + e.color + '"></span><span class="sk-pt tm">' + cstDT(e.tms).slice(0, 14) +
+      '</span><span class="sk-pn">' + e.name + '</span><span class="sk-bd ' + e.kind + '">' + st(e.kind === 'transit' ? 'lk_transit' : 'lk_near') +
+      '</span><span class="sk-pe">' + e.sep_deg.toFixed(2) + '°</span>';
+    d.addEventListener('click', () => selectLunar(e, true));
+    box.appendChild(d);
+  });
+  if(LUNAR.data && !LUNAR.events.length){ const n = document.createElement('div'); n.className = 'sk-pass'; n.textContent = st('lunar_none'); box.appendChild(n); }
+  showDetail(); updateListStates();
+}
+
+/* 月相名稱 */
+function phaseName(frac, waxing){
+  if(frac < 0.03) return st('ph_new');
+  if(frac > 0.97) return st('ph_full');
+  if(Math.abs(frac - 0.5) <= 0.06) return st(waxing ? 'ph_fq' : 'ph_lq');
+  if(frac < 0.5) return st(waxing ? 'ph_wax_cres' : 'ph_wan_cres');
+  return st(waxing ? 'ph_wax_gib' : 'ph_wan_gib');
+}
+/* 畫面座標基底（與後端一致）：right＝方位角增加方向、up＝天頂方向 */
+function tangentBasis(az, el){
+  const m = azelVec(az, el);
+  const right = norm3([m[1], -m[0], 0]);
+  const up = norm3([-m[2] * m[0], -m[2] * m[1], 1 - m[2] * m[2]]);
+  return {m, right, up};
+}
+function azelVec(az, el){ const a = az * D2R, e = el * D2R; return [Math.cos(e) * Math.sin(a), Math.cos(e) * Math.cos(a), Math.sin(e)]; }
+function norm3(v){ const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+function dot3(a, b){ return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+/* 月球畫面上：太陽方向角（自 right 逆時針）與天球北極方向角（自 up 順時針）*/
+function moonFrame(moonAz, moonEl, sunAz, sunEl){
+  const b = tangentBasis(moonAz, moonEl);
+  const sv = azelVec(sunAz, sunEl), pl = OBS.lat * D2R, ncp = [0, Math.cos(pl), Math.sin(pl)];
+  return {sunAng: Math.atan2(dot3(sv, b.up), dot3(sv, b.right)) / D2R, northAng: Math.atan2(dot3(ncp, b.right), dot3(ncp, b.up)) / D2R};
+}
+
+/* 月面程序化貼圖（示意）：主要月海位置取自標準正立月面圖（北上、東左之肉眼視角）*/
+const MARIA = [[-0.28, 0.42, 0.30, 0.22, 0.55], [0.08, 0.45, 0.17, 0.15, 0.5], [0.26, 0.20, 0.22, 0.17, 0.5], [0.62, 0.30, 0.11, 0.08, 0.6],
+  [0.60, -0.10, 0.13, 0.15, 0.45], [0.36, -0.12, 0.09, 0.08, 0.4], [-0.66, 0.05, 0.28, 0.38, 0.5], [-0.22, -0.30, 0.17, 0.14, 0.42],
+  [-0.52, -0.36, 0.11, 0.09, 0.5], [0.0, 0.86, 0.36, 0.06, 0.4]];
+function hash2(i, j){ let h = (i * 374761393 + j * 668265263) | 0; h = ((h ^ (h >>> 13)) * 1274126177) | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; }
+function vnoise(x, y){
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+function albedo(u, v){
+  let a = 1;
+  for(const m of MARIA){ const dx = (u - m[0]) / m[2], dy = (v - m[1]) / m[3], d = dx * dx + dy * dy; if(d < 1.6) a *= 1 - m[4] * Math.exp(-d * 1.8); }
+  a *= 0.88 + 0.22 * (0.55 * vnoise(u * 7 + 3, v * 7 + 9) + 0.3 * vnoise(u * 19 + 5, v * 19 + 1) + 0.15 * vnoise(u * 43, v * 43 + 7));
+  a += 0.30 * Math.exp(-((u + 0.12) ** 2 + (v + 0.72) ** 2) / 0.004) + 0.22 * Math.exp(-((u + 0.33) ** 2 + (v - 0.10) ** 2) / 0.003)
+     + 0.18 * Math.exp(-((u + 0.55) ** 2 + (v - 0.32) ** 2) / 0.003);
+  return clamp(a, 0.32, 1.15);
+}
+const SPRITES = new Map();
+function moonSprite(R, frac, sunAng, northAng){
+  const key = [Math.round(R), Math.round(frac * 100), Math.round(sunAng / 3), Math.round(northAng / 3)].join('|');
+  if(SPRITES.has(key)) return SPRITES.get(key);
+  const D = Math.ceil(2 * R) + 2, cv = document.createElement('canvas'); cv.width = cv.height = D;
+  const c = cv.getContext('2d'), img = c.createImageData(D, D);
+  const inc = Math.acos(clamp(2 * frac - 1, -1, 1)), a = sunAng * D2R;
+  const Lx = Math.sin(inc) * Math.cos(a), Ly = Math.sin(inc) * Math.sin(a), Lz = Math.cos(inc);
+  const th = northAng * D2R, ct = Math.cos(th), sn = Math.sin(th);
+  for(let y = 0; y < D; y++){
+    for(let x = 0; x < D; x++){
+      const nx = (x + 0.5 - D / 2) / R, ny = -(y + 0.5 - D / 2) / R, r2 = nx * nx + ny * ny, o = (y * D + x) * 4;
+      const edge = clamp((1 - Math.sqrt(r2)) * R + 0.5, 0, 1);
+      if(edge <= 0){ img.data[o + 3] = 0; continue; }
+      const nz = Math.sqrt(Math.max(0, 1 - Math.min(r2, 1)));
+      const lam = Math.max(0, nx * Lx + ny * Ly + nz * Lz);
+      const u = nx * ct - ny * sn, v = nx * sn + ny * ct;          // 螢幕座標 → 月面正立座標
+      const alb = albedo(u, v), lum = alb * (0.96 * lam) + 0.05 * (0.55 + 0.45 * nz);
+      img.data[o] = clamp(232 * lum, 0, 255); img.data[o + 1] = clamp(226 * lum, 0, 255); img.data[o + 2] = clamp(212 * lum + 4, 0, 255);
+      img.data[o + 3] = 255 * edge;
+    }
+  }
+  c.putImageData(img, 0, 0);
+  if(SPRITES.size > 10) SPRITES.delete(SPRITES.keys().next().value);
+  SPRITES.set(key, cv);
+  return cv;
+}
+function trackAt(e, tRel){
+  const t = e.track; if(!t.length || tRel < t[0][0] || tRel > t[t.length - 1][0]) return null;
+  let i = 1; while(i < t.length - 1 && t[i][0] < tRel) i++;
+  const f = (tRel - t[i - 1][0]) / ((t[i][0] - t[i - 1][0]) || 1);
+  return [t[i - 1][1] + (t[i][1] - t[i - 1][1]) * f, t[i - 1][2] + (t[i][2] - t[i - 1][2]) * f];
+}
+
+function drawLunarScene(ctx, W, H, ms, u, opt, top, bot){
+  const cel = celestial(ms), e = lunarSel(ms);
+  const tlH = 50 * u, availH = H - top - bot - tlH;
+  const side = W / availH >= 1.35;
+  let V, cx, cy, info;
+  if(side){ V = Math.min(availH / 2 - 8 * u, W * 0.30); cx = W * 0.31; cy = top + availH / 2; info = {x: cx + V + 34 * u, y: top + 6 * u, w: W - (cx + V + 34 * u) - 14 * u}; }
+  else { V = Math.min(W / 2 - 22 * u, availH * 0.36); cx = W / 2; cy = top + V + 14 * u; info = {x: 14 * u, y: cy + V + 34 * u, w: W - 28 * u}; }
+
+  // 月面參數：事件時取事件當下；否則取目前時刻月球
+  let frac, sunAng, northAng, Rdeg, mAz, mEl, waxing;
+  if(e){
+    frac = e.moon_frac; Rdeg = e.moon_r_deg; mAz = e.moon_az; mEl = e.moon_el; waxing = e.moon_phase_deg < 180;
+    if(e._north === undefined){ const sunEv = celestial(e.tms).sun; e._north = moonFrame(mAz, mEl, sunEv.az, sunEv.el).northAng; }
+    sunAng = e.sun_angle_deg; northAng = e._north;
+  } else {
+    frac = cel.moon.frac; Rdeg = 0.259; mAz = cel.moon.az; mEl = cel.moon.el; waxing = cel.moon.waxing;
+    const fr = moonFrame(mAz, mEl, cel.sun.az, cel.sun.el); sunAng = fr.sunAng; northAng = fr.northAng;
+  }
+  const margin = (LUNAR.data && LUNAR.data.near_margin_deg) || 0.3;
+  const Hdeg = Rdeg + margin + 0.06, ppd = V / Hdeg, Rpx = Rdeg * ppd;
+
+  // 畫框與刻度
+  ctx.save();
+  ctx.beginPath(); ctx.rect(cx - V, cy - V, 2 * V, 2 * V); ctx.clip();
+  ctx.fillStyle = '#04060b'; ctx.fillRect(cx - V, cy - V, 2 * V, 2 * V);
+  ctx.strokeStyle = 'rgba(160,190,230,.14)'; ctx.lineWidth = 1;
+  for(let g = -0.6; g <= 0.6001; g += 0.1){
+    const px = cx + g * ppd, py = cy - g * ppd;
+    ctx.beginPath(); ctx.moveTo(px, cy - V); ctx.lineTo(px, cy + V); ctx.moveTo(cx - V, py); ctx.lineTo(cx + V, py); ctx.stroke();
+  }
+  // 擦邊範圍環
+  ctx.setLineDash([5 * u, 4 * u]); ctx.strokeStyle = 'rgba(255,214,0,.55)'; ctx.lineWidth = 1.3 * u;
+  ctx.beginPath(); ctx.arc(cx, cy, (Rdeg + margin) * ppd, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+  text(ctx, st('ln_ring', {m: margin.toFixed(2)}), cx, cy - (Rdeg + margin) * ppd + 9 * u, 9.5 * u, 'rgba(255,214,0,.85)', 'center');
+  // 月球
+  const spr = moonSprite(Rpx, frac, sunAng, northAng);
+  ctx.drawImage(spr, cx - spr.width / 2, cy - spr.height / 2);
+  // 衛星軌跡
+  if(e && e.track.length){
+    const pts = e.track.map(q => [cx + q[1] * ppd, cy - q[2] * ppd, q[0]]);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(5,8,14,.85)'; ctx.lineWidth = 5 * u; ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke();
+    ctx.strokeStyle = e.color; ctx.lineWidth = 2.6 * u; ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke();
+    for(const f of [0.2, 0.5, 0.8]){
+      const i = Math.max(1, Math.min(pts.length - 1, Math.round(f * (pts.length - 1))));
+      drawArrow(ctx, pts[i][0], pts[i][1], Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]), 7 * u, e.color);
+    }
+    // 最近距離點
+    const p0 = trackAt(e, 0);
+    if(p0){ const px = cx + p0[0] * ppd, py = cy - p0[1] * ppd;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.4 * u; ctx.beginPath(); ctx.moveTo(px - 5 * u, py); ctx.lineTo(px + 5 * u, py); ctx.moveTo(px, py - 5 * u); ctx.lineTo(px, py + 5 * u); ctx.stroke(); }
+    // 目前衛星位置
+    const tRel = (ms - e.tms) / 1000, pc = trackAt(e, tRel);
+    if(pc){
+      const px = cx + pc[0] * ppd, py = cy - pc[1] * ppd;
+      ctx.beginPath(); ctx.arc(px, py, 5.5 * u, 0, 2 * Math.PI); ctx.fillStyle = e.color; ctx.fill(); ctx.lineWidth = 2 * u; ctx.strokeStyle = '#fff'; ctx.stroke();
+    }
+  }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(160,190,230,.6)'; ctx.lineWidth = 1.5 * u; ctx.strokeRect(cx - V, cy - V, 2 * V, 2 * V);
+  // 比例尺（0.25°）
+  const sc = 0.25 * ppd; ctx.strokeStyle = '#c9d1d9'; ctx.lineWidth = 1.6 * u; ctx.beginPath();
+  ctx.moveTo(cx - V + 10 * u, cy + V - 12 * u); ctx.lineTo(cx - V + 10 * u + sc, cy + V - 12 * u); ctx.stroke();
+  text(ctx, '0.25°', cx - V + 10 * u + sc / 2, cy + V - 21 * u, 9.5 * u, '#c9d1d9', 'center');
+  // 月相標示
+  text(ctx, phaseName(frac, waxing) + '  ' + Math.round(frac * 100) + '%    ' + st('hud_alt') + ' ' + mEl.toFixed(1) + '°  az ' + mAz.toFixed(0) + '°',
+       cx + V - 10 * u, cy + V - 14 * u, 11.5 * u, '#e6edf3', 'right', 'bold');
+  // 倒數
+  if(e){
+    const dt = (ms - e.tms) / 1000, adt = Math.abs(dt);
+    const label = adt < 60 ? st('ln_dt_now', {s: (dt >= 0 ? '+' : '−') + adt.toFixed(1)}) :
+      st('ln_dt_before', {t: (dt < 0 ? '' : '−') + Math.floor(adt / 3600) + ':' + String(Math.floor(adt % 3600 / 60)).padStart(2, '0') + ':' + String(Math.floor(adt % 60)).padStart(2, '0')});
+    text(ctx, label, cx + V - 8 * u, cy - V + 16 * u, 14 * u, adt < 8 ? '#ffd24a' : '#c9d1d9', 'right', 'bold');
+  }
+  // 事件資訊卡
+  let ly = info.y + 4 * u; const lh = 19 * u;
+  const put = (label, val, col) => { text(ctx, label, info.x, ly, 11 * u, '#8b949e'); text(ctx, val, info.x + 118 * u, ly, 12 * u, col || '#e6edf3', 'left', 'bold'); ly += lh; };
+  if(e){
+    text(ctx, e.name, info.x, ly, 16 * u, e.color, 'left', 'bold'); ly += lh + 4 * u;
+    put(st('norad'), String(e.norad_id));
+    put(cstDT(e.tms).slice(0, 5) + ' CST', cstDT(e.tms).slice(6) + '.' + String(Math.floor((e.tms % 1000 + 1000) % 1000 / 100)));
+    put('', st(e.kind === 'transit' ? 'ln_transit_word' : 'ln_near_word'), e.kind === 'transit' ? '#ffd24a' : '#9fb3c8');
+    put(st('ln_sep'), e.sep_deg.toFixed(3) + '°  (R = ' + e.moon_r_deg.toFixed(3) + '°)');
+    if(e.kind === 'transit') put(st('ln_chord'), e.chord_s.toFixed(2) + ' ' + st('sec'));
+    put(st('ln_omega'), e.omega_dps.toFixed(3) + ' °/s');
+    put(st('ln_sat'), e.sat_el.toFixed(1) + '° / ' + e.sat_az.toFixed(0) + '°');
+    put(st('ln_moon'), e.moon_el.toFixed(1) + '° / ' + e.moon_az.toFixed(0) + '°');
+    put(st('ln_range'), Math.round(e.sat_range_km).toLocaleString() + ' km');
+  } else {
+    text(ctx, LUNAR.loading ? st('lunar_loading') : st('ln_none_sel'), info.x, ly + 8 * u, 12 * u, '#8b949e', 'left');
+    ly += lh * 2;
+  }
+  // 誤差說明（自動折行）
+  ctx.font = (9.5 * u) + 'px ' + FONT;
+  const words = st('ln_note').split(''); let line = '', yy = ly + 8 * u;
+  words.forEach(ch => { if(ctx.measureText(line + ch).width > info.w){ text(ctx, line, info.x, yy, 9.5 * u, '#d29922', 'left'); yy += 13 * u; line = ch; } else line += ch; });
+  if(line) text(ctx, line, info.x, yy, 9.5 * u, '#d29922', 'left');
+  // 月面圖說明（自動折行）
+  { let l2 = '', y2 = yy + 22 * u;
+    for(const ch of st('ln_pic')){ if(ctx.measureText(l2 + ch).width > info.w){ text(ctx, l2, info.x, y2, 9.5 * u, '#8fb8e8', 'left'); y2 += 13 * u; l2 = ch; } else l2 += ch; }
+    if(l2) text(ctx, l2, info.x, y2, 9.5 * u, '#8fb8e8', 'left'); }
+
+  // 事件時間軸
+  const ty = H - bot - tlH + 8 * u, tx0 = 14 * u, tx1 = W - 14 * u;
+  text(ctx, st('ln_tl'), tx0, ty, 10 * u, '#8fb8e8', 'left', 'bold');
+  const by = ty + 24 * u, bh = 16 * u;
+  ctx.fillStyle = '#0d1421'; ctx.fillRect(tx0, by - bh / 2, tx1 - tx0, bh);
+  if(LUNAR.data){
+    const t0 = LUNAR.t0, sp = LUNAR.span, X = t => tx0 + (t - t0) / sp * (tx1 - tx0);
+    (LUNAR.data.moon_up_runs || []).forEach(r => {
+      const a = X(Date.parse(r[0])), b = X(Date.parse(r[1]));
+      ctx.fillStyle = 'rgba(170,190,225,.28)'; ctx.fillRect(a, by - bh / 2, Math.max(1, b - a), bh);
+    });
+    ctx.strokeStyle = 'rgba(160,190,230,.35)'; ctx.lineWidth = 1;
+    const hr0 = Math.ceil((t0 + 8 * 3600e3) / 3600e3) * 3600e3 - 8 * 3600e3;
+    for(let t = hr0; t <= t0 + sp; t += 3600e3){
+      const hh = new Date(t + 8 * 3600e3).getUTCHours();
+      const x = X(t); ctx.beginPath(); ctx.moveTo(x, by + bh / 2); ctx.lineTo(x, by + bh / 2 + (hh % 3 === 0 ? 5 : 2.5) * u); ctx.stroke();
+      if(hh % 3 === 0 && sp <= 49 * 3600e3) text(ctx, String(hh).padStart(2, '0'), x, by + bh / 2 + 12 * u, 9 * u, '#8b949e', 'center');
+    }
+    lunarVisible().forEach(ev => {
+      const x = X(ev.tms), h = ev.kind === 'transit' ? bh : bh * 0.55, sel = e && ev.key === e.key;
+      ctx.strokeStyle = sel ? '#ffffff' : ev.color; ctx.lineWidth = (sel ? 2.6 : (ev.kind === 'transit' ? 1.6 : 1)) * u;
+      ctx.globalAlpha = ev.kind === 'transit' || sel ? 1 : 0.6;
+      ctx.beginPath(); ctx.moveTo(x, by - h / 2); ctx.lineTo(x, by + h / 2); ctx.stroke(); ctx.globalAlpha = 1;
+    });
+    const xm = X(clamp(ms, t0, t0 + sp));
+    ctx.strokeStyle = '#ff4d4f'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.moveTo(xm, by - bh / 2 - 3 * u); ctx.lineTo(xm, by + bh / 2 + 3 * u); ctx.stroke();
+  }
 }
 
 /* ── 整體版面／HUD ────────────────────────────────────────────────────────── */
@@ -593,11 +902,13 @@ function render(ctx, W, H, ms, opt){
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#0a0e17'; ctx.fillRect(0, 0, W, H);
   if(opt.hit) S.hit = [];
-  const top = 66 * u, bot = 30 * u, availH = H - top - bot, lay = opt.layout || S.layout;
+  const top = 92 * u, bot = 30 * u, availH = H - top - bot, lay = opt.layout || S.layout;
   const cel = celestial(ms);
   const panels = [];
   const side = opt.forceSide || W / availH >= 1.45;
-  if(lay === 'both'){
+  if(lay === 'lunar'){
+    /* 由 drawLunarScene 繪製 */
+  } else if(lay === 'both'){
     if(side){
       const R = Math.min(W / 4, availH / 2) - 42 * u;
       panels.push({k: 'sky', cx: W / 4, cy: top + availH / 2 + 8 * u, R}, {k: 'ground', cx: 3 * W / 4, cy: top + availH / 2 + 8 * u, R});
@@ -617,13 +928,15 @@ function render(ctx, W, H, ms, opt){
     if(pn.k === 'sky') drawSky(ctx, pn.cx, pn.cy, pn.R, ms, u, po);
     else drawGround(ctx, pn.cx, pn.cy, pn.R, ms, u, po);
     const ttl = pn.k === 'sky' ? st('title_sky') : st('title_ground', {r: S.rangeKm});
-    if(pn.single) text(ctx, ttl, 12 * u, 54 * u, 12 * u, '#8fb8e8', 'left', 'bold');
+    if(pn.single) text(ctx, ttl, 12 * u, 56 * u, 12 * u, '#8fb8e8', 'left', 'bold');
     else text(ctx, ttl, pn.cx, pn.cy - pn.R - Math.max(31 * u, pn.R * 0.08 + 17 * u), 12 * u, '#8fb8e8', 'center', 'bold');
   });
+  if(lay === 'lunar') drawLunarScene(ctx, W, H, ms, u, opt, top, bot);
   // HUD
   const nUp = S.passes.filter(p => !S.hiddenCats.has(p.cat) && isActive(p, ms)).length;
+  const hudCount = lay === 'lunar' ? st('ln_events', {n: lunarVisible().length, t: lunarVisible().filter(x => x.kind === 'transit').length}) : st('hud_above') + ': ' + nUp;
   text(ctx, cst(ms, true) + '   (' + utcStr(ms) + ')', 12 * u, 16 * u, 13 * u, '#e6edf3', 'left', 'bold');
-  text(ctx, st('taipei') + ' ' + OBS.lat.toFixed(2) + '°N ' + OBS.lon.toFixed(2) + '°E   ' + st('hud_above') + ': ' + nUp,
+  text(ctx, st('taipei') + ' ' + OBS.lat.toFixed(2) + '°N ' + OBS.lon.toFixed(2) + '°E   ' + hudCount,
        12 * u, 33 * u, 10.5 * u, '#8b949e');
   const tw = st(twilight(cel.sun.el));
   text(ctx, st('hud_sun') + ' ' + st('hud_alt') + ' ' + cel.sun.el.toFixed(1) + '° (' + tw + ')   ' +
@@ -633,8 +946,9 @@ function render(ctx, W, H, ms, opt){
   drawLedClock(ctx, W / 2, 6 * u, u, ms);
   // 圖例
   let lx = 12 * u;
-  Object.keys((S.data && S.data.categories) || {}).forEach(id => {
-    const c = S.data.categories[id], hidden = S.hiddenCats.has(id);
+  const legCats = (lay === 'lunar' && LUNAR.data) ? LUNAR.data.categories : ((S.data && S.data.categories) || {});
+  Object.keys(legCats).forEach(id => {
+    const c = legCats[id], hidden = S.hiddenCats.has(id);
     ctx.globalAlpha = hidden ? 0.35 : 1;
     ctx.beginPath(); ctx.arc(lx + 4 * u, H - 15 * u, 4.5 * u, 0, 2 * Math.PI); ctx.fillStyle = c.color; ctx.fill();
     const label = catLabel(id, c.label);
@@ -652,15 +966,19 @@ function frame(now){
   if(!READY || VIEW !== 'sky' || document.hidden || S.exporting) { lastT = now; return; }
   const dt = Math.min(0.25, (now - lastT) / 1000); lastT = now;
   if(S.autoCycle && now - S.lastCycle > S.autoSec * 1000) cycleLayout();
-  if(S.playing && S.span){
+  if(S.playing && winSpan()){
     S.simMs += dt * 1000 * S.speed; S.dirty = true;
-    const end = S.t0 + S.span;
-    if(S.simMs > end){ if(S.loop) S.simMs = S.t0; else { S.simMs = end; S.playing = false; syncPlayBtn(); } }
+    const w0 = winStart(), end = w0 + winSpan();
+    if(S.layout === 'lunar' && LUNAR.replay && LUNAR.selKey && S.speed <= 5){
+      const ev = LUNAR.events.find(x => x.key === LUNAR.selKey);
+      if(ev){ const h = lunarHalf(ev) + 6; if(S.simMs > ev.tms + h * 1000 && S.simMs < ev.tms + h * 1000 + 3000) S.simMs = ev.tms - h * 1000; }
+    }
+    if(S.simMs > end){ if(S.loop) S.simMs = w0; else { S.simMs = end; S.playing = false; syncPlayBtn(); } }
   }
   if(S.dirty){
     S.dirty = false;
     render(CTX, CV.width, CV.height, S.simMs, {hit: true, u: Math.max(0.8, Math.min(CV.width, CV.height) / 760)});
-    const sl = $('#sk-slider'); if(sl && S.span) sl.value = Math.round((S.simMs - S.t0) / 1000);
+    const sl = $('#sk-slider'); if(sl && winSpan()) sl.value = Math.round((S.simMs - winStart()) / 1000);
     const tl = $('#sk-time'); if(tl) tl.textContent = cst(S.simMs, true);
     S.listPending = true;
   }
@@ -689,8 +1007,9 @@ async function load(startMs){
     S.data = d; S.t0 = Date.parse(d.timestamp); S.span = d.hours * 3600e3; S.maskDeg = d.mask_deg;
     S.passes = d.passes.map(prep).sort((a, b) => (a.stationary - b.stationary) || (a.tr0 - b.tr0));
     if(S.simMs < S.t0 || S.simMs > S.t0 + S.span) S.simMs = clamp(Date.now(), S.t0, S.t0 + S.span);
-    const sl = $('#sk-slider'); sl.max = Math.round(S.span / 1000);
-    buildCats(); buildList(); setMsg(S.passes.length ? '' : st('no_passes'));
+    syncSlider();
+    buildCats(); refreshList();
+    if(S.layout !== 'lunar') setMsg(S.passes.length ? '' : st('no_passes'));
   }catch(e){
     if(e.name === 'AbortError') return;
     setMsg(st('load_fail', {msg: e.message}));
@@ -699,7 +1018,7 @@ async function load(startMs){
     S.dirty = true;
   }
 }
-function reloadNow(){ S.startMs = null; S.simMs = Date.now(); load(Date.now() - PRE_MS); }
+function reloadNow(){ S.startMs = null; S.simMs = Date.now(); load(Date.now() - PRE_MS); if(S.layout === 'lunar') loadLunar(Date.now()); }
 function setMsg(m){ const el = $('#sk-msg'); if(el){ el.textContent = m; el.style.display = m ? 'flex' : 'none'; } }
 
 /* ── 選取／清單 ───────────────────────────────────────────────────────────── */
@@ -708,7 +1027,9 @@ function select(p, jump){
   if(p && jump) S.simMs = clamp(p.tr0 - 30e3, S.t0, S.t0 + S.span);
   S.dirty = true; updateListStates(true); showDetail();
 }
+function refreshList(){ if(S.layout === 'lunar') buildLunarList(); else buildList(); }
 function showDetail(){
+  if(S.layout === 'lunar'){ lunarDetail(); return; }
   const el = $('#sk-detail'), p = S.passes.find(x => x.key === S.selKey);
   if(!p){ el.textContent = st('sel_hint'); return; }
   const m = Math.floor(p.duration_s / 60), s = p.duration_s % 60;
@@ -730,6 +1051,18 @@ function buildList(){
 }
 function updateListStates(scroll){
   const box = $('#sk-list'); if(!box) return;
+  if(S.layout === 'lunar'){
+    const cur = lunarSel(S.simMs);
+    box.querySelectorAll('.sk-pass[data-key]').forEach(d => {
+      const ev = LUNAR.events.find(x => x.key === d.dataset.key); if(!ev) return;
+      d.classList.toggle('hidden', S.hiddenCats.has(ev.cat) || (LUNAR.kind === 'transit' && ev.kind !== 'transit'));
+      d.classList.toggle('done', ev.tms < S.simMs - 5000);
+      d.classList.toggle('active', Math.abs(ev.tms - S.simMs) < 30000);
+      const sel = !!cur && ev.key === cur.key; d.classList.toggle('sel', sel);
+      if(sel && scroll) d.scrollIntoView({block: 'nearest'});
+    });
+    return;
+  }
   box.querySelectorAll('.sk-pass').forEach(d => {
     const p = S.passes.find(x => x.key === d.dataset.key); if(!p) return;
     d.classList.toggle('hidden', S.hiddenCats.has(p.cat));
@@ -741,12 +1074,13 @@ function updateListStates(scroll){
 }
 function buildCats(){
   const box = $('#sk-cats'); box.innerHTML = '';
-  const cats = (S.data && S.data.categories) || {};
+  const lun = S.layout === 'lunar' && LUNAR.data;
+  const cats = lun ? LUNAR.data.categories : ((S.data && S.data.categories) || {});
   Object.keys(cats).forEach(id => {
-    const n = S.passes.filter(p => p.cat === id).length;
+    const n = lun ? LUNAR.events.filter(x => x.cat === id).length : S.passes.filter(p => p.cat === id).length;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'sk-chip' + (S.hiddenCats.has(id) ? ' off' : '');
     b.innerHTML = '<span class="sk-dot" style="background:' + cats[id].color + '"></span>' + catLabel(id, cats[id].label) + ' <i>' + n + '</i>';
-    b.addEventListener('click', () => { if(S.hiddenCats.has(id)) S.hiddenCats.delete(id); else S.hiddenCats.add(id); buildCats(); S.dirty = true; updateListStates(); });
+    b.addEventListener('click', () => { if(S.hiddenCats.has(id)) S.hiddenCats.delete(id); else S.hiddenCats.add(id); buildCats(); S.dirty = true; updateListStates(); showDetail(); });
     box.appendChild(b);
   });
 }
@@ -759,21 +1093,26 @@ function download(blob, name){
 function stamp(){ return new Date(S.simMs + 8 * 3600e3).toISOString().slice(0, 16).replace(/[-:T]/g, ''); }
 function exportSize(){
   const H = +$('#sk-ex-size').value, lay = S.layout;
-  return {H, W: lay === 'both' ? Math.round(H * 1.9) : H};
+  return {H, W: lay === 'both' ? Math.round(H * 1.9) : (lay === 'lunar' ? Math.round(H * 1.6) : H)};
 }
 function frameCanvas(W, H){ const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
 async function exportAnim(){
-  if(S.exporting || !S.span) return;
+  if(S.exporting || !winSpan()) return;
   const fmt = $('#sk-ex-fmt').value, simMin = +$('#sk-ex-sim').value, outSec = +$('#sk-ex-out').value, fps = +$('#sk-ex-fps').value;
   const {H, W} = exportSize(), info = $('#sk-ex-info'), N = Math.max(2, Math.round(outSec * fps));
   let startMs = S.simMs, spanMs = simMin * 60e3;
-  if(startMs + spanMs > S.t0 + S.span) startMs = Math.max(S.t0, S.t0 + S.span - spanMs);
-  spanMs = Math.min(spanMs, S.t0 + S.span - startMs);
+  if(S.layout === 'lunar'){                          // 凌月版面：輸出所選事件（前後各數秒）的慢動作
+    const ev = lunarSel(S.simMs);
+    if(ev){ const h = lunarHalf(ev) + 4; startMs = ev.tms - h * 1000; spanMs = 2 * h * 1000; }
+  }
+  const wEnd = winStart() + winSpan();
+  if(startMs + spanMs > wEnd) startMs = Math.max(winStart(), wEnd - spanMs);
+  spanMs = Math.min(spanMs, wEnd - startMs);
   const cv = frameCanvas(W, H), ctx = cv.getContext('2d', {willReadFrequently: fmt === 'gif'});
   const at = i => startMs + spanMs * i / (N - 1);
   const opt = {layout: S.layout, forceSide: true, u: Math.max(0.8, H / 760)};
   S.exporting = true; $('#sk-ex-go').disabled = true;
-  if(S.layout !== 'sky' && S.bordersState === 'idle') await ensureBorders();
+  if(S.layout !== 'sky' && S.layout !== 'lunar' && S.bordersState === 'idle') await ensureBorders();
   try{
     if(fmt === 'gif'){
       const enc = new GifEncoder(W, H, 100 / fps);
@@ -820,12 +1159,26 @@ function snapshotPng(){
 }
 
 /* ── UI ───────────────────────────────────────────────────────────────────── */
-const SPEEDS = [1, 5, 10, 30, 60, 120, 300, 600];
+const SPEEDS = [0.25, 1, 5, 10, 30, 60, 120, 300, 600];
 const LAYOUTS = ['both', 'sky', 'ground'];
 function setLayout(l){
+  const prev = S.layout;
   S.layout = l;
   const sel = $('#sk-layout'); if(sel) sel.value = l;
-  if(l !== 'sky') ensureBorders();
+  if(l !== 'sky' && l !== 'lunar') ensureBorders();
+  const lo = $('#sk-lunar-opts'); if(lo) lo.style.display = l === 'lunar' ? 'block' : 'none';
+  const h = $('#sk-sec-title'); if(h){ h.dataset.sk = l === 'lunar' ? 'sec_lunar' : 'sec_passes'; h.textContent = st(h.dataset.sk); }
+  if(l === 'lunar'){
+    if(!LUNAR.data && !LUNAR.loading) loadLunar();
+    else if(LUNAR.data){
+      if(S.simMs < LUNAR.t0 || S.simMs > LUNAR.t0 + LUNAR.span) S.simMs = clamp(Date.now(), LUNAR.t0, LUNAR.t0 + LUNAR.span);
+      setMsg(LUNAR.events.length ? '' : st('lunar_none'));
+    } else setMsg(st('lunar_loading'));
+  } else if(prev === 'lunar'){
+    if(S.span && (S.simMs < S.t0 || S.simMs > S.t0 + S.span)) S.simMs = clamp(Date.now(), S.t0, S.t0 + S.span);
+    setMsg(S.data && !S.passes.length ? st('no_passes') : '');
+  }
+  buildCats(); refreshList(); syncSlider();
   updateCycleBtn(); S.dirty = true;
 }
 function cycleLayout(){ setLayout(LAYOUTS[(LAYOUTS.indexOf(S.layout) + 1) % LAYOUTS.length]); S.lastCycle = performance.now(); }
@@ -847,7 +1200,10 @@ function buildUI(){
     '</div></div>' +
     '<div id="sk-side">' +
       '<div class="sk-sec"><h3 data-sk="sec_show"></h3>' +
-        '<div class="sk-row"><span data-sk="layout"></span> <select id="sk-layout"><option value="both" data-sk="layout_both"></option><option value="sky" data-sk="layout_sky"></option><option value="ground" data-sk="layout_ground"></option></select></div>' +
+        '<div class="sk-row"><span data-sk="layout"></span> <select id="sk-layout"><option value="both" data-sk="layout_both"></option><option value="sky" data-sk="layout_sky"></option><option value="ground" data-sk="layout_ground"></option><option value="lunar" data-sk="layout_lunar"></option></select></div>' +
+        '<div id="sk-lunar-opts" style="display:none"><div class="sk-row"><span data-sk="lunar_hours"></span> <select id="sk-lhours"><option value="12">12</option><option value="24" selected>24</option><option value="48">48</option></select> <span data-sk="h_unit"></span> ' +
+        '<span data-sk="lunar_kind"></span> <select id="sk-lkind"><option value="all" data-sk="lf_all"></option><option value="transit" data-sk="lf_transit"></option></select></div>' +
+        '<div class="sk-row"><label><input type="checkbox" id="sk-lreplay" checked> <span data-sk="ln_replay"></span></label></div></div>' +
         '<div class="sk-row"><label><input type="checkbox" id="sk-auto"> <span data-sk="auto_cycle"></span></label> <select id="sk-autosec"><option value="5">5</option><option value="8" selected>8</option><option value="15">15</option><option value="30">30</option></select></div>' +
         '<div class="sk-row"><span data-sk="range"></span> <select id="sk-range"><option value="2000">2000 km</option><option value="2500">2500 km</option></select></div>' +
         '<div class="sk-row"><span data-sk="hours"></span> <select id="sk-hours"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="6">6</option></select> <span data-sk="h_unit"></span> ' +
@@ -859,7 +1215,7 @@ function buildUI(){
             '<label><input type="checkbox" data-opt="' + k + '"' + (S[k] ? ' checked' : '') + '> <span data-sk="' + l + '"></span></label>').join('') +
         '</div></div>' +
       '<div class="sk-sec"><h3 data-sk="sec_cats"></h3><div id="sk-cats"></div></div>' +
-      '<div class="sk-sec sk-grow"><h3 data-sk="sec_passes"></h3><div id="sk-detail"></div><div id="sk-list"></div></div>' +
+      '<div class="sk-sec sk-grow"><h3 id="sk-sec-title" data-sk="sec_passes"></h3><div id="sk-detail"></div><div id="sk-list"></div></div>' +
       '<div class="sk-sec"><h3 data-sk="sec_export"></h3>' +
         '<div class="sk-grid">' +
           '<span data-sk="ex_fmt"></span><select id="sk-ex-fmt"><option value="gif">GIF</option><option value="mp4">MP4</option><option value="webm">WebM</option></select>' +
@@ -878,12 +1234,15 @@ function buildUI(){
     if(!mrOk(m)){ const o = $('#sk-ex-fmt option[value="' + v + '"]'); if(o) o.disabled = true; }
   });
   $('#sk-play').addEventListener('click', () => { S.playing = !S.playing; syncPlayBtn(); });
-  $('#sk-slider').addEventListener('input', e => { S.simMs = S.t0 + (+e.target.value) * 1000; S.dirty = true; });
+  $('#sk-slider').addEventListener('input', e => { S.simMs = winStart() + (+e.target.value) * 1000; S.dirty = true; });
+  $('#sk-lhours').addEventListener('change', e => { LUNAR.hours = +e.target.value; LUNAR.data = null; LUNAR.events = []; LUNAR.selKey = null; if(S.layout === 'lunar') loadLunar(); });
+  $('#sk-lkind').addEventListener('change', e => { LUNAR.kind = e.target.value; buildCats(); updateListStates(); showDetail(); S.dirty = true; });
+  $('#sk-lreplay').addEventListener('change', e => { LUNAR.replay = e.target.checked; });
   $('#sk-speed').addEventListener('change', e => { S.speed = +e.target.value; });
   $('#sk-loop').addEventListener('change', e => { S.loop = e.target.checked; });
   $('#sk-now').addEventListener('click', reloadNow);
   $('#sk-reload').addEventListener('click', () => { S.hours = +$('#sk-hours').value; const v = $('#sk-start').value;
-    if(v){ const ms = Date.parse(v + ':00+08:00'); S.simMs = ms + PRE_MS; load(ms); } else reloadNow(); });
+    if(v){ const ms = Date.parse(v + ':00+08:00'); S.simMs = ms + PRE_MS; load(ms); if(S.layout === 'lunar') loadLunar(ms); } else reloadNow(); });
   $('#sk-hours').addEventListener('change', () => { S.hours = +$('#sk-hours').value; });
   $('#sk-layout').addEventListener('change', e => setLayout(e.target.value));
   $('#sk-cycle').addEventListener('click', cycleLayout);
@@ -946,7 +1305,7 @@ function init(){
 }
 window.TaipeiSky = {
   init, setView,
-  onLang(){ if(!READY) return; applyTexts(); buildCats(); buildList(); updateListStates(); S.dirty = true; },
+  onLang(){ if(!READY) return; applyTexts(); buildCats(); refreshList(); updateListStates(); S.dirty = true; },
   _state: S, _render: render,
 };
 })();

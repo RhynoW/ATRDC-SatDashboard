@@ -106,3 +106,30 @@ def api_taipei_sky():
         _SKY_CACHE.clear()
     _SKY_CACHE[key] = (now_m, data)
     return json_response(data, max_age=120)
+
+
+_LUNAR_CACHE: dict[tuple, tuple[float, dict]] = {}
+_LUNAR_TTL_S = 900
+
+
+@bp.get("/api/taipei_lunar")
+def api_taipei_lunar():
+    """台北衛星凌月事件預報（含畫面座標軌跡）；ts 缺省為現在（取整 10 分）。"""
+    from ..physics.lunar_transit import find_lunar_transits
+    ts = _parse_ts()
+    ts = ts.replace(minute=ts.minute - ts.minute % 10, second=0, microsecond=0)
+    hours = parse_float_arg(request.args, "hours", 24.0, 1.0, 48.0)
+    margin = parse_float_arg(request.args, "near", 0.30, 0.0, 1.0)
+    cats = tuple(sorted(c for c in request.args.get("cats", "").split(",") if c.strip()))
+    key = (ts.isoformat(), hours, margin, cats)
+    now_m = time.monotonic()
+    hit = _LUNAR_CACHE.get(key)
+    if hit and now_m - hit[0] < _LUNAR_TTL_S:
+        return json_response(hit[1], max_age=300)
+    t0 = time.monotonic()
+    data = find_lunar_transits(ts, hours=hours, near_margin_deg=margin, cats=list(cats) or None)
+    data["elapsed_sec"] = round(time.monotonic() - t0, 2)
+    if len(_LUNAR_CACHE) > 8:
+        _LUNAR_CACHE.clear()
+    _LUNAR_CACHE[key] = (now_m, data)
+    return json_response(data, max_age=300)

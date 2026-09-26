@@ -140,3 +140,7 @@ body.mode-sky #sky-view{display:flex}
 .sk-pe{color:#4CAF50;width:34px;text-align:right}
 #sk-ex-info{font-size:10.5px;color:#8b949e;margin-top:5px;word-break:break-all;min-height:14px}
 @media (max-width:900px){#sky-view{flex-direction:column}#sk-side{width:auto;max-height:45%}}
+.sk-pt.tm{color:#c9d1d9;font-variant-numeric:tabular-nums;min-width:82px}
+.sk-bd{font-size:9.5px;padding:1px 6px;border-radius:9px;border:1px solid #30404d;color:#9fb3c8;white-space:nowrap}
+.sk-bd.transit{color:#0a0e17;background:#ffd24a;border-color:#ffd24a;font-weight:bold}
+#sk-lunar-opts select{max-width:120px}

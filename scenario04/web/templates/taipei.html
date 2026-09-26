@@ -11,10 +11,25 @@
   function _css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
   function _js(src,ok,fail){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail||function(){};document.head.appendChild(s);}
   function _err(m){var el=document.getElementById('map-loading');if(el){el.textContent=m;el.style.color='#f44336';}}
-  _css('/cesium/Widgets/widgets.css');
-  _js("{{ url_for('static', filename='js/taipei.js') }}",function(){
+  var _mapStarted=false;
+  // 地圖（Cesium）改為首次切到「地圖」檢視時才載入；天球檢視完全不需 Cesium
+  window.loadMapOnce=function(){
+    if(_mapStarted||typeof startApp!=='function') return;
+    _mapStarted=true;
+    _css('/cesium/Widgets/widgets.css');
     _js('/cesium/Cesium.js',function(){startApp();},function(){_err('本機 Cesium 未安裝，請將 CesiumJS 解壓至 data/cesium/');});
-  },function(){_err('前端腳本 taipei.js 載入失敗');});
+  };
+  var SKY_LIBS=[
+    "{{ url_for('static', filename='vendor/astronomy/astronomy.browser.min.js') }}",
+    "{{ url_for('static', filename='js/sky_catalog.js') }}",
+    "{{ url_for('static', filename='js/taipei_gif.js') }}",
+    "{{ url_for('static', filename='js/taipei_sky.js') }}"
+  ];
+  function _chain(i){
+    if(i>=SKY_LIBS.length){ if(window.TaipeiSky) window.TaipeiSky.init(); return; }
+    _js(SKY_LIBS[i],function(){_chain(i+1);},function(){var m=document.getElementById('sky-view');if(m)m.textContent='前端腳本載入失敗: '+SKY_LIBS[i];});
+  }
+  _js("{{ url_for('static', filename='js/taipei.js') }}",function(){_chain(0);},function(){_err('前端腳本 taipei.js 載入失敗');});
 }());
 </script>
 </head>
@@ -27,12 +42,17 @@
     <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
     <button type="button" class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
   </div>
-  <button class="tbtn" onclick="refreshAll()">&#8635; <span data-i18n="btn_refresh">更新</span></button>
+  <div id="view-switcher">
+    <button type="button" class="view-btn active" data-view="sky" onclick="TaipeiSky.setView('sky')">&#127756; <span data-i18n="view_sky">天球</span></button>
+    <button type="button" class="view-btn" data-view="map" onclick="TaipeiSky.setView('map')">&#128506; <span data-i18n="view_map">地圖</span></button>
+  </div>
+  <button class="tbtn map-only" onclick="refreshAll()">&#8635; <span data-i18n="btn_refresh">更新</span></button>
   <a class="tbtn" href="/starlink">&#127921; Starlink</a>
   <a class="tbtn" href="/story">&#128214; StoryMap</a>
   <a class="tbtn" href="/">&#8592; <span data-i18n="nav_home">返回主頁</span></a>
 </div>
 <div id="main">
+  <div id="sky-view"></div>
   <div id="panel">
     <div id="panel-header">
       <h2 data-i18n="panel_title">衛星分類覆蓋</h2>

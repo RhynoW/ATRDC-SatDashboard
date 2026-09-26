@@ -9,6 +9,7 @@
 const I18N = {
   zh: {
     doc_title: '台北覆蓋分析 — Cesium 2D',
+    view_sky: '天球', view_map: '地圖',
     header_title: '台北覆蓋分析 — 台北周邊 2,000 km 內的衛星通過',
     btn_refresh: '更新',
     nav_home: '返回主頁',
@@ -45,6 +46,7 @@ const I18N = {
   },
   ja: {
     doc_title: '台北カバレッジ分析 — Cesium 2D',
+    view_sky: '天球', view_map: '地図',
     header_title: '台北カバレッジ分析 — 台北から半径2,000 km圏内の衛星通過',
     btn_refresh: '更新',
     nav_home: 'ホームへ戻る',
@@ -81,6 +83,7 @@ const I18N = {
   },
   en: {
     doc_title: 'Taipei Coverage Analysis — Cesium 2D',
+    view_sky: 'Sky', view_map: 'Map',
     header_title: 'Taipei Coverage Analysis — Satellite Passes within 2,000 km of Taipei',
     btn_refresh: 'Refresh',
     nav_home: 'Home',
@@ -145,6 +148,7 @@ function setLang(lang){
   });
 
   if(_refreshUI) _refreshUI();
+  if(window.TaipeiSky) window.TaipeiSky.onLang();
 }
 
 function startApp(){
@@ -622,6 +626,13 @@ _refreshUI=function(){
   _tlUpdateDisplay();
   if(activePanelTab==='overview') renderOverview();
   else renderPasses();
+};
+
+// 天球／地圖檢視切換：地圖隱藏時暫停 Cesium 渲染，顯示時重設尺寸
+window.taipeiMapVisible=function(v){
+  if(!viewer) return;
+  viewer.useDefaultRenderLoop=v;
+  if(v) setTimeout(function(){viewer.resize();},0);
 };
 
 } // end startApp

@@ -12,6 +12,7 @@ from ..physics.coverage import (
     compute_taipei_coverage_at,
     predict_taipei_passes_at,
 )
+from ..physics.skypass import predict_taipei_sky_passes
 from ..services.passes_service import passes_service
 from . import json_response, parse_float_arg
 
@@ -76,3 +77,32 @@ def api_taipei_passes_at():
     data  = predict_taipei_passes_at(ts, hours=hours, step_sec=step, mask_deg=mask)
     data["elapsed_sec"] = round(time.monotonic() - t0, 2)
     return json_response(data, max_age=300)
+
+
+_SKY_CACHE: dict[tuple, tuple[float, dict]] = {}
+_SKY_TTL_S = 300
+
+
+@bp.get("/api/taipei_sky")
+def api_taipei_sky():
+    """天球視角過頂軌跡（方位角／仰角）；ts 缺省為現在（取整分鐘）。"""
+    ts    = _parse_ts().replace(second=0, microsecond=0)
+    hours = parse_float_arg(request.args, "hours",       2.0, 0.5, 6.0)
+    step  = parse_float_arg(request.args, "step_sec",   20.0, 10.0, 120.0)
+    mask  = parse_float_arg(request.args, "mask_deg", settings.MASK_DEG, 0.0, 85.0)
+    min_el = parse_float_arg(request.args, "min_el",    10.0, 0.0, 85.0)
+    per_cat = int(parse_float_arg(request.args, "max_per_cat", 25, 1, 60))
+
+    key = (ts.isoformat(), hours, step, mask, min_el, per_cat)
+    now_m = time.monotonic()
+    hit = _SKY_CACHE.get(key)
+    if hit and now_m - hit[0] < _SKY_TTL_S:
+        return json_response(hit[1], max_age=120)
+    t0 = time.monotonic()
+    data = predict_taipei_sky_passes(ts, hours=hours, step_sec=step, mask_deg=mask,
+                                     min_el=min_el, max_per_cat=per_cat)
+    data["elapsed_sec"] = round(time.monotonic() - t0, 2)
+    if len(_SKY_CACHE) > 16:
+        _SKY_CACHE.clear()
+    _SKY_CACHE[key] = (now_m, data)
+    return json_response(data, max_age=120)

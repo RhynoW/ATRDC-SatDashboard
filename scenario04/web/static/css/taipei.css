@@ -13,7 +13,7 @@ html,body{height:100%;overflow:hidden;background:#0a0e17;color:#c9d1d9;font-fami
 .lang-btn{padding:4px 8px;background:#162032;color:#8b949e;border:1px solid #1e3a5f;border-radius:4px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
 .lang-btn:hover{background:#1e3a5f;color:#c9d1d9}
 .lang-btn.active{background:#58a6ff;color:#0a0e17;border-color:#58a6ff}
-#main{display:flex;height:calc(100vh - 44px)}
+#main{display:flex;height:calc(100vh - 44px);position:relative}
 #panel{width:290px;background:#0d1117;border-right:1px solid #21262d;
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 #panel-header{padding:8px 12px 5px;border-bottom:1px solid #21262d;flex-shrink:0}
@@ -87,3 +87,56 @@ html,body{height:100%;overflow:hidden;background:#0a0e17;color:#c9d1d9;font-fami
 .tl-badge.hist{color:#FF9800;background:rgba(255,152,0,.15)}
 .tl-badge.future{color:#58a6ff;background:rgba(88,166,255,.15)}
 #tl-loading{font-size:10px;color:#484f58}
+
+/* ── 檢視切換（天球／地圖）與天球視角 ─────────────────────────────────────── */
+#view-switcher{display:flex;gap:4px}
+.view-btn{padding:4px 10px;background:#162032;color:#8b949e;border:1px solid #1e3a5f;border-radius:4px;
+  font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.view-btn:hover{background:#1e3a5f;color:#c9d1d9}
+.view-btn.active{background:#58a6ff;color:#0a0e17;border-color:#58a6ff}
+body.mode-sky .map-only{display:none}
+#sky-view{position:absolute;inset:0;display:none;background:#0a0e17;z-index:40}
+body.mode-sky #sky-view{display:flex}
+#sk-stage{flex:1;display:flex;flex-direction:column;min-width:0}
+#sk-cvwrap{flex:1;position:relative;min-height:0}
+#sk-canvas{position:absolute;inset:0;display:block}
+#sk-msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(10,14,23,.78);color:#58a6ff;font-size:13px;letter-spacing:1px;text-align:center;padding:20px}
+#sk-ctl{display:flex;align-items:center;gap:10px;padding:7px 12px;background:#0d1117;border-top:1px solid #21262d;font-size:11px;color:#8b949e}
+#sk-ctl label{display:flex;align-items:center;gap:4px;white-space:nowrap}
+#sk-slider{flex:1;min-width:120px;accent-color:#58a6ff;cursor:pointer}
+#sk-time{color:#e6edf3;font-weight:bold;min-width:150px;text-align:center}
+#sk-play,.sk-btn{padding:4px 12px;background:#162032;border:1px solid #1e3a5f;color:#58a6ff;border-radius:4px;
+  font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap}
+#sk-play{min-width:78px}
+#sk-play:hover,.sk-btn:hover{background:#1e3a5f}
+.sk-btn:disabled{opacity:.45;cursor:default}
+.sk-primary{background:#1a3a5c;border-color:#58a6ff}
+#sk-side{width:310px;flex-shrink:0;background:#0d1117;border-left:1px solid #21262d;display:flex;flex-direction:column;overflow-y:auto}
+#sk-side select,#sk-side input[type=datetime-local],#sk-ctl select{background:#111827;color:#c9d1d9;border:1px solid #30363d;border-radius:3px;font-size:11px;padding:2px 4px;font-family:inherit}
+.sk-sec{padding:8px 12px;border-bottom:1px solid #21262d;font-size:11px;color:#8b949e}
+.sk-sec h3{font-size:11px;color:#58a6ff;margin-bottom:6px;letter-spacing:.5px}
+.sk-grow{display:flex;flex-direction:column;min-height:170px;flex:1}
+.sk-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
+.sk-checks{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:4px}
+.sk-checks label{display:flex;align-items:center;gap:4px;color:#c9d1d9;cursor:pointer}
+.sk-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;margin-bottom:6px}
+#sk-cats{display:flex;flex-wrap:wrap;gap:5px}
+.sk-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;background:#111827;border:1px solid #30404d;
+  color:#c9d1d9;border-radius:11px;font-size:10.5px;font-family:inherit;cursor:pointer}
+.sk-chip i{font-style:normal;color:#8b949e}
+.sk-chip.off{opacity:.38}
+.sk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+#sk-detail{font-size:10.5px;color:#c9d1d9;padding:4px 0 6px;line-height:1.5;min-height:34px}
+#sk-list{flex:1;overflow-y:auto;min-height:100px;max-height:340px;border:1px solid #161b22;border-radius:3px}
+.sk-pass{display:flex;align-items:center;gap:6px;padding:4px 7px;border-bottom:1px solid #161b22;cursor:pointer;font-size:10.5px}
+.sk-pass:hover{background:#161b22}
+.sk-pass.sel{background:#1a3a5c}
+.sk-pass.active .sk-pn{color:#e6edf3;font-weight:bold}
+.sk-pass.done{opacity:.45}
+.sk-pass.hidden{display:none}
+.sk-pn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9aa5b1}
+.sk-pt{color:#8b949e}
+.sk-pe{color:#4CAF50;width:34px;text-align:right}
+#sk-ex-info{font-size:10.5px;color:#8b949e;margin-top:5px;word-break:break-all;min-height:14px}
+@media (max-width:900px){#sky-view{flex-direction:column}#sk-side{width:auto;max-height:45%}}

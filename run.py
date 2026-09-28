@@ -86,5 +86,9 @@ if __name__ == "__main__":
     _debug = True
     if not _debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         get_cache().start(get_sat_index, interval=60)
+        # 離軌 Starlink 再入預測（分段 M/A 校準）背景批次：每 6 小時一次，結果寫 DB/deorbit_forecast.json
+        if os.getenv("DEORBIT_FORECAST_DISABLE", "").lower() not in ("1", "true", "yes"):
+            from scenario04.services.deorbit_forecast import deorbit_forecast_service
+            deorbit_forecast_service.start()
     # threaded=True：/api/broadcast/stream 為長連線 SSE，須並行處理其餘請求，否則會卡住整個開發伺服器
     app.run(host=settings.HOST, port=settings.PORT, debug=_debug, threaded=True)

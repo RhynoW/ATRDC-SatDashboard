@@ -45,6 +45,7 @@ _kt_cache: dict[str, Any] = {}
 _kt_cached_at: float = 0.0
 
 # 離軌候選判定口徑（與 starlink_lifecycle story 舊版靜態表格一致，改為即時查詢）
+REENTRY_ALT_KM = 80.0         # 線性粗估之「再入」高度（與分段校準 stop_alt_km 一致）
 DEORBIT_FRESH_DAYS = 5        # 近 N 天仍有 TLE（代表尚未失去追蹤/尚未確認再入）
 DEORBIT_DA30_KM = 40.0        # 近 30 天半長軸下降門檻（km）
 DEORBIT_ALT_MAX_KM = 480.0    # 高度低於工作殼層下緣
@@ -176,10 +177,10 @@ def our_starlink_counts() -> dict[str, Any]:
 def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
     """近期仍有 TLE、半長軸快速下降的 Starlink（離軌候選），依目前高度由低到高排序。
 
-    「估計剩餘天數」為粗略線性外推（以近 7 天平均每日下降速率、外推目前高度歸零所需天數），
-    未考慮阻力隨高度下降而指數增強的真實物理，因此對真正接近再入者會**低估**剩餘天數
-    （即實際會比外推值更快發生）；如需較可靠的個別衛星估計，另呼叫
-    estimate_reentry_detail() 用 SGP4 逐圈外推近地點高度。
+    「估計剩餘天數」為粗略線性外推（以近 7 天平均每日下降速率、外推目前高度降到 80 km 所需天數），
+    未考慮阻力隨高度下降而指數增強，因此會**高估**剩餘天數（實際再入更早；2026-09 以 38 顆
+    Starlink 官方 TIP 回測，舊版「外推到高度歸零」高估 350–960 小時）。較可靠的預測為
+    services.deorbit_forecast 之分段 M/A 校準（背景批次快取；「詳細」按鈕即時計算）。
     """
     db = resolve_db()
     if db is None:
@@ -254,7 +255,8 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
             da7 = float(r["da_7d_km"])
             alt = float(r["alt_km"])
             daily_rate = da7 / 7.0  # 負值＝下降
-            est_days = round(alt / abs(daily_rate), 1) if daily_rate < -0.05 else None
+            est_days = (round(max(alt - REENTRY_ALT_KM, 0.0) / abs(daily_rate), 1)
+                        if daily_rate < -0.05 else None)
             nid = int(r["norad_id"])
             items.append({
                 "norad_id": nid,
@@ -275,9 +277,9 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
             "total_matching": total_n,
             "shown": len(items),
             "items": items,
-            "method": "est_days_to_reentry_rough 為近 7 天平均下降速率之線性外推歸零天數，"
-                      "未計入阻力隨高度指數增強，對接近再入者會低估剩餘天數（實際更快）；"
-                      "僅供排序參考，個別精確估計請用「詳細」按鈕（SGP4 逐圈外推近地點）。",
+            "method": "est_days_to_reentry_rough 為近 7 天平均下降速率線性外推至 80 km 之天數，"
+                      "未計入阻力隨高度指數增強，會高估剩餘天數（實際再入更早），僅供排序參考；"
+                      "較可靠之再入預測見 seg 欄（分段 M/A 校準，背景批次每 6 小時更新）。",
         }
     except Exception as exc:  # noqa: BLE001
         logger.warning("list_deorbiting_starlinks 失敗：%s", exc)
@@ -455,8 +457,9 @@ def count_v3_candidates(era_start: str = V3_ERA_START) -> dict[str, Any]:
         return {"error": str(exc)}
 
 
-def estimate_reentry_detail(norad_id: int, days: float = 10.0) -> dict[str, Any]:
-    """單顆衛星之零階再入估算（SGP4 逐圈外推近地點高度），供離軌清單「詳細」按鈕使用。"""
+def estimate_reentry_detail(norad_id: int, days: float = 10.0, segmented: bool = True) -> dict[str, Any]:
+    """單顆衛星再入估算，供離軌清單「詳細」按鈕使用：SGP4 逐圈外推近地點（零階，對照用）
+    ＋ segmented=True 時附分段 M/A 校準結果（主要預測，即時計算約 2–6 s）。"""
     db = resolve_db()
     if db is None:
         return {"error": "資料庫不存在"}
@@ -478,6 +481,13 @@ def estimate_reentry_detail(norad_id: int, days: float = 10.0) -> dict[str, Any]
         est = reentry_estimate(line1, line2, days=days)
         est["norad_id"] = norad_id
         est["name"] = _starlink_name(norad_id) or f"NORAD-{norad_id}"
+        if segmented:
+            from ..services.deorbit_forecast import forecast_norad
+            seg = forecast_norad(norad_id)
+            seg.pop("stats", None)
+            for k in ("reentry_unix", "early_unix", "late_unix"):
+                seg.pop(k, None)
+            est["segmented"] = seg
         return est
     except Exception as exc:  # noqa: BLE001
         logger.warning("estimate_reentry_detail(%s) 失敗：%s", norad_id, exc)

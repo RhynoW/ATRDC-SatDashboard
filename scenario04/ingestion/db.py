@@ -78,6 +78,37 @@ def _download_slim_db(dest: Path) -> Path | None:
         return None
 
 
+SW_ALL_DATASET_URL = "https://huggingface.co/datasets/RhynoWu/satdashboard-db/resolve/main/SW-All.csv"
+_SW_FAIL_AT: float = 0.0
+
+
+def ensure_space_weather() -> Path | None:
+    """確保 settings.DB_DIR/SW-All.csv 存在（CelesTrak 太空天氣，每日管線更新後隨 Dataset 發布）；
+    缺檔時自 Dataset 下載一次。失敗後 1 小時內不重試，呼叫端則退回 pymsis 內建檔。"""
+    global _SW_FAIL_AT
+    dest = settings.DB_DIR / "SW-All.csv"
+    if dest.exists():
+        return dest
+    if time.time() - _SW_FAIL_AT < 3600:
+        return None
+    import requests
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        r = requests.get(SW_ALL_DATASET_URL, timeout=(10, 120))
+        r.raise_for_status()
+        if not r.text.startswith("DATE,"):
+            raise ValueError("SW-All.csv 內容格式不符")
+        tmp = dest.with_suffix(".part")
+        tmp.write_text(r.text, encoding="utf-8")
+        tmp.replace(dest)
+        logger.warning("太空天氣檔自 Dataset 下載完成：%s（%.1f MB）", dest, dest.stat().st_size / 1e6)
+        return dest
+    except Exception as exc:  # noqa: BLE001
+        _SW_FAIL_AT = time.time()
+        logger.error("太空天氣檔下載失敗（改用 pymsis 內建檔）：%s", exc)
+        return None
+
+
 def check_db_freshness(db_path: Path | None = None,
                        warn_days: float | None = None) -> dict[str, Any]:
     """檢查資料庫 TLE 最新 epoch 之資料齡；過期則以 WARNING 告警（啟動時呼叫）。

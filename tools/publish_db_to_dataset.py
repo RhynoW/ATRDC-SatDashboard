@@ -16,6 +16,7 @@ DATASET = "RhynoWu/satdashboard-db"
 # 舊版與新版 i18n 都需要重啟才會拿到新 DB，缺一會讓其中一個 Space 資料卡在舊快照
 SPACES = ["RhynoWu/ATRDC-SatDashboard", "RhynoWu/ATRDC-SatDashboard-i18n"]
 DB = Path(__file__).resolve().parents[1] / "DB" / "space_db_slim.duckdb"
+SW = Path(__file__).resolve().parents[1] / "DB" / "SW-All.csv"   # tools/fetch_space_weather.py 每日更新
 
 
 def main() -> int:
@@ -27,6 +28,16 @@ def main() -> int:
     api.upload_file(path_or_fileobj=str(DB), path_in_repo="space_db_slim.duckdb",
                     repo_id=DATASET, repo_type="dataset",
                     commit_message=f"slim DB update ({DB.stat().st_size/1e6:.0f} MB)")
+    if SW.exists():
+        import time
+        age_d = (time.time() - SW.stat().st_mtime) / 86400
+        if age_d > 2:
+            print(f"[WARN] SW-All.csv 已 {age_d:.1f} 天未更新（先執行 tools/fetch_space_weather.py）")
+        print(f"上傳 SW-All.csv（{SW.stat().st_size/1e6:.1f} MB）→ {DATASET} …")
+        api.upload_file(path_or_fileobj=str(SW), path_in_repo="SW-All.csv",
+                        repo_id=DATASET, repo_type="dataset", commit_message="space weather SW-All.csv update")
+    else:
+        print("[WARN] 找不到 DB/SW-All.csv：Space 將退回 pymsis 內建太空天氣檔（可能過時）")
     print("壓縮 Dataset 歷史（只留最新版，控制儲存額度）…")
     api.super_squash_history(repo_id=DATASET, repo_type="dataset")
     for space in SPACES:

@@ -30,7 +30,25 @@ def api_starlink_deorbiting():
         limit = max(1, min(int(request.args.get("limit", 60)), 300))
     except (TypeError, ValueError):
         limit = 60
-    return json_response(list_deorbiting_starlinks(limit=limit), max_age=300)
+    data = list_deorbiting_starlinks(limit=limit)
+    if not data.get("error"):
+        from ..services.deorbit_forecast import deorbit_forecast_service
+        fc = deorbit_forecast_service.get() or {}
+        fmap = fc.get("forecasts", {})
+        for it in data.get("items", []):
+            it["seg"] = fmap.get(str(it["norad_id"]))
+        data["forecast"] = {k: fc.get(k) for k in ("generated_at", "method", "window_rule", "n")} if fc else None
+    return json_response(data, max_age=300)
+
+
+@bp.get("/api/starlink/deorbit_forecast")
+def api_starlink_deorbit_forecast():
+    """背景批次之分段 M/A 校準再入預測快取（每 6 小時更新；尚未算出時回 202）。"""
+    from ..services.deorbit_forecast import deorbit_forecast_service
+    fc = deorbit_forecast_service.get()
+    if fc is None:
+        return json_response({"status": "computing"}), 202
+    return json_response(fc, max_age=600)
 
 
 @bp.get("/api/starlink/v3_census")

@@ -258,8 +258,65 @@ _PRESETS: dict[tuple[int, int], dict] = {
     },
 }
 
-# 靜態歷史資料 → 模組級快取（key: (primary, secondary)）
-_SCENE_CACHE: dict[tuple[int, int], dict] = {}
+# 同一配對的其他事件時段（/rpo?primary=&secondary=&variant=<key>）；未帶 variant 時沿用 _PRESETS。
+_PRESET_VARIANTS: dict[tuple[int, int], dict[str, dict]] = {
+    (69673, 67689): {
+        "cycle2": {
+            "title": "神龍第4次任務 — Object H 第二次部署與回收（69673 × 67689，2026-08-31 ～ 09-13）",
+            "focus_center": "2026-09-06T12:00Z",
+            "focus_hours": 204.0,
+            "fine_step_s": 600.0,
+            # 69673 於 09-07 06:48 ～ 09-09 11:38 之 10 筆官方 elset 半長軸驟低 18 km、平近點角領先約 20°，
+            # 10 小時後又回到與太空飛機共位——物理上不可能，研判為編目錯配；剔除後由 09-06 elset 外推跨越。
+            "exclude_epochs": {69673: [("2026-09-07T00:00:00Z", "2026-09-09T18:00:00Z")]},
+            "phases": [
+                {"from": "2026-08-31T00:00Z", "to": "2026-09-01T12:00Z", "label": "再部署", "color": "#FF5C4E"},
+                {"from": "2026-09-01T12:00Z", "to": "2026-09-06T23:59Z", "label": "離開", "color": "#F2A73B"},
+                {"from": "2026-09-07T00:00Z", "to": "2026-09-09T18:00Z", "label": "錯配 elset 已剔除", "color": "#6B7280"},
+                {"from": "2026-09-09T18:00Z", "to": "2026-09-12T23:59Z", "label": "近接", "color": "#35C6F4"},
+                {"from": "2026-09-13T00:00Z", "to": "2026-09-14T23:59Z", "label": "再回收", "color": "#FF5C4E"},
+            ],
+            "subtitle": (
+                "7 月中旬首次回收後，H 與太空飛機 67689 的官方軌道根數維持完全相同約七週；"
+                "2026-08-31 兩者再度分離，09-05～07 拉開至約 1,200–1,300 km，09-09 晚間已折返至約 3 km 內（折返時點落在錯配資料空窗中，無法精確判定），"
+                "09-13 起軌道根數再度完全相同——與美國太空軍資料（McDowell 2026-09-23 引述）之「第二次抓回」一致。"
+                "「根數完全相同」代表編目上已無法分辨兩物體，與併體判讀一致，但非實體捕獲之獨立證據。"
+                "Pc 為 Chan 首階排序代理，非作業級數值。"
+            ),
+            "events": [
+                {"t": "2026-08-31T12:00Z", "label": "RE-DEPLOY"},
+                {"t": "2026-09-13T00:00Z", "label": "TCA 再回收 ~0 km"},
+            ],
+            "timeline": [
+                {"d": "07-14 ~ 08-30", "t": "<b>共位</b>：首次回收後，H 與太空飛機之官方 elset 根數逐筆完全相同（距離 0 km）。"},
+                {"d": "2026-08-31", "t": "<b>再部署</b>：兩者根數分開，當日距離由 0 升至約 230 km。"},
+                {"d": "09-01 ~ 09-07", "t": "<b>離開</b>：距離逐日增加，09-05～07 約 1,200–1,300 km。"},
+                {"d": "09-07 ~ 09-09", "t": "<b>錯配 elset（已剔除）</b>：H 的 10 筆官方 elset 半長軸驟低 18 km、相位領先約 20°，"
+                                             "10 小時後又回到共位，物理上不可能；研判為編目錯配（同次發射另有新編目、尚無軌道之 Object J，關聯未證實）。"
+                                             "剔除後本段畫面由時間上最近之 elset 外推，距離僅供示意，H 實際折返時點無法判定。"},
+                {"d": "09-09 ~ 09-12", "t": "<b>返回</b>：09-09 21:36 首筆恢復正常之 elset 時 H 已在太空飛機約 3 km 內，09-10 最近約 0.2 km，其後維持約 0–8 km 近接。"},
+                {"d": "09-13 起", "t": "<b>再回收</b>：兩者根數再度完全相同（0 km），與首次回收後之樣貌一致。"},
+            ],
+        },
+    },
+}
+
+
+def preset_for(primary: int, secondary: int, variant: str | None = None) -> dict:
+    """取案例設定：有 variant 且存在時用變體，否則用基本案例（未知配對回傳空 dict）。"""
+    if variant:
+        v = _PRESET_VARIANTS.get((int(primary), int(secondary)), {}).get(variant)
+        if v:
+            return v
+    return _PRESETS.get((int(primary), int(secondary)), {})
+
+
+def valid_variant(primary: int, secondary: int, variant: str | None) -> str | None:
+    return variant if variant and variant in _PRESET_VARIANTS.get((int(primary), int(secondary)), {}) else None
+
+
+# 靜態歷史資料 → 模組級快取（key: (primary, secondary, variant)）
+_SCENE_CACHE: dict[tuple, dict] = {}
 
 
 def _iso(t: datetime) -> str:
@@ -306,7 +363,7 @@ def _satrec_from_elements(nid, epoch_dt: datetime, ecc, incl_deg, raan_deg,
     return sat
 
 
-def _load_recs(con: duckdb.DuckDBPyConnection, nid: int, window=None):
+def _load_recs(con: duckdb.DuckDBPyConnection, nid: int, window=None, exclude=None):
     """回傳 (recs, ep_ts, name, df) 或 (None, ...)。
 
     window=(t0, t1)（ISO 字串）時僅載入該 epoch 區間之 TLE——供長壽命衛星
@@ -345,6 +402,13 @@ def _load_recs(con: duckdb.DuckDBPyConnection, nid: int, window=None):
         return None, None, None, None
     df["epoch_utc"] = pd.to_datetime(df["epoch_utc"], utc=True)
     df = df.drop_duplicates("epoch_utc").reset_index(drop=True)
+    # 已知編目錯配之 elset 區段（exclude=[(t0, t1), …]）：剔除後由前一筆 elset 外推跨越該段
+    for t0, t1 in exclude or []:
+        a, b = pd.Timestamp(t0), pd.Timestamp(t1)
+        df = df[~((df["epoch_utc"] >= a) & (df["epoch_utc"] <= b))]
+    df = df.reset_index(drop=True)
+    if df.empty:
+        return None, None, None, None
 
     name = None
     if "object_name" in cols:
@@ -442,6 +506,7 @@ def compute_rpo_scene(
     fine_step_s: float = 60.0,
     max_coarse_pts: int = 1500,
     db=None,
+    variant: str | None = None,
 ) -> dict:
     """計算兩顆衛星之相對接近 3D 場景資料（含 Chan Pc）。
 
@@ -452,16 +517,17 @@ def compute_rpo_scene(
     if path is None:
         raise RuntimeError("找不到資料庫（resolve_db 回傳 None）")
 
-    preset = _PRESETS.get((int(primary), int(secondary)), {})
+    preset = preset_for(primary, secondary, variant)
     window = preset.get("window")   # 已知案例可限定 TLE 載入區間
+    excl = preset.get("exclude_epochs", {})
     # 已知案例可覆寫聚焦窗／步長：GEO 定點保持迴圈（地固座標系）需數日拖尾才看得出
     # 「同向操作」與東西換位，LEO 預設 ±12 h / 60 s 對 GEO 太短。
     focus_hours = float(preset.get("focus_hours", focus_hours))
     fine_step_s = float(preset.get("fine_step_s", fine_step_s))
     con = _connect_ro(path)
     try:
-        Precs, Pep, pname, Pdf = _load_recs(con, primary, window)
-        Srecs, Sep, sname, Sdf = _load_recs(con, secondary, window)
+        Precs, Pep, pname, Pdf = _load_recs(con, primary, window, excl.get(int(primary)))
+        Srecs, Sep, sname, Sdf = _load_recs(con, secondary, window, excl.get(int(secondary)))
     finally:
         con.close()
 
@@ -587,23 +653,25 @@ def compute_rpo_scene(
     return out
 
 
-def _cache_file(primary: int, secondary: int):
-    return settings.DB_DIR / f"rpo_scene_{int(primary)}_{int(secondary)}.json"
+def _cache_file(primary: int, secondary: int, variant: str | None = None):
+    suffix = f"_{variant}" if variant else ""
+    return settings.DB_DIR / f"rpo_scene_{int(primary)}_{int(secondary)}{suffix}.json"
 
 
 def get_rpo_scene(primary: int = 58573, secondary: int = 59884,
-                  refresh: bool = False) -> dict:
+                  refresh: bool = False, variant: str | None = None) -> dict:
     """帶記憶體＋檔案快取之場景取得。
 
     歷史 TLE 為靜態，且完整 archive（13 GB）可能被資料管線 write 鎖定；故一經算出即
-    落地為 JSON 檔（scenario04/DB/rpo_scene_<p>_<s>.json），之後直接由檔案供應，
+    落地為 JSON 檔（scenario04/DB/rpo_scene_<p>_<s>[_<variant>].json），之後直接由檔案供應，
     使 3D 展示與 archive 鎖狀態解耦。refresh=True 時強制重算並覆寫。
     """
-    key = (int(primary), int(secondary))
+    variant = valid_variant(primary, secondary, variant)
+    key = (int(primary), int(secondary), variant)
     if not refresh and key in _SCENE_CACHE:
         return _SCENE_CACHE[key]
 
-    cf = _cache_file(primary, secondary)
+    cf = _cache_file(primary, secondary, variant)
     if not refresh and cf.exists():
         try:
             data = json.loads(cf.read_text(encoding="utf-8"))
@@ -612,7 +680,8 @@ def get_rpo_scene(primary: int = 58573, secondary: int = 59884,
         except Exception:
             logger.warning("RPO 場景快取讀取失敗、改為重算：%s", cf)
 
-    data = compute_rpo_scene(primary, secondary)
+    data = compute_rpo_scene(primary, secondary, variant=variant)
+    data.setdefault("meta", {})["variant"] = variant
     _SCENE_CACHE[key] = data
     try:
         cf.parent.mkdir(parents=True, exist_ok=True)

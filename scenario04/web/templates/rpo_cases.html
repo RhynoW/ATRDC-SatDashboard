@@ -86,21 +86,30 @@ const RPO_I18N = {
     btn_replay: "▶ 回放",
     method_note: "方法學：兩物體各自選取可取得的最近 elset，使用 SGP4 傳播至共同 epoch；已知案例載入預設\n     時間窗與事件標註。GEO 案例啟用「COMSPOC 模式」後，可檢視地固座標系下的定點保持軌跡。",
     featured_html: `
-    <h2>特寫：神龍太空飛機（第 4 次任務）× Object H — 部署、訪問與回收全程回放</h2>
+    <h2>特寫：神龍太空飛機（第 4 次任務）× Object H — 三個月內兩度部署與回收</h2>
     <div class="ids">primary 69673（OBJECT H，2026-024H）× secondary 67689（PRC TEST SPACECRAFT 4，2026-024A）</div>
     <p><b>背景</b> — 中國第 4 架可重複使用試驗太空飛機（NORAD 67689，2026-024A，2026-02-07
        酒泉發射，西方稱 Shenlong「神龍」）於 605 km / 49.99° 軌道運作。2026-06-22 釋放一顆
        小型衛星 Object H（NORAD 69673，2026-024H）。H 隨後機動離開、前往「上一次任務（2023-195）
        釋放的 Object G（59884）」繞行偵察，再折返太空飛機並於 7 月中旬被回收——
        美國第 18 太空防禦中隊（18 SDS）與 LeoLabs 均作此評估，路透社 2026-08 報導即此事件。
-       本案例以 Space-Track 公開 TLE 逐日 SGP4 重建，時序與 LeoLabs 完全一致。</p>
+       本案例以 Space-Track 公開 TLE 逐日 SGP4 重建，時序與 LeoLabs 完全一致。
+       <b>第二次循環</b>：2026-08-31 H 再度分離，約兩週後的 09-13 再度與太空飛機共位——美國太空軍資料（McDowell 2026-09-23 引述）稱之為「第二次抓回」。約 12 週內兩度釋放並收回同一枚小衛星，中方未說明其用途。</p>
     <h3>逐段時序（回放時對照畫面右側時間軸）</h3>
     <div class="tl">
       <div class="tlrow"><div class="d">2026-06-22</div><div><b>部署</b>：H 自太空飛機釋放，兩者相距僅 ≈0.2 km、近乎共位。</div></div>
       <div class="tlrow"><div class="d">06-24 ~ 07-06</div><div><b>離開</b>：H 沿軌道漸行漸遠，前往訪問 Object G（H–太空飛機距離升至約 1,000 km）。</div></div>
       <div class="tlrow"><div class="d">07-08 ~ 07-11</div><div><b>返回</b>：訪 G 結束後折返，H–太空飛機 722 → 5 km——逆轉自然漂移需要推力，是「受控接近」的直接證據。</div></div>
       <div class="tlrow"><div class="d">07-12 ~ 07-14</div><div><b>回收</b>：兩者距離 ≈0 km，地面感測器已無法分辨；18 SDS 評估 H 已被太空飛機收回。</div></div>
-      <div class="tlrow"><div class="d">07-14 之後</div><div><b>共位</b>：編目上 H 與太空飛機維持近乎相同軌道（≈0 km）。</div></div>
+      <div class="tlrow"><div class="d">07-14 ~ 08-30</div><div><b>共位</b>：編目上 H 與太空飛機的軌道根數逐筆完全相同（0 km），約七週。</div></div>
+    </div>
+    <h3>第二次循環（回放請按下方「第二次循環」按鈕）</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-08-31</div><div><b>再部署</b>：兩者根數分開，當日距離由 0 升至約 230 km。</div></div>
+      <div class="tlrow"><div class="d">09-01 ~ 09-07</div><div><b>離開</b>：距離逐日增加，09-05～07 約 1,200–1,300 km。</div></div>
+      <div class="tlrow"><div class="d">09-07 ~ 09-09</div><div><b>資料空窗</b>：H 有 10 筆官方 elset 半長軸驟低 18 km、相位領先約 20°，10 小時後又回到共位——物理上不可能，研判為編目錯配，已剔除；H 實際折返時點無法判定。</div></div>
+      <div class="tlrow"><div class="d">09-09 ~ 09-12</div><div><b>返回近接</b>：資料恢復時 H 已在太空飛機約 3 km 內，09-10 最近約 0.2 km。</div></div>
+      <div class="tlrow"><div class="d">09-13 起</div><div><b>再回收</b>：軌道根數再度完全相同（0 km）。「根數相同」代表編目上已無法分辨兩物體，與併體判讀一致，但不是實體捕獲的獨立證據。</div></div>
     </div>
     <div class="howto"><b>怎麼看回放</b>：
       ① 右側浮動「相對軌跡投影」視窗是主線索：紅點沿粗趨勢線移動，靠向原點＝接近、貼原點＝回收；
@@ -110,6 +119,7 @@ const RPO_I18N = {
       ⑤ 3σ 橢球代表 TLE 級不確定度——次公里距離落在雜訊底，回收段請看趨勢而非單點數值；
       ⑥ 浮窗縱軸＝Δ高度、粗線＝單圈移動平均——衛星繞圈看不出的軌道升降在這裡一眼可見（可拖曳、⇄ 換中心）。</div>
     <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ 回放：部署與回收（69673 × 67689）</a>
+    <a class="btn" href="/rpo?primary=69673&secondary=67689&variant=cycle2">▶ 回放：第二次循環（08-31 部署 → 09-13 回收）</a>
     <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ 支線：H 訪問 Object G（69673 × 59884）</a>
     <div class="note">獨立重現：verify_shenlong_2026_rpo.py（SGP4 逐日最小距離）；報告章：期末_RPO案例_神龍_20260807。</div>`,
   },
@@ -121,7 +131,7 @@ const RPO_I18N = {
     btn_replay: "▶ 再生",
     method_note: "方法論：各物体について利用可能な直近のエレメントセット（elset）を選択し、SGP4で共通エポック\n     まで伝播します。既知事例では、プリセットされた時間窓とイベント注記を読み込みます。GEO事例では「COMSPOCモード」を有効にすると、地球固定座標系での定点保持軌跡を表示できます。",
     featured_html: `
-    <h2>特集：神龍宇宙往還機（第4回ミッション）× Object H — 分離・訪問・回収の全過程再現</h2>
+    <h2>特集：神龍宇宙往還機（第4回ミッション）× Object H — 3か月で2度の分離と回収</h2>
     <div class="ids">primary 69673（OBJECT H、2026-024H）× secondary 67689（PRC TEST SPACECRAFT 4、2026-024A）</div>
     <p><b>背景</b> — 中国の第4号再使用型実験宇宙往還機（NORAD 67689、2026-024A、2026-02-07に
        酒泉から打上げ、西側では「神龍（Shenlong）」と呼称）は高度605km／傾斜角49.99°の軌道で運用。
@@ -129,14 +139,23 @@ const RPO_I18N = {
        「前回ミッション（2023-195）で分離されたObject G（59884）」を周回・観測した後、宇宙往還機へ折り返し、
        7月中旬に回収されたと見られる——米宇宙軍第18宇宙防衛隊（18 SDS）とLeoLabsの双方がこの評価を示しており、
        ロイター通信も2026年8月にこの事案を報じている。本事例はSpace-Track公開TLEを用いた日次SGP4再構築であり、
-       時系列はLeoLabsの評価と完全に一致する。</p>
+       時系列はLeoLabsの評価と完全に一致する。
+       <b>第2サイクル</b>：2026-08-31にHが再び分離し、約2週間後の09-13に再び往還機と同一軌道に戻った——米宇宙軍のデータ（McDowell、2026-09-23）はこれを「2度目の回収」としている。約12週間で同じ小型衛星を2度分離・回収したことになるが、中国側は目的を説明していない。</p>
     <h3>段階別タイムライン（再生時、画面右側のタイムラインと対照）</h3>
     <div class="tl">
       <div class="tlrow"><div class="d">2026-06-22</div><div><b>分離</b>：Hが宇宙往還機から分離。両者の距離は≈0.2 kmのみでほぼ同一軌道。</div></div>
       <div class="tlrow"><div class="d">06-24 ～ 07-06</div><div><b>離脱</b>：Hが軌道上を徐々に離れ、Object Gへの訪問に向かう（H–往還機間の距離は約1,000 kmまで増加）。</div></div>
       <div class="tlrow"><div class="d">07-08 ～ 07-11</div><div><b>帰還</b>：Gへの訪問終了後に折り返し、H–往還機間の距離が722 → 5 kmに縮小——自然なドリフトを逆行させるには推力が必要であり、「制御された接近」の直接的証拠である。</div></div>
       <div class="tlrow"><div class="d">07-12 ～ 07-14</div><div><b>回収</b>：両者の距離は≈0 kmとなり、地上センサーではもはや区別不能。18 SDSはHが宇宙往還機に回収されたと評価。</div></div>
-      <div class="tlrow"><div class="d">07-14以降</div><div><b>同一軌道保持</b>：カタログ上、Hと宇宙往還機の軌道はほぼ同一（≈0 km）のまま維持。</div></div>
+      <div class="tlrow"><div class="d">07-14 ～ 08-30</div><div><b>同一軌道保持</b>：カタログ上、Hと往還機の軌道要素は1件ずつ完全に一致（0 km）、約7週間。</div></div>
+    </div>
+    <h3>第2サイクル（下の「第2サイクル」ボタンで再生）</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-08-31</div><div><b>再分離</b>：軌道要素が分かれ、当日の距離は0から約230 kmに。</div></div>
+      <div class="tlrow"><div class="d">09-01 ～ 09-07</div><div><b>離脱</b>：距離は日ごとに増加し、09-05～07に約1,200–1,300 km。</div></div>
+      <div class="tlrow"><div class="d">09-07 ～ 09-09</div><div><b>データ欠落</b>：Hの公式elset 10件で長半径が18 km急低下、位相が約20°先行し、10時間後に再び同一軌道へ——物理的に不可能なためカタログ上の誤関連と判断し除外。Hが実際に折り返した時刻は特定できない。</div></div>
+      <div class="tlrow"><div class="d">09-09 ～ 09-12</div><div><b>帰還・近接</b>：データ回復時点でHは往還機から約3 km以内、09-10に最接近約0.2 km。</div></div>
+      <div class="tlrow"><div class="d">09-13以降</div><div><b>再回収</b>：軌道要素が再び完全一致（0 km）。「要素の一致」はカタログ上2物体を区別できなくなったことを意味し、結合との解釈と整合するが、物理的な捕獲の独立した証拠ではない。</div></div>
     </div>
     <div class="howto"><b>再生の見方</b>：
       ①右側に浮かぶ「相対軌跡投影」ウィンドウが主な手がかりです。赤い点が太い傾向線に沿って動き、原点に近づく＝接近、原点に張り付く＝回収を意味します。
@@ -146,6 +165,7 @@ const RPO_I18N = {
       ⑤3σ楕円体はTLE級の不確かさを表します——サブキロメートルの距離は雑音の下限に位置するため、回収段階は個々の値ではなく傾向として読み取ってください。
       ⑥浮動ウィンドウの縦軸＝Δ高度、太線＝1周移動平均——衛星の周回運動だけでは分からない軌道の上昇・降下がここで一目で分かります（ドラッグ可能、⇄で基準衛星を切替）。</div>
     <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ 再生：分離と回収（69673 × 67689）</a>
+    <a class="btn" href="/rpo?primary=69673&secondary=67689&variant=cycle2">▶ 再生：第2サイクル（08-31 分離 → 09-13 回収）</a>
     <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ 支線：HによるObject G訪問（69673 × 59884）</a>
     <div class="note">独立再現：verify_shenlong_2026_rpo.py（SGP4による日次最小距離計算）；報告章：期末_RPO案例_神龍_20260807。</div>`,
   },
@@ -157,7 +177,7 @@ const RPO_I18N = {
     btn_replay: "▶ Replay",
     method_note: "Methodology: each object is propagated with SGP4 from its nearest available element set (elset) to a common epoch;\n     known cases load preset time windows and event annotations. For GEO cases, enable \"COMSPOC mode\" to view the station-keeping trajectory in an Earth-fixed frame.",
     featured_html: `
-    <h2>Featured: Shenlong Spaceplane (4th Mission) × Object H — Full Replay of Deployment, Approach and Recovery</h2>
+    <h2>Featured: Shenlong Spaceplane (4th Mission) × Object H — Two Deploy-and-Recover Cycles in Three Months</h2>
     <div class="ids">primary 69673 (OBJECT H, 2026-024H) × secondary 67689 (PRC TEST SPACECRAFT 4, 2026-024A)</div>
     <p><b>Background</b> — China's 4th reusable experimental spaceplane (NORAD 67689, 2026-024A, launched
        from Jiuquan on 2026-02-07, referred to in the West as "Shenlong") operates in a 605 km / 49.99°
@@ -166,14 +186,23 @@ const RPO_I18N = {
        (2023-195)," before returning to the spaceplane and apparently being recovered in mid-July —
        an assessment made by both U.S. Space Force's 18th Space Defense Squadron (18 SDS) and LeoLabs;
        this is the event reported by Reuters in August 2026. This case is reconstructed day-by-day with
-       SGP4 from public Space-Track TLEs, and the timeline matches LeoLabs' assessment exactly.</p>
+       SGP4 from public Space-Track TLEs, and the timeline matches LeoLabs' assessment exactly.
+       <b>Second cycle</b>: on 2026-08-31 H separated again, and about two weeks later, on 09-13, it was co-located with the spaceplane once more — U.S. Space Force data (cited by Jonathan McDowell, 2026-09-23) describe this as a second recapture. The same small satellite was released and recovered twice in about 12 weeks; China has not explained its purpose.</p>
     <h3>Timeline by Phase (compare against the timeline on the right during replay)</h3>
     <div class="tl">
       <div class="tlrow"><div class="d">2026-06-22</div><div><b>Deployment</b>: H is released from the spaceplane; the two are only ≈0.2 km apart, nearly co-located.</div></div>
       <div class="tlrow"><div class="d">06-24 ~ 07-06</div><div><b>Departure</b>: H gradually drifts away along its orbit to visit Object G (H–spaceplane distance grows to about 1,000 km).</div></div>
       <div class="tlrow"><div class="d">07-08 ~ 07-11</div><div><b>Return</b>: After the visit to G, H turns back; H–spaceplane distance shrinks from 722 → 5 km — reversing natural drift requires thrust, direct evidence of a "controlled approach."</div></div>
       <div class="tlrow"><div class="d">07-12 ~ 07-14</div><div><b>Recovery</b>: The two objects' distance is ≈0 km, no longer distinguishable by ground sensors; 18 SDS assesses that H has been recovered by the spaceplane.</div></div>
-      <div class="tlrow"><div class="d">After 07-14</div><div><b>Co-location</b>: In the catalog, H and the spaceplane remain in nearly identical orbits (≈0 km).</div></div>
+      <div class="tlrow"><div class="d">07-14 ~ 08-30</div><div><b>Co-location</b>: In the catalog, every H element set is identical to the spaceplane's (0 km) for about seven weeks.</div></div>
+    </div>
+    <h3>Second cycle (use the "Second cycle" replay button below)</h3>
+    <div class="tl">
+      <div class="tlrow"><div class="d">2026-08-31</div><div><b>Re-deployment</b>: the element sets diverge; separation grows from 0 to about 230 km that day.</div></div>
+      <div class="tlrow"><div class="d">09-01 ~ 09-07</div><div><b>Departure</b>: separation grows daily, reaching about 1,200–1,300 km on 09-05 to 09-07.</div></div>
+      <div class="tlrow"><div class="d">09-07 ~ 09-09</div><div><b>Data gap</b>: ten official H element sets show a semi-major axis 18 km lower and a phase about 20° ahead, then return to co-location within 10 hours — physically impossible, so they are treated as a catalog mis-association and excluded; the exact time H turned back cannot be determined.</div></div>
+      <div class="tlrow"><div class="d">09-09 ~ 09-12</div><div><b>Return and proximity</b>: when normal data resume, H is already within about 3 km of the spaceplane; closest approach about 0.2 km on 09-10.</div></div>
+      <div class="tlrow"><div class="d">From 09-13</div><div><b>Second recovery</b>: element sets identical again (0 km). Identical elements mean the catalog can no longer tell the two objects apart — consistent with docking, but not independent proof of physical capture.</div></div>
     </div>
     <div class="howto"><b>How to read the replay</b>:
       ① The floating "relative trajectory projection" panel on the right is the main clue: the red dot moves along a thick trend line — approaching the origin means closing in, sitting on the origin means recovery;
@@ -183,6 +212,7 @@ const RPO_I18N = {
       ⑤ The 3σ ellipsoid represents TLE-grade uncertainty — sub-kilometer distances sit at the noise floor, so read the recovery phase as a trend rather than individual values;
       ⑥ The floating panel's vertical axis is Δaltitude, and the thick line is the per-orbit moving average — altitude changes invisible from watching the satellite orbit are visible here at a glance (draggable, ⇄ to switch reference object).</div>
     <a class="btn" href="/rpo?primary=69673&secondary=67689">▶ Replay: Deployment &amp; Recovery (69673 × 67689)</a>
+    <a class="btn" href="/rpo?primary=69673&secondary=67689&variant=cycle2">▶ Replay: Second cycle (08-31 deploy → 09-13 recovery)</a>
     <a class="btn alt" href="/rpo?primary=69673&secondary=59884">▶ Side story: H visits Object G (69673 × 59884)</a>
     <div class="note">Independently reproduced: verify_shenlong_2026_rpo.py (day-by-day SGP4 minimum distance); report chapter: 期末_RPO案例_神龍_20260807.</div>`,
   },

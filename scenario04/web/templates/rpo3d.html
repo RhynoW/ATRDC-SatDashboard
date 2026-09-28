@@ -133,7 +133,7 @@
     <div class="note" id="note"></div>
   </div>
 
-  <script>window.RPO_PRIMARY={{ default_primary }};window.RPO_SECONDARY={{ default_secondary }};</script>
+  <script>window.RPO_PRIMARY={{ default_primary }};window.RPO_SECONDARY={{ default_secondary }};window.RPO_VARIANT={{ default_variant|tojson }};</script>
   <script>
   (function(){
     function tt(zh,ja,en){ var l='zh'; try{ l=localStorage.getItem('rpo3d_lang')||'zh'; }catch(e){} if(l==='ja')return ja; if(l==='en')return en; return zh; }

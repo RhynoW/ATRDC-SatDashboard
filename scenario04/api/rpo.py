@@ -2,7 +2,7 @@
 
   GET /rpo                       → 3D 場景頁（預設神龍 58573 × 59884）
   GET /rpo/cases                 → RPO 案例總覽 landing page（各案例直接連結）
-  GET /api/rpo/<prim>/<sec>      → 場景資料 JSON（orbit / series / meta / summary）
+  GET /api/rpo/<prim>/<sec>      → 場景資料 JSON（orbit / series / meta / summary；?variant= 選同配對之其他事件段）
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import logging
 
 from flask import Blueprint, jsonify, render_template, request
 
-from ..physics.rpo import _PRESETS, get_rpo_scene
+from ..physics.rpo import _PRESET_VARIANTS, _PRESETS, get_rpo_scene, valid_variant
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,8 @@ def rpo_presets():
     """精選 RPO 案例配對（供選單置頂）；源自 physics.rpo._PRESETS。"""
     out = [{"primary": p, "secondary": s, "title": info.get("title", f"{p} × {s}")}
            for (p, s), info in _PRESETS.items()]
+    out += [{"primary": p, "secondary": s, "variant": v, "title": info.get("title", f"{p} × {s} ({v})")}
+            for (p, s), vs in _PRESET_VARIANTS.items() for v, info in vs.items()]
     return jsonify({"presets": out})
 
 
@@ -39,6 +41,7 @@ def rpo_cases():
     return render_template("rpo_cases.html", featured=featured, cases=rest)
 
 
+
 @bp.get("/rpo", strict_slashes=False)
 def rpo_page():
     try:
@@ -46,13 +49,14 @@ def rpo_page():
         s = int(request.args.get("secondary", DEFAULT_SECONDARY))
     except (TypeError, ValueError):
         p, s = DEFAULT_PRIMARY, DEFAULT_SECONDARY
-    return render_template("rpo3d.html", default_primary=p, default_secondary=s)
+    v = valid_variant(p, s, request.args.get("variant"))
+    return render_template("rpo3d.html", default_primary=p, default_secondary=s, default_variant=v or "")
 
 
 @bp.get("/api/rpo/<int:primary>/<int:secondary>")
 def rpo_data(primary: int, secondary: int):
     try:
-        return jsonify(get_rpo_scene(primary, secondary))
+        return jsonify(get_rpo_scene(primary, secondary, variant=request.args.get("variant")))
     except (ValueError, RuntimeError) as e:
         logger.warning("RPO 場景計算失敗 %s×%s：%s", primary, secondary, e)
         return jsonify({"error": str(e)}), 400

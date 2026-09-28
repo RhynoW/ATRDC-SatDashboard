@@ -9,7 +9,7 @@
   var PRIM = "#F2A73B", SEC = "#35C6F4", CRIT = "#FF5C4E";
   var _tick = null;            // 目前 clock.onTick handler（切換時移除）
   var _loadSeq = 0;            // 防止快速切換之過期回應覆寫
-  var _curP = null, _curS = null;
+  var _curP = null, _curS = null, _curV = "";
   var _eP = null, _eS = null;  // 兩顆衛星 entity（視角追蹤用）
   var _meta = null, _vp = "p"; // 目前視角：'p'=primary / 's'=secondary
   var _pcSpheres = [], _pcSphereOn = true;   // 碰撞機率球 entities（兩顆衛星各一）+ 開關
@@ -885,18 +885,19 @@
     stat("stat_summary", { dmin: fmtRange(summary.d_min), pc: fmtPc(summary.pc_max).replace("&lt;", "<"), n: summary.n_orbit });
   }
 
-  function loadScene(primary, secondary, onDone) {
+  function loadScene(primary, secondary, onDone, variant) {
     var seq = ++_loadSeq;
-    _curP = primary; _curS = secondary;
+    _curP = primary; _curS = secondary; _curV = variant || "";
+    var vq = _curV ? "variant=" + encodeURIComponent(_curV) : "";
     stat("loading_scene_pair", { p: primary, s: secondary });
-    try { history.replaceState(null, "", "/rpo?primary=" + primary + "&secondary=" + secondary); } catch (e) {}
-    fetch("/api/rpo/" + primary + "/" + secondary).then(function (r) { return r.json(); }).then(function (data) {
+    try { history.replaceState(null, "", "/rpo?primary=" + primary + "&secondary=" + secondary + (vq ? "&" + vq : "")); } catch (e) {}
+    fetch("/api/rpo/" + primary + "/" + secondary + (vq ? "?" + vq : "")).then(function (r) { return r.json(); }).then(function (data) {
       if (seq !== _loadSeq) return;                       // 已被更新的請求取代
       if (data.error) { stat("load_fail", { error: data.error }, true); return; }
       if (!data.orbit || !data.orbit.length) { stat("no_valid_orbit", null, true); return; }
       buildScene(data);
       var sel = document.getElementById("pairSel");
-      if (sel) sel.value = primary + "," + secondary;
+      if (sel) sel.value = primary + "," + secondary + (_curV ? "," + _curV : "");
       if (onDone) onDone();
     }).catch(function (e) {
       if (seq === _loadSeq) stat("fetch_fail", { error: e.message }, true);
@@ -919,13 +920,13 @@
         fetch("/api/conjunctions?threshold_km=" + (threshold || 10)).then(function (r) { return r.json(); }).then(function (d) {
           var pairs = (d && d.pairs) || [];
           var html = "";
-          var cur = _curP != null ? (_curP + "," + _curS) : null;
+          var cur = _curP != null ? (_curP + "," + _curS + (_curV ? "," + _curV : "")) : null;
           // 保留目前（預設/深連結）配對於清單頂端
           if (cur) html += '<option value="' + cur + '">' + tpl("cur_pair", { p: _curP, s: _curS }) + "</option>";
           // 精選案例（置於即時配對之前）
           for (var j = 0; j < presets.length; j++) {
             var pr = presets[j];
-            var pv = pr.primary + "," + pr.secondary;
+            var pv = pr.primary + "," + pr.secondary + (pr.variant ? "," + pr.variant : "");
             if (pv === cur) continue;
             html += '<option value="' + pv + '">' + tpl("preset_case", { title: pr.title }) + "</option>";
           }
@@ -945,12 +946,12 @@
   window.startRPO = function () {
     try { initCesium(); } catch (e) { warn(tpl("cesium_init_fail", { error: e.message })); return; }
     var initP = window.RPO_PRIMARY || 58573, initS = window.RPO_SECONDARY || 59884;
-    _curP = initP; _curS = initS;
+    _curP = initP; _curS = initS; _curV = window.RPO_VARIANT || "";
 
     var sel = document.getElementById("pairSel");
     if (sel) sel.addEventListener("change", function () {
       var v = this.value; if (!v) return;
-      var a = v.split(","); loadScene(parseInt(a[0], 10), parseInt(a[1], 10));
+      var a = v.split(","); loadScene(parseInt(a[0], 10), parseInt(a[1], 10), null, a[2] || "");
     });
     var btn = document.getElementById("rescan");
     if (btn) btn.addEventListener("click", function () {
@@ -988,7 +989,7 @@
     });
 
     populatePairs(parseFloat((document.getElementById("thr") || {}).value) || 10);
-    loadScene(initP, initS);
+    loadScene(initP, initS, null, _curV);
 
     if (window.SatBroadcast) {
       window.SatBroadcast.init({

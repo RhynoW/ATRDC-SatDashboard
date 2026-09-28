@@ -1,53 +1,70 @@
 @echo off
 rem ============================================================
-rem  update_slim_publish_hf.bat -- 更新 space_db_slim.duckdb 並發布（Dataset 架構）
+rem  update_slim_publish_hf.bat -- 更新 space_db_slim.duckdb 並發布到 HF Dataset 架構
 rem
-rem  2026-09-07 起 DB 已移出 Space git（根本解）：
-rem    發布＝上傳 HF Dataset（RhynoWu/satdashboard-db）＋壓縮歷史＋重啟 Space；
-rem    Space 容器開機時由 resolve_db() 自動下載 slim DB。
-rem    不再有 git LFS push／prune／歷史重寫／fetch 復原等機關。
+rem  2026-09-07 起 DB 已移出 Space git：
+rem    發布＝上傳 HF Dataset RhynoWu/satdashboard-db ＋壓縮歷史＋重啟兩個 Space；
+rem    Space 容器開機時由 resolve_db 自動下載 slim DB。
 rem
-rem  用法：update_slim_publish_hf.bat [dryrun]
-rem    dryrun = 只做 1-3 步（重建/併入/部署副本），不上傳不重啟
+rem  用法：update_slim_publish_hf.bat [dryrun] [skipbuild]
+rem    dryrun    = 只做本機步驟，不上傳、不重啟
+rem    skipbuild = 略過第 1 步，沿用頂層既有 slim DB；download_tle_unified.bat publish 會帶此參數
 rem
-rem  注意：本檔以 CP950+CRLF 儲存（中文 UTF-8 bat 會被 cmd 錯位執行）。
+rem  注意：本檔以 CP950+CRLF 儲存。echo 行一律只用 ASCII：
+rem    Big5 全形括號「）」的第二個位元組是 0x5E，也就是 cmd 的跳脫字元 ^，
+rem    放在 echo 行尾會把下一行接進 echo，2026-09-23 曾因此讓 if 判斷被吃掉、誤走 dryrun。
 rem ============================================================
 setlocal
 set PYTHONIOENCODING=utf-8
-set APP=F:\GitHub\Sat_TraingDataExtension\scenario-advanced01
-set PARENT=F:\GitHub\Sat_TraingDataExtension
+set APP=%~dp0
+set APP=%APP:~0,-1%
+for %%I in ("%APP%\..") do set PARENT=%%~fI
+set DRYRUN=0
+set SKIPBUILD=0
+for %%A in (%*) do (
+  if /i "%%~A"=="dryrun" set DRYRUN=1
+  if /i "%%~A"=="skipbuild" set SKIPBUILD=1
+)
 
-echo [%TIME:~0,8%] [1/4] 重建頂層 slim DB（近 14 天 + 白名單全歷史，約 15-60 秒）...
-cd /d %PARENT%
+if "%SKIPBUILD%"=="1" (
+  echo [%TIME:~0,8%] [1/4] skipbuild - reuse existing top-level slim DB
+  goto :merge
+)
+echo [%TIME:~0,8%] [1/4] Rebuild top-level slim DB - recent 14 days plus whitelist history, 15-60 s ...
+cd /d "%PARENT%"
 python prc_maneuver\build_slim_db.py --slim-only --keep-lines --recent-days 14
 if errorlevel 1 goto :fail
 
-echo [%TIME:~0,8%] [2/4] 複製到 app 本機 DB 並併入 StoryMap TLE（約 10-30 秒）...
-copy /y %PARENT%\space_db_slim.duckdb %APP%\DB\space_db_slim.duckdb >nul
+:merge
+echo [%TIME:~0,8%] [2/4] Copy to app DB and merge StoryMap TLE, 10-30 s ...
+if not exist "%PARENT%\space_db_slim.duckdb" (
+  echo [FAIL] top-level slim DB not found
+  goto :fail
+)
+copy /y "%PARENT%\space_db_slim.duckdb" "%APP%\DB\space_db_slim.duckdb" >nul
 if errorlevel 1 goto :fail
-cd /d %APP%
+cd /d "%APP%"
 python tools\merge_storymap_tle.py
 if errorlevel 1 goto :fail
 
-echo [%TIME:~0,8%] [3/4] 複製到部署副本 scenario04\DB（本機 run.py 用）...
-copy /y %APP%\DB\space_db_slim.duckdb %APP%\scenario04\DB\space_db_slim.duckdb >nul
+echo [%TIME:~0,8%] [3/4] Copy to deploy copy scenario04\DB for local run.py ...
+copy /y "%APP%\DB\space_db_slim.duckdb" "%APP%\scenario04\DB\space_db_slim.duckdb" >nul
 if errorlevel 1 goto :fail
-for %%A in (%APP%\scenario04\DB\space_db_slim.duckdb) do set /a DBMB=%%~zA/1048576
-echo            部署副本就緒（%DBMB% MB）
+for %%A in ("%APP%\scenario04\DB\space_db_slim.duckdb") do set /a DBMB=%%~zA/1048576
+echo            deploy copy ready: %DBMB% MB
 
-if /i "%~1"=="dryrun" (
-  echo [%TIME:~0,8%] [4/4] dryrun：略過 Dataset 上傳與 Space 重啟。
+if "%DRYRUN%"=="1" (
+  echo [%TIME:~0,8%] [4/4] dryrun - skip Dataset upload and Space restart
   goto :ok
 )
-
-echo [%TIME:~0,8%] [4/4] 上傳 %DBMB% MB 至 HF Dataset ＋ 壓縮歷史 ＋ 重啟 Space（約 1-10 分鐘）...
+echo [%TIME:~0,8%] [4/4] Upload %DBMB% MB to HF Dataset, squash history, restart both Spaces, 1-10 min ...
 python tools\publish_db_to_dataset.py
 if errorlevel 1 goto :fail
 
 :ok
-curl -s https://huggingface.co/api/spaces/RhynoWu/ATRDC-SatDashboard | python -c "import sys,json;d=json.load(sys.stdin);print('HF sha',(d.get('sha') or '')[:8],'stage',d.get('runtime',{}).get('stage'))"
-echo [%TIME:~0,8%] [OK] 完成（Space 重啟後約 1-3 分鐘恢復 RUNNING 並載入新 DB）
+python -c "import json,urllib.request as u;[print(s,'sha',(d.get('sha') or '')[:8],'stage',d.get('stage')) for s in ('RhynoWu/ATRDC-SatDashboard','RhynoWu/ATRDC-SatDashboard-i18n') for d in [json.load(u.urlopen('https://huggingface.co/api/spaces/'+s+'/runtime',timeout=30))]]"
+echo [%TIME:~0,8%] [OK] done - Spaces return to RUNNING with the new DB in about 1-3 min
 exit /b 0
 :fail
-echo [FAIL] 失敗（errorlevel %errorlevel%），流程中止
+echo [FAIL] errorlevel %errorlevel% - aborted
 exit /b 1

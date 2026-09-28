@@ -99,3 +99,26 @@ def test_space_weather_default_path_prefers_env_then_db(tmp_path, monkeypatch):
     monkeypatch.delenv("SW_ALL_PATH")
     p = SpaceWeather.default_path()
     assert p is not None and str(p).endswith("SW-All.csv")
+
+
+def test_refresh_runs_subprocess_and_reloads(tmp_path, monkeypatch):
+    import subprocess
+    cache = tmp_path / "deorbit_forecast.json"
+    monkeypatch.setattr(dfm, "CACHE_FILE", cache)
+    calls = []
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd)
+        dfm._write_atomic({"generated_at": "2026-09-29T00:00:00+00:00", "n": 3, "elapsed_s": 1.0,
+                           "forecasts": {}}, cache)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(dfm.subprocess, "run", fake_run)
+    svc = dfm.DeorbitForecastService()
+    assert svc.refresh()["n"] == 3
+    assert calls[0][1:] == ["-m", "scenario04.services.deorbit_forecast"]
+
+    monkeypatch.setattr(dfm.subprocess, "run",
+                        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "boom"))
+    assert svc.refresh()["error"] == "rc=1"
+    assert svc.get()["n"] == 3          # 失敗時保留舊快取

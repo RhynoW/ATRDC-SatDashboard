@@ -2,12 +2,17 @@
 
 清單頁不可在請求中對數十顆同步數值積分（每顆 2–6 s），故由背景執行緒每 INTERVAL_S 秒
 重算一次清單上各衛星，結果原子寫入 settings.DB_DIR/deorbit_forecast.json；API 只讀快取。
+批次在獨立子程序（python -m scenario04.services.deorbit_forecast，Linux 上 nice 10）執行，
+避免 RK4 純 Python 迴圈與網頁請求搶同一個 GIL（本機實測同程序時靜態檔延遲 14→200 ms）。
 「詳細」按鈕則以 forecast_norad() 即時計算單顆。
 """
 from __future__ import annotations
 
 import json
 import logging
+import os
+import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timezone
@@ -24,6 +29,8 @@ CACHE_FILE: Path = settings.DB_DIR / "deorbit_forecast.json"
 INTERVAL_S = 6 * 3600
 START_DELAY_S = 90            # 等 DB／索引就緒
 CHECK_S = 1800
+SUBPROC_TIMEOUT_S = 1800
+APP_DIR = Path(__file__).resolve().parents[2]      # 含 scenario04 套件的目錄（-m 執行用）
 TLE_LOOKBACK_DAYS = 12
 LIST_LIMIT = 100
 WIDEN_FRAC = 0.25             # 區間至少 ±25% × 剩餘時數（38 顆 TIP 回測調得，待樣本外驗證）
@@ -170,14 +177,25 @@ class DeorbitForecastService:
         return None if gen is None else (datetime.now(timezone.utc) - gen).total_seconds()
 
     def refresh(self) -> dict[str, Any]:
-        data = compute_all()
+        """於子程序重算並寫快取，完成後重新載入。"""
+        kw: dict[str, Any] = {}
+        if os.name == "posix":
+            kw["preexec_fn"] = lambda: os.nice(10)
+        try:
+            cp = subprocess.run([sys.executable, "-m", "scenario04.services.deorbit_forecast"],
+                                cwd=str(APP_DIR), capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=SUBPROC_TIMEOUT_S, **kw)
+        except subprocess.TimeoutExpired:
+            logger.warning("離軌預測批次逾時（%d s）", SUBPROC_TIMEOUT_S)
+            return {"error": "timeout"}
+        if cp.returncode != 0:
+            logger.warning("離軌預測批次失敗（rc=%s）：%s", cp.returncode, (cp.stderr or "")[-500:])
+            return {"error": f"rc={cp.returncode}"}
+        with self._lock:
+            self._data = None
+        data = self.get() or {"error": "快取檔不存在"}
         if not data.get("error"):
-            _write_atomic(data)
-            with self._lock:
-                self._data = data
-            logger.info("離軌預測批次完成：%d 顆，%.0f s", data["n"], data["elapsed_s"])
-        else:
-            logger.warning("離軌預測批次失敗：%s", data["error"])
+            logger.info("離軌預測批次完成：%d 顆，%.0f s", data.get("n", 0), data.get("elapsed_s", 0))
         return data
 
     def start(self, interval_s: int = INTERVAL_S, delay_s: int = START_DELAY_S) -> None:
@@ -200,3 +218,18 @@ class DeorbitForecastService:
 
 
 deorbit_forecast_service = DeorbitForecastService()
+
+
+def _main() -> int:
+    """子程序入口：計算整批並原子寫入快取；失敗回非零碼。"""
+    logging.basicConfig(level=logging.WARNING)
+    data = compute_all()
+    if data.get("error"):
+        print(data["error"], file=sys.stderr)
+        return 1
+    _write_atomic(data)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(_main())

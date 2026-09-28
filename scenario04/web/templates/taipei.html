@@ -9,7 +9,7 @@
 <script>
 (function(){
   function _css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
-  function _js(src,ok,fail){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail||function(){};document.head.appendChild(s);}
+  function _js(src,ok,fail,n){n=n||0;var s=document.createElement('script');s.src=n?src+(src.indexOf('?')<0?'?':'&')+'retry='+n:src;s.onload=ok;s.onerror=function(){s.remove();if(n<3){setTimeout(function(){_js(src,ok,fail,n+1);},1500*(n+1));}else{(fail||function(){})();}};document.head.appendChild(s);}  /* 失敗自動重試 3 次（1.5/3/4.5 s），吸收 HF 代理暫時性 502/503 */
   function _err(m){var el=document.getElementById('map-loading');if(el){el.textContent=m;el.style.color='#f44336';}}
   var _mapStarted=false;
   // 地圖（Cesium）改為首次切到「地圖」檢視時才載入；天球檢視完全不需 Cesium

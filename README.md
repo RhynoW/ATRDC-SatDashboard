@@ -23,7 +23,6 @@ pinned: false
 | **RPO 相對接近** | `/rpo`（案例總覽：`/rpo/cases`） | 近距離配對兩衛星 3D 相對接近、碰撞機率球（3σ R/T/N 橢球）、衛星視角切換 |
 | **StoryMap 敘事頁** | `/story` | StoryMaps 式整合展示：GPS／北斗／Starlink／OneWeb／大陸 ISR・通訊星系即時位置、2026 機動候選事件、台灣假想雷達站效益、日本 2026 發射誌 |
 | **軌道六參數調整器**（Orbit Tuner） | 主頁工具列面板（介紹頁：`/orbit-tuner`） | 互動滑桿調整古典軌道六要素（a/e/i/Ω/ω/ν），即時疊加繪製於 3D 地球並產生對應 STK Connect 指令；概念參考 AGI Orbit Tuner |
-| 星座排行 | `/constellations` | 各星座衛星數量排行（僅有效載荷） |
 | 軌道要素歷史 | `/orbit` | 單顆衛星 SMA／傾角／RAAN／ARGP 歷史（Spiral Polar + SMA 圓形圖） |
 | Starlink 顆數普查 | `/starlink-census` | 本系統 vs keeptrack.space 公開數字比對 |
 | Starlink 離軌名單 | `/starlink-deorbit` | 即時離軌中的 Starlink（SGP4 再入時刻／落點估算） |
@@ -144,7 +143,6 @@ python run.py
 | Method | Endpoint | 說明 |
 |--------|----------|------|
 | GET | `/api/stats` | 衛星統計摘要（各類別數量；`?payload_only=1` 排除碎片/火箭體） |
-| GET | `/api/stats/constellations` | 星座排行 — 僅有效載荷（不含碎片/火箭體），附色碼；`?top=N` 取前 N 名 |
 | GET | `/api/positions` | 即時位置（ECI → LLH，含過濾） |
 | GET | `/api/search` | NORAD ID / 名稱搜尋 |
 

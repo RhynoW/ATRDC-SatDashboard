@@ -20,7 +20,6 @@ try:
     from spacetrack_client import (          # noqa: F401
         fetch_latest_tle_batch,
         fetch_cdm_for_satellite,
-        fetch_cdm_batch,
         fetch_decay_prediction,
         fetch_satcat_info,
     )
@@ -28,7 +27,6 @@ try:
 except ImportError:
     fetch_latest_tle_batch = None   # type: ignore[assignment]
     fetch_cdm_for_satellite = None  # type: ignore[assignment]
-    fetch_cdm_batch = None          # type: ignore[assignment]
     fetch_decay_prediction = None   # type: ignore[assignment]
     fetch_satcat_info = None        # type: ignore[assignment]
 

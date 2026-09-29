@@ -60,7 +60,6 @@ SAT_RADIUS_KM     = 0.005  # 衛星等效硬體半徑
 SPACETRACK_USER     = os.getenv("SPACETRACK_USER") or os.getenv("SPACE_TRACK_IDENTITY", "")
 SPACETRACK_PASS     = os.getenv("SPACETRACK_PASS") or os.getenv("SPACE_TRACK_PASSWORD", "")
 CDM_CACHE_TTL       = int(os.getenv("CDM_CACHE_TTL", "3600"))
-CDM_HIGH_RISK_LIMIT = int(os.getenv("CDM_HIGH_RISK_LIMIT", "100"))
 
 # ── 台北覆蓋分析 ──────────────────────────────────────────────────────────────
 TAIPEI_LAT  = 25.0330

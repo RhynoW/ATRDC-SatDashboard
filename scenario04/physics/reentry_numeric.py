@@ -18,7 +18,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from sgp4.api import Satrec, jday
 
-from .coords import eci_to_llh_batch, gmst_rad
+from .coords import eci_to_llh_batch
 
 MU = 398600.4418            # km^3/s^2
 RE = 6378.137               # km

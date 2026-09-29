@@ -18,7 +18,7 @@ import threading
 import time
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, request
 
 from . import json_response
 

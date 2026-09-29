@@ -76,7 +76,7 @@ def min_arc_distance_deg(u: np.ndarray, m: np.ndarray, min_el_deg: float = 4.0) 
     """u: (n,T,3) 衛星單位向量；m: (T,3) 月球單位向量。
     回傳每顆衛星「月球到衛星各相鄰步之大圓弧」的最小角距（度）與其所在步索引。
     僅計算兩端點皆高於 min_el_deg 的弧（多數衛星大部分時間在地平線下，可省去約 90% 運算）。"""
-    n_sat, n_t = u.shape[0], u.shape[1]
+    n_sat = u.shape[0]
     zmin = math.sin(math.radians(min_el_deg))
     ok = (u[:, :-1, 2] >= zmin) & (u[:, 1:, 2] >= zmin)
     si, ki = np.nonzero(ok)

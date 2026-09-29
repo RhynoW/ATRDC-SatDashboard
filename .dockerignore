@@ -1,0 +1,14 @@
+# 正式映像檔只需 run.py、scenario04/、data/ 與 requirements；以下皆為開發／文件用
+.git
+.gitattributes
+**/__pycache__
+**/*.pyc
+.pytest_cache
+tests/
+docs/
+docs_media/
+tools/
+fetch-first
+*.bat
+*.md
+!scenario04/**/*.md

@@ -72,7 +72,6 @@ def perigee_passes(line1: str, line2: str, t_start: datetime, t_end: datetime,
 def reentry_estimate(line1: str, line2: str, t_start: datetime | None = None, days: float = 20.0,
                      interface_km: float = 100.0) -> dict:
     """由 TLE 外推 days 天，回傳所有近地點掠過與首次低於 interface_km 之圈次（零階再入估算）。"""
-    sat = Satrec.twoline2rv(line1, line2)
     ep = datetime(2000 + int(line1[18:20]) if int(line1[18:20]) < 57 else 1900 + int(line1[18:20]), 1, 1, tzinfo=timezone.utc) \
         + timedelta(days=float(line1[20:32]) - 1.0)
     t0 = t_start or ep

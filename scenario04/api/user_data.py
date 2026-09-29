@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 
 from ..ingestion.index import get_sat_index
 from ..ingestion.user_defined import (

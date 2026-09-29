@@ -33,12 +33,6 @@ def starlink_page():
     return render_template("starlink.html")
 
 
-@bp.get("/constellations")
-def constellations_page():
-    """星座排行頁 — 僅有效載荷（資料源 /api/stats/constellations）。"""
-    return render_template("constellations.html")
-
-
 @bp.get("/starlink-census")
 def starlink_census_page():
     """Starlink 顆數普查：本系統 vs keeptrack.space 公開數字（資料源 /api/starlink/census）。"""

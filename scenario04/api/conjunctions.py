@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from flask import Blueprint, jsonify, request
 
@@ -17,8 +16,6 @@ bp = Blueprint("conjunctions", __name__)
 # CDM 查詢快取（process-level）
 _cdm_cache:          dict[int, list[dict]] = {}
 _cdm_cache_at:       dict[int, float] = {}
-_high_risk_cache:    dict[str, Any] | None = None
-_high_risk_cache_at: float = 0.0
 
 
 @bp.get("/api/conjunctions")
@@ -33,42 +30,6 @@ def api_conjunctions():
 
     data = get_conjunctions(threshold_km=threshold, max_pairs=max_pairs)
     return json_response(data, max_age=settings.CONJ_TTL)
-
-
-@bp.get("/api/cdm/high_risk")
-def api_cdm_high_risk():
-    global _high_risk_cache, _high_risk_cache_at
-    if not spacetrack.ST_ENABLED:
-        return jsonify({"error": "Space-Track 未配置", "count": 0, "events": []})
-    now = time.monotonic()
-    if _high_risk_cache is not None and (now - _high_risk_cache_at) < settings.CDM_CACHE_TTL:
-        return jsonify(_high_risk_cache)
-    idx = get_sat_index()
-    limit = min(settings.CDM_HIGH_RISK_LIMIT, len(idx))
-    subset = dict(list(idx.items())[:limit])
-    nid_to_name = {nid: info["name"] for nid, info in subset.items()}
-    t0 = time.monotonic()
-    all_cdms = spacetrack.fetch_cdm_batch(nid_to_name)
-    elapsed = time.monotonic() - t0
-    high_risk: list[dict] = []
-    for nid, events in all_cdms.items():
-        for ev in events:
-            if ev.get("pc", 0.0) > 1e-4:
-                high_risk.append({
-                    "norad_id":  nid,
-                    "satellite": nid_to_name.get(nid, ""),
-                    **ev,
-                })
-    high_risk.sort(key=lambda x: x.get("pc", 0.0), reverse=True)
-    result: dict[str, Any] = {
-        "count":       len(high_risk),
-        "events":      high_risk,
-        "scanned":     len(nid_to_name),
-        "elapsed_sec": round(elapsed, 2),
-    }
-    _high_risk_cache    = result
-    _high_risk_cache_at = now
-    return jsonify(result)
 
 
 @bp.get("/api/cdm/<int:norad_id>")

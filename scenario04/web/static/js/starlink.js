@@ -82,7 +82,7 @@ const I18N = {
     card3_1_title: '備援情境模擬',
     card3_1_desc: '隨機折損 0～90% 衛星，觀察台灣可見數與可用率的退化程度（呼應 2024 東部強震海纜受損、單一路徑失效的韌性議題；可與海纜頁 /cable 對照）。',
     card3_2_title: '世代 / 機型篩選',
-    card3_2_desc: '依發射日期啟發式區分 v1.0／v1.5／v2 Mini／V3 世代子集合分析可用性；並自動排除近期偵測為離軌中的衛星（詳見 /starlink-deorbit 即時名單）。',
+    card3_2_desc: '依發射日期啟發式區分 v1.0／v1.5／v2 Mini／V3 世代子集合分析可用性；並自動排除近期偵測為離軌中的衛星（詳見「離軌名單」分頁）。',
     status_note_label: '現況說明',
     status_note_body: '《電信管理法》第 36 條修正案已於 2026 年 7 月 21 日三讀通過，取消外資持股上限，改由主管機關依國家安全等 7 項標準逐案審核核准；惟截至目前 Starlink 尚未取得正式核准、也還未在台灣商轉。本工具基於公開 TLE 資料計算純幾何可用性，供技術評估與政策討論參考。',
   },
@@ -152,7 +152,7 @@ const I18N = {
     card3_1_title: 'Redundancy Scenario Simulation',
     card3_1_desc: 'Randomly drops 0–90% of satellites to show how visible count and availability over Taiwan degrade (echoing the resilience lessons of the 2024 eastern Taiwan earthquake submarine cable damage — see also the /cable page).',
     card3_2_title: 'Generation / Model Filtering',
-    card3_2_desc: 'Splits the constellation into v1.0 / v1.5 / v2 Mini / V3 subsets by a launch-date heuristic, and automatically excludes satellites currently detected as deorbiting (see the live list at /starlink-deorbit).',
+    card3_2_desc: 'Splits the constellation into v1.0 / v1.5 / v2 Mini / V3 subsets by a launch-date heuristic, and automatically excludes satellites currently detected as deorbiting (see the "Deorbiting" tab).',
     status_note_label: 'Current Status',
     status_note_body: "An amendment to Article 36 of the Telecommunications Management Act passed its third reading on July 21, 2026, removing the foreign-ownership cap and replacing it with a case-by-case review against 7 criteria (including national security) by the competent authority; however, as of now Starlink has not yet obtained formal approval or launched commercial service in Taiwan. This tool computes pure geometric availability from public TLE data, for technical evaluation and policy discussion reference only.",
   },
@@ -222,7 +222,7 @@ const I18N = {
     card3_1_title: '冗長性シナリオシミュレーション',
     card3_1_desc: '衛星を0～90%ランダムに損失させ、台湾上空の可視数と可用率の劣化度をシミュレート（2024年台湾東部地震での海底ケーブル損傷問題を踏まえたレジリエンス検討。/cableページも参照）。',
     card3_2_title: '世代・機種フィルタリング',
-    card3_2_desc: '打ち上げ日による推定でv1.0／v1.5／v2 Mini／V3世代のサブセットに分けて可用性を分析し、直近で離軌中と判定された衛星を自動的に除外（リアルタイムリストは /starlink-deorbit を参照）。',
+    card3_2_desc: '打ち上げ日による推定でv1.0／v1.5／v2 Mini／V3世代のサブセットに分けて可用性を分析し、直近で離軌中と判定された衛星を自動的に除外（「離軌リスト」タブを参照）。',
     status_note_label: '現状説明',
     status_note_body: '電信管理法第36条の改正案は2026年7月21日に第三読会を通過し、外資持株比率の上限が撤廃され、国家安全保障など7つの基準に基づく主務官庁による個別審査・承認制に変更された。ただし現時点でStarlinkはまだ正式な認可を取得しておらず、台湾での商用サービスも開始していない。本ツールは公開TLEデータに基づく純粋な幾何学的可用性を計算するものであり、技術評価および政策議論の参考情報として提供する。',
   },
@@ -859,5 +859,7 @@ function _line(ctx,x1,y1,x2,y2){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(
 document.addEventListener('DOMContentLoaded',()=>{
   _tick(); setInterval(_tick,1000);
   setLang(LANG);
-  triggerCompute();
+  // 分頁：直接開啟其他分頁時，延後到切回「台灣服務分析」才計算（starlink_tabs.js）
+  if (!window.SL_TAB || window.SL_TAB === 'analysis') triggerCompute();
+  else window._slPendingCompute = true;
 });

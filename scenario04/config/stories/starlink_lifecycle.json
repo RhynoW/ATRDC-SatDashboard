@@ -132,7 +132,7 @@
       "type": "embed",
       "title": "⑦ 正在離軌的 Starlink（即時）",
       "dur": 7,
-      "url": "/starlink-deorbit",
+      "url": "/starlink?tab=deorbit",
       "height": 720,
       "body": "改為即時網頁，不再是固定時間點的快照：每次開啟都重新查詢「近 5 天仍有 TLE、近 30 天半長軸下降逾 40 km、高度低於 480 km」的離軌候選名單，並可逐顆展開看 SGP4 逐圈外推的再入時刻與落點粗估。"
     },
@@ -140,7 +140,7 @@
       "type": "embed",
       "title": "⑦.5 Starlink 顆數普查：跟外部數字對得起來嗎",
       "dur": 6,
-      "url": "/starlink-census",
+      "url": "/starlink?tab=census",
       "height": 760,
       "body": "「Starlink 到底有幾顆」這個看似簡單的問題，答案取決於統計口徑：本頁即時抓取 keeptrack.space 公開的在軌／運作中／累計發射三個數字，跟本系統依不同新鮮度篩選算出的數字並列比對，說明差異從何而來——這正是離軌名單為何需要「近期仍有 TLE」這個條件的原因。"
     },
@@ -268,7 +268,7 @@
       "type": "embed",
       "title": "⑦.8 Starlink V3 佈署數量統計",
       "dur": 5,
-      "url": "/starlink-v3",
+      "url": "/starlink?tab=v3",
       "height": 700,
       "body": "追蹤下一代 Starlink V3 營運衛星的部署進度：由於公開目錄不含硬體世代標記，本頁以已知的部署時程與初始入軌殼層做間接推測（啟發式、非官方分類），在正式部署開始前會如實顯示 0 顆。"
     },

@@ -20,6 +20,7 @@ TLE 更新——會讓數字相差百餘顆。本模組把口徑攤開來看，�
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import re
@@ -174,6 +175,11 @@ def our_starlink_counts() -> dict[str, Any]:
         return {"error": str(exc)}
 
 
+DEORBIT_LOOKBACK_DAYS = 45            # 需涵蓋「30 天前」＋ TLE 間隙餘裕
+DEORBIT_CACHE_TTL_S = 600
+_DEORBIT_CACHE: dict[int, tuple[float, dict[str, Any]]] = {}
+
+
 def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
     """近期仍有 TLE、半長軸快速下降的 Starlink（離軌候選），依目前高度由低到高排序。
 
@@ -188,14 +194,20 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
     ids = _starlink_norad_ids()
     if not ids:
         return {"error": "sat_metadata.csv 內找不到任何 Starlink 衛星（檔案缺失或分類規則異常）"}
+    cached = _DEORBIT_CACHE.get(int(limit))
+    if cached and time.monotonic() - cached[0] < DEORBIT_CACHE_TTL_S:
+        return copy.deepcopy(cached[1])
     try:
         with duckdb.connect(str(db), read_only=True) as con:
             _register_starlink_ids(con, ids)
+            # 只取近 DEORBIT_LOOKBACK_DAYS 天：「30 天前高度」只需這段期間；原本對全歷史開窗函數、
+            # 且總數另跑一次同樣查詢，完整庫要 40–55 s、HF 精簡庫約 20 s。
             sql = f"""
                 WITH base AS (
                     SELECT r.norad_id, r.epoch_utc, r.sma_km - 6378.137 AS alt_km
                     FROM {settings.RAW_TABLE} r
                     JOIN starlink_ids s ON s.norad_id = r.norad_id
+                    WHERE r.epoch_utc >= now() - INTERVAL {DEORBIT_LOOKBACK_DAYS} DAY
                 ), cur AS (
                     SELECT norad_id, epoch_utc, alt_km FROM base
                     QUALIFY ROW_NUMBER() OVER (PARTITION BY norad_id ORDER BY epoch_utc DESC) = 1
@@ -224,31 +236,10 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
                   AND (past30.alt_km_30d_ago - cur.alt_km) >= {DEORBIT_DA30_KM}
                   AND cur.alt_km < {DEORBIT_ALT_MAX_KM}
                 ORDER BY cur.alt_km ASC
-                LIMIT {int(limit)}
             """
-            rows = con.execute(sql).fetchdf()
-
-            total_sql = f"""
-                WITH base AS (
-                    SELECT r.norad_id, r.epoch_utc, r.sma_km - 6378.137 AS alt_km
-                    FROM {settings.RAW_TABLE} r
-                    JOIN starlink_ids s ON s.norad_id = r.norad_id
-                ), cur AS (
-                    SELECT norad_id, epoch_utc, alt_km FROM base
-                    QUALIFY ROW_NUMBER() OVER (PARTITION BY norad_id ORDER BY epoch_utc DESC) = 1
-                ), past30 AS (
-                    SELECT norad_id, alt_km AS alt_km_30d_ago FROM base
-                    QUALIFY ROW_NUMBER() OVER (
-                        PARTITION BY norad_id
-                        ORDER BY abs(date_diff('hour', epoch_utc, now() - INTERVAL 30 DAY))
-                    ) = 1
-                )
-                SELECT COUNT(*) FROM cur JOIN past30 USING (norad_id)
-                WHERE cur.epoch_utc >= now() - INTERVAL {DEORBIT_FRESH_DAYS} DAY
-                  AND (past30.alt_km_30d_ago - cur.alt_km) >= {DEORBIT_DA30_KM}
-                  AND cur.alt_km < {DEORBIT_ALT_MAX_KM}
-            """
-            total_n = int(con.execute(total_sql).fetchone()[0])
+            allrows = con.execute(sql).fetchdf()
+        total_n = len(allrows)
+        rows = allrows.head(int(limit))
 
         items = []
         for _, r in rows.iterrows():
@@ -268,7 +259,7 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
                 "da_7d_km": round(da7, 1),
                 "est_days_to_reentry_rough": est_days,
             })
-        return {
+        result = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "criteria": {
                 "fresh_days": DEORBIT_FRESH_DAYS, "da30_km_min": DEORBIT_DA30_KM,
@@ -281,6 +272,8 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
                       "未計入阻力隨高度指數增強，會高估剩餘天數（實際再入更早），僅供排序參考；"
                       "較可靠之再入預測見 seg 欄（分段 M/A 校準，背景批次每 6 小時更新）。",
         }
+        _DEORBIT_CACHE[int(limit)] = (time.monotonic(), result)
+        return copy.deepcopy(result)
     except Exception as exc:  # noqa: BLE001
         logger.warning("list_deorbiting_starlinks 失敗：%s", exc)
         return {"error": str(exc)}
@@ -373,10 +366,10 @@ def deorbiting_norad_ids() -> set[int]:
 
 
 # ── Starlink V3 部署統計（啟發式，見 count_v3_candidates() 說明）──────────────
-# V3 規格與部署時程為公開報導/申請文件之已知資訊（非本系統可獨立驗證），截至本檔案
-# 撰寫時 Starship Flight 14（首次嘗試搭載約 20 顆 V3 進入正式軌道）尚未發射，目標日期
-# 2026-09-15（SpaceX 未正式官宣，可能因天氣/技術/法規因素延後）。
-V3_ERA_START = "2026-09-15"
+# V3 規格與部署時程為公開報導之已知資訊（非本系統可獨立驗證）。Starship Flight 14 於
+# 2026-09-28 12:46 UTC 自 Starbase 發射，首度進入軌道並部署 26 顆 Starlink V3（SpaceX 確認
+# 全數建立聯繫）。起算日取發射日；此後 Falcon 9 發射的 V2 Mini 仍可能落入同一殼層而被誤判。
+V3_ERA_START = "2026-09-28"
 # 已知規劃之初始部署殼層（km），各留 ±5 km 容許範圍
 V3_ALT_BANDS_KM = [(323.0, 327.5), (473.0, 477.5)]
 V3_ALT_TOLERANCE_KM = 5.0
@@ -444,10 +437,10 @@ def count_v3_candidates(era_start: str = V3_ERA_START) -> dict[str, Any]:
             "db_latest_epoch": latest.isoformat() if hasattr(latest, "isoformat") else str(latest),
             "candidate_count": len(items),
             "items": items,
-            "known_schedule_note": "已知排程（公開報導/申請文件，非本系統可獨立驗證）：Starship Flight 14 "
-                                   "目標於 2026-09-15 前後嘗試首次正式軌道飛行，預計搭載約 20 顆 Starlink V3 "
-                                   "營運衛星進入 ~323–327.5 km 或 ~473–477.5 km 軌道層；SpaceX 尚未正式官宣確切"
-                                   "日期，實際發射可能延後。V3 單顆約 2,500 kg（V2 Mini 約 800 kg）。",
+            "known_schedule_note": "公開報導（非本系統可獨立驗證）：Starship Flight 14 於 2026-09-28 "
+                                   "12:46 UTC 發射，首度進入軌道並部署 26 顆 Starlink V3，SpaceX 確認全數建立聯繫。"
+                                   "V3 單顆約 2,000 kg（報導引述之標稱值；V2 Mini 約 800 kg）；26 顆合計約 52 公噸"
+                                   "為換算值，非官方實測。新衛星須待 Space-Track 編目後才會出現在本系統。",
             "method": "啟發式：以公開已知的部署時程（≥ era_start）與初始入軌殼層（±5 km 容許）"
                       "間接推測，Space-Track/CelesTrak 目錄本身不含硬體世代標記，故本統計非官方分類，"
                       "僅供追蹤部署進度參考。",

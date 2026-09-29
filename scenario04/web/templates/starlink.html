@@ -5,7 +5,12 @@
 <title>Starlink 台灣服務能力分析</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/starlink.css') }}"/>
+<script>
+/* 分頁：?tab=census|v3|deorbit（舊 /starlink-census 等網址 302 轉入）；預設台灣服務分析 */
+window.SL_TAB = new URLSearchParams(location.search).get('tab') || 'analysis';
+</script>
 <script src="{{ url_for('static', filename='js/starlink.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/starlink_tabs.js') }}" defer></script>
 </head>
 <body>
 <div id="topbar">
@@ -21,6 +26,14 @@
   <button type="button" class="tbtn" onclick="location.href='/'">&#8592; <span data-i18n="nav_home">主頁</span></button>
 </div>
 
+<nav id="sl-tabs">
+  <button type="button" data-tab="analysis" onclick="slShowTab('analysis')">台灣服務分析</button>
+  <button type="button" data-tab="census" onclick="slShowTab('census')">顆數普查</button>
+  <button type="button" data-tab="v3" onclick="slShowTab('v3')">V3 佈署</button>
+  <button type="button" data-tab="deorbit" onclick="slShowTab('deorbit')">離軌名單</button>
+</nav>
+
+<section id="panel-analysis">
 <!-- 設定欄 -->
 <div id="settings-bar">
   <span class="sf-label" data-i18n="lbl_lat">緯度</span>
@@ -98,7 +111,7 @@
     <div class="stat-card">
       <div class="sc-val" id="st-excluded">—</div>
       <div class="sc-label" data-i18n="stat_excluded">已排除離軌中衛星</div>
-      <div style="font-size:9px;margin-top:2px"><a href="/starlink-deorbit" style="color:#58a6ff" data-i18n="stat_excluded_link">查看即時離軌名單 →</a></div>
+      <div style="font-size:9px;margin-top:2px"><a href="?tab=deorbit" onclick="slShowTab('deorbit');return false" style="color:#58a6ff" data-i18n="stat_excluded_link">查看即時離軌名單 →</a></div>
     </div>
   </div>
 
@@ -223,7 +236,7 @@
         </div>
         <div class="rm-card">
           <div class="rm-card-head"><span class="rm-badge done">&#9989; <span data-i18n="badge_done">已實作</span></span><h4 data-i18n="card3_2_title">世代 / 機型篩選</h4></div>
-          <p data-i18n="card3_2_desc">依發射日期啟發式區分 v1.0／v1.5／v2 Mini／V3 世代子集合分析可用性；並自動排除近期偵測為離軌中的衛星（詳見 /starlink-deorbit 即時名單）。</p>
+          <p data-i18n="card3_2_desc">依發射日期啟發式區分 v1.0／v1.5／v2 Mini／V3 世代子集合分析可用性；並自動排除近期偵測為離軌中的衛星（詳見「離軌名單」分頁）。</p>
         </div>
       </div>
     </div>
@@ -235,5 +248,10 @@
   </div>
 
 </div>
+</section>
+
+<section id="panel-census" class="sl-panel" hidden></section>
+<section id="panel-v3" class="sl-panel" hidden></section>
+<section id="panel-deorbit" class="sl-panel" hidden></section>
 </body>
 </html>

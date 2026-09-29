@@ -85,9 +85,21 @@ def test_deorbit_forecast_endpoint(client, monkeypatch):
 
 
 def test_deorbit_page_has_seg_column(client):
-    html = client.get("/starlink-deorbit").get_data(as_text=True)
-    assert "th_seg" in html and "segCell" in html and "sparkB" in html
-    assert "低估" not in html  # 線性粗估是高估，舊文案已更正
+    # 離軌名單已併入 /starlink 分頁；舊網址 302 轉址
+    r = client.get("/starlink-deorbit")
+    assert r.status_code == 302 and r.headers["Location"].endswith("/starlink?tab=deorbit")
+    html = client.get("/starlink").get_data(as_text=True)
+    assert 'id="panel-deorbit"' in html and "starlink_tabs.js" in html
+    import pathlib
+    js = (pathlib.Path(__file__).resolve().parents[1] / "scenario04/web/static/js/starlink_tabs.js").read_text(encoding="utf-8")
+    assert "th_seg" in js and "segCell" in js and "sparkB" in js
+    assert "低估" not in js  # 線性粗估是高估
+
+
+def test_old_starlink_pages_redirect_to_tabs(client):
+    for old, tab in (("/starlink-census", "census"), ("/starlink-v3", "v3"), ("/starlink-deorbit", "deorbit")):
+        r = client.get(old)
+        assert r.status_code == 302 and r.headers["Location"].endswith(f"/starlink?tab={tab}")
 
 
 def test_space_weather_default_path_prefers_env_then_db(tmp_path, monkeypatch):

@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from flask import Blueprint, make_response, render_template, send_from_directory
+from flask import Blueprint, make_response, redirect, render_template, send_from_directory
 
 from ..config import settings
 
@@ -33,22 +33,16 @@ def starlink_page():
     return render_template("starlink.html")
 
 
-@bp.get("/starlink-census")
-def starlink_census_page():
-    """Starlink 顆數普查：本系統 vs keeptrack.space 公開數字（資料源 /api/starlink/census）。"""
-    return render_template("starlink_census.html")
+# 舊頁面已併入 /starlink 分頁；保留網址轉址（StoryMap 與書籤連結不失效）
+_STARLINK_TAB_REDIRECTS = {"/starlink-census": "census", "/starlink-v3": "v3", "/starlink-deorbit": "deorbit"}
 
 
-@bp.get("/starlink-deorbit")
-def starlink_deorbit_page():
-    """即時離軌中的 Starlink 名單（資料源 /api/starlink/deorbiting、/api/starlink/reentry_detail）。"""
-    return render_template("starlink_deorbit.html")
+def _starlink_tab_redirect(tab: str):
+    return lambda: redirect(f"/starlink?tab={tab}", code=302)
 
 
-@bp.get("/starlink-v3")
-def starlink_v3_page():
-    """Starlink V3 佈署數量統計（啟發式；資料源 /api/starlink/v3_census）。"""
-    return render_template("starlink_v3.html")
+for _path, _tab in _STARLINK_TAB_REDIRECTS.items():
+    bp.add_url_rule(_path, endpoint=f"starlink_tab_{_tab}", view_func=_starlink_tab_redirect(_tab))
 
 
 @bp.get("/orbit")

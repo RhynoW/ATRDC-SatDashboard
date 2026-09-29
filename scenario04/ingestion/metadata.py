@@ -198,9 +198,22 @@ def classify_era(launch_date: datetime | None, intl_code: str | None) -> str:
 
 # ── sat_metadata.csv ─────────────────────────────────────────────────────────
 
+_SAT_META_CACHE: tuple[tuple[float, int], dict[int, dict[str, str]]] | None = None
+
+
 def load_sat_metadata_csv() -> dict[int, dict[str, str]]:
+    """讀取 sat_metadata.csv（~3 MB、3 萬筆）。以檔案 (mtime, size) 為鍵快取：檔案更新自動重讀。
+
+    回傳值為共用快取，呼叫端**只可讀取、不可修改**。原本每次呼叫都重新解析（約 0.5 s），
+    離軌名單逐顆查名稱時 88 顆即耗時 40 s 以上。
+    """
+    global _SAT_META_CACHE
     if not settings.SAT_META_CSV.exists():
         return {}
+    st = settings.SAT_META_CSV.stat()
+    key = (st.st_mtime, st.st_size)
+    if _SAT_META_CACHE is not None and _SAT_META_CACHE[0] == key:
+        return _SAT_META_CACHE[1]
     result: dict[int, dict[str, str]] = {}
     try:
         with settings.SAT_META_CSV.open(encoding="utf-8-sig", newline="") as f:
@@ -215,6 +228,7 @@ def load_sat_metadata_csv() -> dict[int, dict[str, str]]:
                 result[nid] = {k: (v.strip() if v else "") for k, v in row.items()
                                if k != "norad_id"}
         logger.info("sat_metadata.csv: %d 筆", len(result))
+        _SAT_META_CACHE = (key, result)
     except Exception as exc:
         logger.error("sat_metadata.csv 讀取失敗: %s", exc)
     return result

@@ -266,3 +266,42 @@ def api_search():
         results.append(r)
 
     return jsonify({"results": results, "count": len(results), "query": q})
+
+
+# Starship Flight 14 (2026-09-28, intl designator 2026-225A..AB) — synthetic NORAD
+# block reserved by this project for TLEs fitted from SpaceX MEME precise ephemeris
+# (starlink_ephemeris/meme_to_tle.py). Not official Space-Track numbers; kept out of
+# starlink_census.py's official V3 count on purpose so that count stays accurate.
+V3_FLIGHT14_NORAD_IDS = list(range(339974, 340000))
+
+
+@bp.get("/api/v3_flight14_roster")
+def api_v3_flight14_roster():
+    idx = get_sat_index()
+    valid = [nid for nid in V3_FLIGHT14_NORAD_IDS if nid in idx]
+    positions = propagate_batch(valid, idx)
+
+    results = []
+    for nid, pos in zip(valid, positions):
+        info = idx[nid]
+        r: dict[str, Any] = {
+            "norad_id":      nid,
+            "name":          info["name"],
+            "constellation": info["constellation"] or "—",
+        }
+        if pos:
+            r["lat"]    = round(pos[0], 4)
+            r["lon"]    = round(pos[1], 4)
+            r["alt_km"] = round(pos[2], 1)
+        results.append(r)
+
+    return jsonify({
+        "results": results,
+        "count": len(results),
+        "expected_count": len(V3_FLIGHT14_NORAD_IDS),
+        "source": (
+            "ESTIMATED — SGP4 fitted from SpaceX MEME precise ephemeris, not an "
+            "official Space-Track/CelesTrak TLE. NORAD IDs 339974-339999 are "
+            "synthetic, reserved by this project pending official cataloguing."
+        ),
+    })

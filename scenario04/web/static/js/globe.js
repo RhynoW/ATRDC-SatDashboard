@@ -1270,6 +1270,15 @@ async function showMultiSats(tokens){
 async function autoSelectFromUrl(){
   // 支援 ?sat=55025,66666,25544  ?sat=STARLINK-36833  ?norad_id=55025
   const params   = new URLSearchParams(window.location.search);
+
+  // ?v3flight14=1 -- 一次顯示 Starship Flight 14 的 26 顆 Starlink V3
+  // (合成 NORAD 339974-339999，MEME 精密星曆反算 SGP4 估測軌道，非官方 TLE)
+  if(params.get('v3flight14') === '1'){
+    const V3_FLIGHT14_IDS = Array.from({length:26}, (_,i)=>String(339974+i));
+    await showMultiSats(V3_FLIGHT14_IDS);
+    return;
+  }
+
   const satParam = (params.get('sat') || params.get('norad_id') || params.get('norad') || '').trim();
   if(!satParam) return;
 

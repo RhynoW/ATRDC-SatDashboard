@@ -13,9 +13,8 @@ build_maneuvers_2026.py — 整合展示用「今年度機動偵測成果」預�
 from __future__ import annotations
 
 import json
-import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 import duckdb

@@ -5,7 +5,7 @@
 <title>台北覆蓋分析 — Cesium 2D</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/taipei.css') }}" onerror="var n=+(this.dataset.r||0);if(n<3){var l=this.cloneNode();l.dataset.r=n+1;var h=this.href.replace(/[?&]retry=\d+/,'');l.href=h+(h.indexOf('?')<0?'?':'&')+'retry='+(n+1);var t=this;setTimeout(function(){t.parentNode.insertBefore(l,t.nextSibling);},800*(n+1));}"/>
-<script>/* HF 代理暫時性 502/503/504：同源 GET fetch 自動重試 3 次（0.8/1.6/2.4 s） */(function(){var f=window.fetch;if(!f)return;window.fetch=function(input,init){var m=((init&&init.method)||(input&&input.method)||'GET').toUpperCase();var u=typeof input==='string'?input:(input&&input.url)||'';var same=u.charAt(0)==='/'||u.indexOf(location.origin)===0;if(m!=='GET'||!same)return f.apply(this,arguments);var self=this,args=arguments;return new Promise(function(res,rej){(function go(n){f.apply(self,args).then(function(r){if((r.status===502||r.status===503||r.status===504)&&n<3){setTimeout(function(){go(n+1);},800*(n+1));}else{res(r);}},function(e){if(n<3){setTimeout(function(){go(n+1);},800*(n+1));}else{rej(e);}});})(0);});};}());</script>
+{% include "_net_retry.html" %}
 <script>window.CESIUM_ION_TOKEN="{{ cesium_token }}";</script>
 {% include "_cesium_loader.html" %}
 <script>

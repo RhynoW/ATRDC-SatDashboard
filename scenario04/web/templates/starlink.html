@@ -5,6 +5,7 @@
 <title>Starlink 台灣服務能力分析</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/starlink.css') }}"/>
+{% include "_net_retry.html" %}
 <script>
 /* 分頁：?tab=census|v3|deorbit（舊 /starlink-census 等網址 302 轉入）；預設台灣服務分析 */
 window.SL_TAB = new URLSearchParams(location.search).get('tab') || 'analysis';

@@ -81,14 +81,26 @@ if __name__ == "__main__":
     get_sat_index()
     get_stats()
     logger.info("啟動背景傳播快取（慢層：每 60 s 全星座重算）…")
+    # 正式模式：HF Space（平台注入 SPACE_ID）或 PRODUCTION=1 → waitress 多執行緒 WSGI、無 debug/reloader。
+    # 原本正式環境也跑 Werkzeug 開發伺服器 + debug：HF 代理下 Cesium 大量並行素材請求頻繁 502，
+    # reloader 父程序重複預熱索引，且互動除錯器不應對外。本機開發維持 debug 開發伺服器。
+    _prod = bool(os.getenv("SPACE_ID")) or os.getenv("PRODUCTION", "").lower() in ("1", "true", "yes")
     # app.debug 在 app.run() 之前恆為 False，故先定義局部旗標
     # debug=True 時 Werkzeug 啟動 reloader parent + child；只在 child（WERKZEUG_RUN_MAIN=true）啟動執行緒
-    _debug = True
+    _debug = not _prod
     if not _debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         get_cache().start(get_sat_index, interval=60)
         # 離軌 Starlink 再入預測（分段 M/A 校準）背景批次：每 6 小時一次，結果寫 DB/deorbit_forecast.json
         if os.getenv("DEORBIT_FORECAST_DISABLE", "").lower() not in ("1", "true", "yes"):
             from scenario04.services.deorbit_forecast import deorbit_forecast_service
             deorbit_forecast_service.start()
-    # threaded=True：/api/broadcast/stream 為長連線 SSE，須並行處理其餘請求，否則會卡住整個開發伺服器
-    app.run(host=settings.HOST, port=settings.PORT, debug=_debug, threaded=True)
+    if _prod:
+        from waitress import serve
+        _threads = int(os.getenv("WAITRESS_THREADS", "64"))   # SSE 長連線各占一執行緒，須留足
+        logger.info("正式模式：waitress %s:%d（threads=%d）", settings.HOST, settings.PORT, _threads)
+        # send_bytes=1：SSE 小封包立即送出，不等緩衝滿；channel_timeout 大於 SSE keepalive 間隔
+        serve(app, host=settings.HOST, port=settings.PORT, threads=_threads,
+              send_bytes=1, channel_timeout=300, connection_limit=500, ident="SatDashboard")
+    else:
+        # threaded=True：/api/broadcast/stream 為長連線 SSE，須並行處理其餘請求，否則會卡住整個開發伺服器
+        app.run(host=settings.HOST, port=settings.PORT, debug=_debug, threaded=True)

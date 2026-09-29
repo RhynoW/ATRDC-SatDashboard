@@ -1,0 +1,23 @@
+{# Cesium 共用載入器：正式環境（HF）自 CDN 載入、失敗退回本站 /cesium/；本機一律用本站。
+   用法：{% include "_cesium_loader.html" %} 後呼叫 window.loadCesium(onOk, onFail)。 #}
+<script>
+window.CESIUM_LOCAL='/cesium/';
+window.CESIUM_BASE_URL={{ (cesium_cdn or '/cesium/')|tojson }};
+/* Cesium 素材（JSON/貼圖/GeoJSON）遇 HF 代理 502/503/504 重試 3 次 */
+window._cesiumRetry=function(){try{var R=Cesium.Resource,o=R.prototype.retryOnError;R.prototype.retryOnError=function(e){var s=e&&e.statusCode,n=this._retryCount||0;if((s===502||s===503||s===504)&&n<3){this._retryCount=n+1;return new Promise(function(r){setTimeout(function(){r(true);},800*(n+1));});}return o.call(this,e);};}catch(err){}};
+window.loadCesium=function(ok,fail){
+  function css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
+  function js(src,good,bad,left){var s=document.createElement('script');s.src=src;
+    s.onload=good;s.onerror=function(){s.remove();if(left>0){setTimeout(function(){js(src,good,bad,left-1);},1500);}else{bad();}};
+    document.head.appendChild(s);}
+  function done(){window._cesiumRetry();ok();}
+  var base=window.CESIUM_BASE_URL;
+  css(base+'Widgets/widgets.css');
+  js(base+'Cesium.js',done,function(){
+    if(base===window.CESIUM_LOCAL){(fail||function(){})();return;}
+    window.CESIUM_BASE_URL=window.CESIUM_LOCAL;           /* CDN 失敗 → 本站 */
+    css(window.CESIUM_LOCAL+'Widgets/widgets.css');
+    js(window.CESIUM_LOCAL+'Cesium.js',done,fail||function(){},3);
+  },base===window.CESIUM_LOCAL?3:1);
+};
+</script>

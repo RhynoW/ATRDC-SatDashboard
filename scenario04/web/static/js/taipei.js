@@ -197,7 +197,7 @@ async function initCesium(){
     timeline:            false,
     baseLayerPicker:     false,
     imageryProvider: new Cesium.TileMapServiceImageryProvider({
-      url:'/cesium/Assets/Textures/NaturalEarthII/',
+      url:(window.CESIUM_BASE_URL||'/cesium/')+'Assets/Textures/NaturalEarthII/',
       fileExtension:'jpg',
       credit:'Natural Earth II',
     }),

@@ -51,6 +51,7 @@
   .lang-btn.active{background:#58a6ff;color:#0d1117;border-color:#58a6ff}
 </style>
 <script>window.CESIUM_ION_TOKEN="{{ cesium_token }}";</script>
+{% include "_cesium_loader.html" %}
 <script>
 (function(){
   function _css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
@@ -62,12 +63,8 @@
       el.style.color='#f44336';
     }
   }
-  _css('/cesium/Widgets/widgets.css');
   window.addEventListener('DOMContentLoaded',function(){
-    var s=document.createElement('script');s.src='/cesium/Cesium.js';
-    s.onload=function(){startApp();};
-    s.onerror=function(){_err('本機 Cesium 未安裝，請將 CesiumJS 解壓至 data/cesium/');};
-    document.head.appendChild(s);
+    window.loadCesium(function(){startApp();},function(){_err('本機 Cesium 未安裝，請將 CesiumJS 解壓至 data/cesium/');});
   });
 }());
 </script>
@@ -322,10 +319,10 @@ function startApp(){
     imagery=(window.CESIUM_ION_TOKEN)
       ? Cesium.createWorldImagery()
       : new Cesium.TileMapServiceImageryProvider({
-          url:'/cesium/Assets/Textures/NaturalEarthII/',fileExtension:'jpg',credit:'Natural Earth II'});
+          url:(window.CESIUM_BASE_URL||'/cesium/')+'Assets/Textures/NaturalEarthII/',fileExtension:'jpg',credit:'Natural Earth II'});
   }catch(e){
     imagery=new Cesium.TileMapServiceImageryProvider({
-      url:'/cesium/Assets/Textures/NaturalEarthII/',fileExtension:'jpg',credit:'Natural Earth II'});
+      url:(window.CESIUM_BASE_URL||'/cesium/')+'Assets/Textures/NaturalEarthII/',fileExtension:'jpg',credit:'Natural Earth II'});
   }
   viewer=new Cesium.Viewer('cesiumContainer',{
     sceneMode:Cesium.SceneMode.SCENE3D,

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RPO 3D — 兩衛星相對接近與 Pc</title>
-<link rel="stylesheet" href="/cesium/Widgets/widgets.css">
+{% include "_cesium_loader.html" %}
 <style>
   :root{
     --bg:#0A0D13;--panel:rgba(16,20,29,.92);--line:rgba(255,255,255,.10);
@@ -139,13 +139,9 @@
     function tt(zh,ja,en){ var l='zh'; try{ l=localStorage.getItem('rpo3d_lang')||'zh'; }catch(e){} if(l==='ja')return ja; if(l==='en')return en; return zh; }
     function fail(m){var w=document.getElementById('warn');w.textContent=m;w.style.display='block';
       var l=document.getElementById('loading');if(l)l.textContent=m;}
-    var s=document.createElement('script');
-    s.src='/cesium/Cesium.js';
-    s.onload=function(){ if(window.startRPO) window.startRPO(); else fail(tt('rpo3d.js 未載入','rpo3d.js が読み込まれていません','rpo3d.js failed to load')); };
-    s.onerror=function(){ fail(tt('本機 Cesium 未安裝（請將 CesiumJS 解壓至 data/cesium/）','ローカル Cesium が未インストールです（CesiumJS を data/cesium/ に展開してください）','Local Cesium is not installed (please extract CesiumJS into data/cesium/)')); };
     var app=document.createElement('script');
     app.src="{{ url_for('static', filename='js/rpo3d.js') }}";
-    app.onload=function(){ document.head.appendChild(s); };
+    app.onload=function(){ window.loadCesium(function(){ if(window.startRPO) window.startRPO(); else fail(tt('rpo3d.js 未載入','rpo3d.js が読み込まれていません','rpo3d.js failed to load')); }, function(){ fail(tt('本機 Cesium 未安裝（請將 CesiumJS 解壓至 data/cesium/）','ローカル Cesium が未インストールです（CesiumJS を data/cesium/ に展開してください）','Local Cesium is not installed (please extract CesiumJS into data/cesium/)')); }); };
     app.onerror=function(){ fail(tt('前端腳本 rpo3d.js 載入失敗','フロントエンドスクリプト rpo3d.js の読み込みに失敗しました','Failed to load frontend script rpo3d.js')); };
     var bc=document.createElement('script');
     bc.src="{{ url_for('static', filename='js/broadcast.js') }}";

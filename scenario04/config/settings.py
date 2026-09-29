@@ -72,6 +72,9 @@ TIMELINE_DAYS        = 30    # 時間軸 ±30 天
 MAX_PASSES_MATRIX_MB = 512   # 過頂預報矩陣記憶體上限
 
 CESIUM_ION_TOKEN = os.getenv("CESIUM_ION_TOKEN", "")
+# Cesium 載入來源：HF Space（SPACE_ID）預設走 jsDelivr CDN（版本須與 data/cesium 相同），失敗前端退回本站 /cesium/；
+# 本機預設空字串＝本站。CESIUM_CDN="" 可在正式環境強制本站。
+CESIUM_CDN = os.getenv("CESIUM_CDN", "https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/" if os.getenv("SPACE_ID") else "")
 
 # ── 檔案資源 ──────────────────────────────────────────────────────────────────
 # 前端資產（Cesium／Logo／貼圖等）優先讀 app 目錄（隨附打包），退回 BASE_DIR

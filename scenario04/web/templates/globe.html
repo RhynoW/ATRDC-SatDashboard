@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/globe.css') }}" onerror="var n=+(this.dataset.r||0);if(n<3){var l=this.cloneNode();l.dataset.r=n+1;var h=this.href.replace(/[?&]retry=\d+/,'');l.href=h+(h.indexOf('?')<0?'?':'&')+'retry='+(n+1);var t=this;setTimeout(function(){t.parentNode.insertBefore(l,t.nextSibling);},800*(n+1));}"/>
 <script>/* HF 代理暫時性 502/503/504：同源 GET fetch 自動重試 3 次（0.8/1.6/2.4 s） */(function(){var f=window.fetch;if(!f)return;window.fetch=function(input,init){var m=((init&&init.method)||(input&&input.method)||'GET').toUpperCase();var u=typeof input==='string'?input:(input&&input.url)||'';var same=u.charAt(0)==='/'||u.indexOf(location.origin)===0;if(m!=='GET'||!same)return f.apply(this,arguments);var self=this,args=arguments;return new Promise(function(res,rej){(function go(n){f.apply(self,args).then(function(r){if((r.status===502||r.status===503||r.status===504)&&n<3){setTimeout(function(){go(n+1);},800*(n+1));}else{res(r);}},function(e){if(n<3){setTimeout(function(){go(n+1);},800*(n+1));}else{rej(e);}});})(0);});};}());</script>
+{% include "_cesium_loader.html" %}
 <script>
-window._cesiumRetry=function(){try{var R=Cesium.Resource,o=R.prototype.retryOnError;R.prototype.retryOnError=function(e){var s=e&&e.statusCode,n=this._retryCount||0;if((s===502||s===503||s===504)&&n<3){this._retryCount=n+1;return new Promise(function(r){setTimeout(function(){r(true);},800*(n+1));});}return o.call(this,e);};}catch(err){}};  /* Cesium 素材（JSON/貼圖/GeoJSON）遇 HF 代理 502/503/504 重試 3 次 */
 (function(){
   function _css(h,n){n=n||0;var l=document.createElement('link');l.rel='stylesheet';l.href=n?h+(h.indexOf('?')<0?'?':'&')+'retry='+n:h;l.onerror=function(){if(n<3)setTimeout(function(){_css(h,n+1);},800*(n+1));};document.head.appendChild(l);}
   function _js(src,ok,fail,n){n=n||0;var s=document.createElement('script');s.src=n?src+(src.indexOf('?')<0?'?':'&')+'retry='+n:src;s.onload=ok;s.onerror=function(){s.remove();if(n<3){setTimeout(function(){_js(src,ok,fail,n+1);},1500*(n+1));}else{(fail||function(){})();}};document.head.appendChild(s);}  /* 失敗自動重試 3 次（1.5/3/4.5 s），吸收 HF 代理暫時性 502/503 */
@@ -15,10 +15,9 @@ window._cesiumRetry=function(){try{var R=Cesium.Resource,o=R.prototype.retryOnEr
     function _s(){var el=document.getElementById('warn');if(el){el.textContent=m;el.style.background='rgba(244,67,54,.88)';el.style.display='block';}}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_s);else _s();
   }
-  _css('/cesium/Widgets/widgets.css');
   _js("{{ url_for('static', filename='js/globe.js') }}",function(){
     _js("{{ url_for('static', filename='js/orbit6_tuner.js') }}",function(){
-      _js('/cesium/Cesium.js',function(){window._cesiumRetry();startApp();},function(){_err('本機 Cesium 未安裝，請將 CesiumJS 解壓至 data/cesium/');});
+      window.loadCesium(function(){startApp();},function(){_err('Cesium 載入失敗（CDN 與本站皆失敗）；本機請將 CesiumJS 解壓至 data/cesium/');});
     },function(){_err('orbit6_tuner.js 載入失敗');});
   },function(){_err('前端腳本 globe.js 載入失敗');});
 }());

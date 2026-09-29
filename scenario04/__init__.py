@@ -46,6 +46,11 @@ def create_app() -> Flask:
     from .api import register_blueprints
     register_blueprints(app)
 
+    @app.context_processor
+    def _inject_cesium_cdn():
+        from .config import settings
+        return {"cesium_cdn": settings.CESIUM_CDN}
+
     @app.errorhandler(Exception)
     def handle_error(err):
         from werkzeug.exceptions import HTTPException

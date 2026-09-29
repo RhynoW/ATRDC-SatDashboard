@@ -134,3 +134,19 @@ def test_refresh_runs_subprocess_and_reloads(tmp_path, monkeypatch):
                         lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "boom"))
     assert svc.refresh()["error"] == "rc=1"
     assert svc.get()["n"] == 3          # 失敗時保留舊快取
+
+
+def test_classify_shells_mode_and_status():
+    import pandas as pd
+    from scenario04.physics.starlink_census import classify_shells
+    # 70° 殼層雙峰（~475 × 3、~572 × 5）→ 工作高度取較密集的 ~572；再加 1 顆 250 km 即將再入
+    rows = [(i, a, 70.0) for i, a in enumerate([475, 476, 474, 572, 572.5, 571.5, 572, 573, 250])]
+    rows += [(100 + i, a, 53.2) for i, a in enumerate([463, 462, 464, 430, 520])]
+    df = pd.DataFrame(rows, columns=["norad_id", "alt_km", "inc_deg"])
+    out = {s["shell"]: s for s in classify_shells(df)["shells"]}
+    s70 = out["70°"]
+    assert abs(s70["work_alt_km"] - 572) < 1.5
+    assert s70["at_shell"] == 5 and s70["below"] == 3 and s70["reentry_imminent"] == 1 and not s70["retiring"]
+    s53 = out["53.2°"]
+    assert s53["at_shell"] == 3 and s53["below"] == 1 and s53["above"] == 1
+    assert out["43°"]["count"] == 0

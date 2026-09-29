@@ -10,6 +10,7 @@ from ..physics.starlink_census import (
     keeptrack_starlink_count,
     list_deorbiting_starlinks,
     our_starlink_counts,
+    starlink_shells,
 )
 
 bp = Blueprint("starlink_census_api", __name__)
@@ -21,6 +22,12 @@ def api_starlink_census():
     kt = keeptrack_starlink_count()
     ours = our_starlink_counts()
     return json_response({"keeptrack": kt, "ours": ours})
+
+
+@bp.get("/api/starlink/shells")
+def api_starlink_shells():
+    """近 30 天有 TLE 的 Starlink 依傾角殼層分類（StoryMap shells 區塊）。"""
+    return json_response(starlink_shells(), max_age=600)
 
 
 @bp.get("/api/starlink/deorbiting")

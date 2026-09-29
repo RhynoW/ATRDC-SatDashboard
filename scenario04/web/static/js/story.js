@@ -132,6 +132,15 @@ const I18N = {
     hero_max_gap: '最長無覆蓋空窗（{h} h 內）',
     hero_conjunction: '空間接近關注事件（<{thr} km）', hero_candidate_note: '候選，需人工複核',
     hero_pairs: '{n} 對',
+    slh_inorbit: '近 30 天在軌（本系統）', slh_inorbit_sub: 'Space-Track TLE 30 天內有更新',
+    slh_kt: 'keeptrack.space 公開在軌', slh_kt_sub: '外部對照 · 累計發射 {n}',
+    slh_deorbit: '正在離軌', slh_deorbit_sub: '30 天降逾 40 km 且低於 480 km',
+    slh_v3: '疑似 V3（Starship 部署）', slh_v3_sub: '新衛星待 Space-Track 編目後計入',
+    slh_shells: '軌道殼層', slh_shells_sub: '依傾角分群',
+    sh_kpi_total: '近 {d} 天有 TLE 的 Starlink', sh_kpi_at: '位於工作殼層', sh_kpi_low: '低於 300 km（即將再入）',
+    sh_th_shell: '殼層（傾角）', sh_th_count: '顆數', sh_th_work: '目前工作高度', sh_th_range: '高度 P10–P90',
+    sh_th_at: '在工作殼層', sh_th_below: '低於（抬軌／降軌中）', sh_th_above: '高於', sh_th_low: '< 300 km',
+    sh_retiring: '退役中殼層', sh_note: '工作高度為該殼層最密集的 5 km 高度帶，每次開啟即時計算；±{tol} km 內算作在工作殼層。單筆 TLE 無法分辨抬軌或離軌，「低於」兩者皆含。',
 
     cdm_kpi_pairs: '<{thr} km 幾何接近配對（TLE 傳播）', cdm_kpi_scanned: '掃描物體數',
     cdm_kpi_elapsed: '{s} s', cdm_kpi_elapsed_label: '向量化 SGP4 掃描耗時',
@@ -273,6 +282,15 @@ const I18N = {
     hero_max_gap: '最長のカバレッジ空白時間（{h}時間以内）',
     hero_conjunction: '近接監視イベント（<{thr} km）', hero_candidate_note: '候補であり、目視確認が必要',
     hero_pairs: '{n} 組',
+    slh_inorbit: '直近30日の在軌数（本システム）', slh_inorbit_sub: 'Space-Track TLE が30日以内に更新',
+    slh_kt: 'keeptrack.space 公開在軌数', slh_kt_sub: '外部比較 · 累計打ち上げ {n}',
+    slh_deorbit: '離軌中', slh_deorbit_sub: '30日で40 km超低下かつ480 km未満',
+    slh_v3: 'V3 と推定（Starship 展開）', slh_v3_sub: '新衛星は Space-Track 登録後に計上',
+    slh_shells: '軌道シェル', slh_shells_sub: '軌道傾斜角でグループ化',
+    sh_kpi_total: '直近{d}日にTLEがあるStarlink', sh_kpi_at: '運用シェル内', sh_kpi_low: '300 km未満（再突入間近）',
+    sh_th_shell: 'シェル（傾斜角）', sh_th_count: '機数', sh_th_work: '現在の運用高度', sh_th_range: '高度 P10–P90',
+    sh_th_at: '運用シェル内', sh_th_below: '下（軌道上昇／降下中）', sh_th_above: '上', sh_th_low: '< 300 km',
+    sh_retiring: '退役中のシェル', sh_note: '運用高度は各シェルで最も衛星が密集する5 km帯で、開くたびにリアルタイム計算します。±{tol} km 以内を運用シェル内とします。単一のTLEでは軌道上昇と離軌を区別できないため、「下」には両方が含まれます。',
 
     cdm_kpi_pairs: '<{thr} km 幾何接近ペア（TLE伝播）', cdm_kpi_scanned: 'スキャン物体数',
     cdm_kpi_elapsed: '{s} 秒', cdm_kpi_elapsed_label: 'ベクトル化SGP4スキャン所要時間',
@@ -414,6 +432,15 @@ const I18N = {
     hero_max_gap: 'Longest coverage gap (within {h} h)',
     hero_conjunction: 'Conjunction watch events (<{thr} km)', hero_candidate_note: 'Candidate — requires manual review',
     hero_pairs: '{n} pairs',
+    slh_inorbit: 'In orbit, last 30 days (this system)', slh_inorbit_sub: 'Space-Track TLE updated within 30 days',
+    slh_kt: 'keeptrack.space public in-orbit', slh_kt_sub: 'External reference · {n} launched',
+    slh_deorbit: 'Deorbiting now', slh_deorbit_sub: '>40 km drop in 30 days and below 480 km',
+    slh_v3: 'Suspected V3 (Starship-deployed)', slh_v3_sub: 'Counted once Space-Track catalogs them',
+    slh_shells: 'Orbital shells', slh_shells_sub: 'Grouped by inclination',
+    sh_kpi_total: 'Starlinks with a TLE in the last {d} days', sh_kpi_at: 'At working shell', sh_kpi_low: 'Below 300 km (reentry imminent)',
+    sh_th_shell: 'Shell (inclination)', sh_th_count: 'Count', sh_th_work: 'Current working altitude', sh_th_range: 'Altitude P10–P90',
+    sh_th_at: 'At shell', sh_th_below: 'Below (raising / lowering)', sh_th_above: 'Above', sh_th_low: '< 300 km',
+    sh_retiring: 'Retiring shell', sh_note: 'The working altitude is the densest 5 km altitude band of each shell, computed live on every visit; satellites within ±{tol} km count as at the shell. A single TLE cannot tell orbit-raising from deorbiting, so "Below" includes both.',
 
     cdm_kpi_pairs: 'Geometric close-approach pairs <{thr} km (TLE propagation)', cdm_kpi_scanned: 'Objects scanned',
     cdm_kpi_elapsed: '{s} s', cdm_kpi_elapsed_label: 'Vectorized SGP4 scan time',
@@ -1268,6 +1295,7 @@ async function loadTrack(el, norad){
 /* ── 首屏狀態卡：離島備援窗口／覆蓋空窗／接近關注事件（幾何層、候選需人工複核） ── */
 async function initHeroCards(cfg){
   const box = $id('hcards'); if(!box) return;
+  if(cfg.kind === 'starlink') return initStarlinkHero(box);
   const group = cfg.group || 'oneweb', site = cfg.site || 'nangan', thr = cfg.threshold_km || 10;
   const card = (v, l, s) => '<div class="hcard"><b>' + v + '</b><span>' + l + '</span>' +
                             (s ? '<i>' + s + '</i>' : '') + '</div>';
@@ -1299,6 +1327,54 @@ async function initHeroCards(cfg){
       card(b.coverage_pct >= 99.999 ? t('rv_no_outage') : b.max_gap_min.toFixed(0) + ' 分', tpl('hero_max_gap', {h: rv.window.hours}), age) +
       card(cj && cj.count != null ? tpl('hero_pairs', {n: fmtN(cj.count)}) : '—', tpl('hero_conjunction', {thr}), t('hero_candidate_note'));
   }catch(e){ box.innerHTML = ''; }
+}
+
+/* Starlink 頁首即時計數（hero_cards.kind = "starlink"） */
+async function initStarlinkHero(box){
+  // 五張卡先畫外框，各 API 回來就各自填入（census 需即時抓外部網站，冷啟動可能數秒，不拖累其他卡）
+  const num = v => (v === null || v === undefined || isNaN(v)) ? '—' : fmtN(v);
+  const ids = ['inorbit', 'kt', 'deorbit', 'v3', 'shells'];
+  box.innerHTML = ids.map(k => '<div class="hcard" id="slh-' + k + '"><b>…</b><span>' + esc(t('slh_' + k)) +
+                                '</span><i>' + esc(t('slh_' + k + '_sub').replace(/ · .*\{n\}.*$/, '')) + '</i></div>').join('');
+  const fill = (k, v, sub) => {
+    const c = $id('slh-' + k); if(!c) return;
+    c.querySelector('b').textContent = v;
+    if(sub !== undefined) c.querySelector('i').textContent = sub;
+  };
+  const get = u => fetch(u).then(r => r.json()).catch(() => ({error: 'fetch'}));
+  get('/api/starlink/census').then(cs => {
+    const ours = (cs && cs.ours) || {}, kt = (cs && cs.keeptrack) || {};
+    fill('inorbit', num(ours.fresh_30d));
+    fill('kt', num(kt.in_orbit), kt.launched_total ? tpl('slh_kt_sub', {n: fmtN(kt.launched_total)}) : t('slh_kt_sub').replace(/ · .*$/, ''));
+  });
+  get('/api/starlink/deorbiting?limit=100').then(d => fill('deorbit', num(d.total_matching)));
+  get('/api/starlink/v3_census').then(d => fill('v3', num(d.candidate_count)));
+  get('/api/starlink/shells').then(d => fill('shells', d.shells ? d.shells.filter(x => x.count > 0).length : '—',
+                                            d.shells ? d.shells.map(x => x.shell).join(' · ') : undefined));
+}
+
+/* 軌道殼層分類（/api/starlink/shells） */
+async function initShells(el){
+  const d = await (await fetch('/api/starlink/shells')).json();
+  if(d.error){ el.innerHTML = '<div class="ph">' + esc(d.error) + '</div>'; return; }
+  const sum = k => d.shells.reduce((a, x) => a + (x[k] || 0), 0);
+  const cols = ['sh_th_shell', 'sh_th_count', 'sh_th_work', 'sh_th_range', 'sh_th_at', 'sh_th_below', 'sh_th_above', 'sh_th_low'];
+  el.innerHTML = '<div class="kpis">' + kpi(fmtN(d.total), tpl('sh_kpi_total', {d: d.fresh_days})) +
+    kpi(fmtN(sum('at_shell')), t('sh_kpi_at')) + kpi(fmtN(sum('reentry_imminent')), t('sh_kpi_low')) + '</div>' +
+    '<table class="data"><tr>' + cols.map(k => '<th>' + esc(t(k)) + '</th>').join('') + '</tr>' +
+    d.shells.map(x => '<tr><td><b>' + esc(x.shell) + '</b>' +
+      (x.retiring ? ' <span style="color:#d29922">' + esc(t('sh_retiring')) + '</span>' : '') + '</td>' +
+      '<td>' + fmtN(x.count) + '</td><td>' + (x.work_alt_km != null ? fmtN(Math.round(x.work_alt_km)) + ' km' : '—') + '</td>' +
+      '<td>' + (x.alt_p10_km != null ? Math.round(x.alt_p10_km) + '–' + Math.round(x.alt_p90_km) + ' km' : '—') + '</td>' +
+      '<td>' + fmtN(x.at_shell || 0) + '</td><td>' + fmtN(x.below || 0) + '</td><td>' + fmtN(x.above || 0) + '</td>' +
+      '<td>' + fmtN(x.reentry_imminent || 0) + '</td></tr>').join('') + '</table>' +
+    '<div class="tbl-note">' + esc(tpl('sh_note', {tol: d.tol_km})) + '</div>';
+}
+
+/* FAQ 摺疊問答（sec.qa = [{q, a}]） */
+function faqHtml(sec){
+  return '<div class="faq">' + (sec.qa || []).map(x =>
+    '<details><summary>' + esc(x.q) + '</summary><div class="faq-a">' + esc(x.a) + '</div></details>').join('') + '</div>';
 }
 
 async function initCdm(el){
@@ -1360,7 +1436,7 @@ async function initReentry(el){
 
 const LAZY_INIT = {groupstats: initGroupStats, maneuvers: initManeuvers, radar: initRadar,
                    skyplot: initSkyplot, cdm: initCdm, isrres: initIsrRes, reentry: initReentry,
-                   revisit: initRevisit};
+                   revisit: initRevisit, shells: initShells};
 function initLazy(el){
   if(el.classList.contains('inited')) return;
   el.classList.add('inited');
@@ -1401,6 +1477,8 @@ async function renderStory(sid){
     h += '<div class="sec-body">';
     if(sec.type === 'toc'){
       h += tocHtml(sec);
+    }else if(sec.type === 'faq'){
+      h += faqHtml(sec);
     }else if(sec.type === 'table'){
       h += '<table class="launch"><tr>' +
            sec.columns.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>';

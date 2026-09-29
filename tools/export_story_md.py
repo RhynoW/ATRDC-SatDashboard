@@ -37,6 +37,7 @@ KIND_LABEL = {
     "radar": "假想地面追蹤站可見性與觀測覆蓋評估（API 名稱 radar_eval 沿用既有實作，輸出為幾何可見性指標）",
     "skyplot": "過頂 Skyplot（radar_eval 之視圖；API 名稱沿用既有實作，輸出為幾何可見性指標）",
     "cdm": "幾何接近事件（單一時刻距離篩選，非碰撞風險判定）",
+    "shells": "Starlink 軌道殼層分類（即時計算）",
     "embed": "內嵌頁面", "toc": "章節總覽",
     "revisit": "重訪 / 覆蓋分析（多仰角門檻；SGP4 傳播之幾何可見性，非鏈路預算）",
     "reentry": "再入估算（SGP4 近地點掠過 ＋ 數值 Monte Carlo；TLE-derived）",
@@ -66,6 +67,7 @@ KIND_LABEL_JA = {
     "isrres": "センサー／分解能分類（公開情報に基づく分類）", "maneuvers": "マヌーバ候補イベント統計",
     "radar": "仮想地上追跡局の可視性・観測カバレッジ評価（API 名 radar_eval は既存実装を踏襲）",
     "skyplot": "パス Skyplot（radar_eval のビュー）", "cdm": "幾何学的接近イベント（単一時刻の距離スクリーニング、衝突リスク判定ではない）",
+    "shells": "Starlink 軌道シェル分類（リアルタイム計算）",
     "embed": "埋め込みページ", "toc": "章の概要",
     "reentry": "再突入推定（SGP4 近地点通過＋数値 Monte Carlo；TLE-derived）",
 }
@@ -157,6 +159,8 @@ def sec_extra(sec: dict, sid: str, lang: str = "zh") -> str:
                          for it in sec.get("items", []))
     if t == "text":
         return ""
+    if t == "faq":
+        return "\n\n".join(f"**Q：{x.get('q', '')}**\n\n{x.get('a', '')}" for x in sec.get("qa", []))
     parts = [f"*（{T['block']}：{labels.get(t, t)}）*"]
     if t == "sat":
         for n in sec.get("norads", []):
@@ -171,6 +175,8 @@ def sec_extra(sec: dict, sid: str, lang: str = "zh") -> str:
         parts.append(f"- {T['data']}：{link(API_OF[t] + ' API', '/api/story/' + API_OF[t], group=sec.get('group'))}")
     elif t == "maneuvers":
         parts.append(f"- {T['data']}：{link('maneuvers API', '/api/story/maneuvers')}")
+    elif t == "shells":
+        parts.append(f"- {T['data']}：{link('shells API', '/api/starlink/shells')}")
     elif t == "cdm":
         parts.append(f"- {T['data']}：{link('conjunctions API', '/api/conjunctions', threshold_km=sec.get('threshold_km', 10))}")
     elif t == "reentry":

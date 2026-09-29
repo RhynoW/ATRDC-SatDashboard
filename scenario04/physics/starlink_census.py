@@ -365,6 +365,88 @@ def deorbiting_norad_ids() -> set[int]:
         return set()
 
 
+# ── Starlink 軌道殼層分類（即時；StoryMap「shells」區塊）─────────────────────────
+# 依傾角分群（公開申請文件之殼層傾角）；工作高度不寫死——2026 年起各殼層已陸續降到
+# ~460–485 km，故以該群「近 30 天有 TLE」衛星最密集的高度帶即時代表工作高度。
+SHELL_BANDS: list[tuple[str, float, float]] = [
+    ("43°", 42.0, 44.0), ("53.0°", 52.5, 53.1), ("53.2°", 53.1, 53.5),
+    ("70°", 69.0, 71.0), ("97.6°", 96.5, 98.5),
+]
+SHELL_TOL_KM = 20.0          # 工作高度 ±20 km 內視為「在工作殼層」
+SHELL_LOW_KM = 300.0         # 低於此高度＝即將再入
+SHELL_FRESH_DAYS = 30
+SHELL_CACHE_TTL_S = 600
+_SHELL_CACHE: tuple[float, dict[str, Any]] | None = None
+
+
+def _mode_alt(alt: pd.Series, bin_km: float = 5.0) -> float:
+    """最密集 bin_km 高度帶內的中位數（殼層可能雙峰，如 70° 同時有 ~475 與 ~570 km 兩群）。"""
+    b = (alt // bin_km) * bin_km
+    top = b.value_counts().idxmax()
+    return float(alt[(alt >= top - bin_km) & (alt < top + 2 * bin_km)].median())
+
+
+def classify_shells(df: pd.DataFrame, tol_km: float = SHELL_TOL_KM,
+                    low_km: float = SHELL_LOW_KM) -> dict[str, Any]:
+    """df 欄位：norad_id、alt_km、inc_deg（每星一列，最新 TLE）。回傳各殼層統計。"""
+    shells, used = [], pd.Series(False, index=df.index)
+    for name, lo, hi in SHELL_BANDS:
+        m = (df["inc_deg"] >= lo) & (df["inc_deg"] < hi)
+        used |= m
+        alt = df.loc[m, "alt_km"]
+        if alt.empty:
+            shells.append({"shell": name, "inc_range": [lo, hi], "count": 0})
+            continue
+        work = _mode_alt(alt[alt >= low_km] if (alt >= low_km).any() else alt)
+        at = (alt - work).abs() <= tol_km
+        shells.append({
+            "shell": name, "inc_range": [lo, hi], "count": int(m.sum()),
+            "work_alt_km": round(work, 1),
+            "alt_p10_km": round(float(alt.quantile(0.1)), 1), "alt_p90_km": round(float(alt.quantile(0.9)), 1),
+            "at_shell": int(at.sum()),
+            "below": int(((alt < work - tol_km) & (alt >= low_km)).sum()),
+            "above": int((alt > work + tol_km).sum()),
+            "reentry_imminent": int((alt < low_km).sum()),
+            "retiring": work < 400.0,   # 最密集高度帶已低於 400 km：舊世代退役中之殼層
+        })
+    return {"shells": shells, "total": int(len(df)), "unclassified": int((~used).sum()),
+            "tol_km": tol_km, "low_km": low_km}
+
+
+def starlink_shells() -> dict[str, Any]:
+    """近 30 天有 TLE 的 Starlink，依傾角殼層分類（10 分鐘快取）。"""
+    global _SHELL_CACHE
+    if _SHELL_CACHE and time.monotonic() - _SHELL_CACHE[0] < SHELL_CACHE_TTL_S:
+        return copy.deepcopy(_SHELL_CACHE[1])
+    db = resolve_db()
+    if db is None:
+        return {"error": "資料庫不存在"}
+    ids = _starlink_norad_ids()
+    try:
+        with duckdb.connect(str(db), read_only=True) as con:
+            _register_starlink_ids(con, ids)
+            df = con.execute(f"""
+                SELECT r.norad_id, r.sma_km - 6378.137 AS alt_km, r.inclination_deg AS inc_deg, r.epoch_utc
+                FROM {settings.RAW_TABLE} r JOIN starlink_ids s ON s.norad_id = r.norad_id
+                WHERE r.epoch_utc >= now() - INTERVAL {SHELL_FRESH_DAYS} DAY AND r.epoch_utc <= now()
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY r.norad_id ORDER BY r.epoch_utc DESC) = 1
+            """).fetchdf()
+        out = classify_shells(df)
+        out.update({
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "fresh_days": SHELL_FRESH_DAYS,
+            "db_latest_epoch": str(df["epoch_utc"].max()) if len(df) else None,
+            "method": f"傾角分群；工作高度＝該群最密集的 5 km 高度帶（排除 <{SHELL_LOW_KM:.0f} km）；"
+                      f"±{SHELL_TOL_KM:.0f} km 內為在工作殼層。單筆 TLE 無法分辨抬軌或離軌，"
+                      "「低於工作殼層」兩者皆含，離軌者見離軌名單。",
+        })
+        _SHELL_CACHE = (time.monotonic(), out)
+        return copy.deepcopy(out)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("starlink_shells 失敗：%s", exc)
+        return {"error": str(exc)}
+
+
 # ── Starlink V3 部署統計（啟發式，見 count_v3_candidates() 說明）──────────────
 # V3 規格與部署時程為公開報導之已知資訊（非本系統可獨立驗證）。Starship Flight 14 於
 # 2026-09-28 12:46 UTC 自 Starbase 發射，首度進入軌道並部署 26 顆 Starlink V3（SpaceX 確認

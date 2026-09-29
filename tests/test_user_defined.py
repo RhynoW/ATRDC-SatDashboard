@@ -72,16 +72,9 @@ class TestSampleFiles:
         assert cat[99001]["country"] == "台灣"
 
     def test_sample_tracking(self):
+        # tracking01.csv 只留表頭，預設「NORAD 監測」清單為空，不再隨附示範衛星
         items = load_tracking_list()
-        ids = [i["norad_id"] for i in items]
-        assert set(ids) == {99001, 25544, 42920}
-        by_id = {i["norad_id"]: i for i in items}
-        assert by_id[99001]["priority"] == "high"       # 高 → high
-        assert by_id[25544]["priority"] == "medium"     # 中 → medium
-        assert all(i["enabled"] for i in items)
-        assert all(i["color"].startswith("#") for i in items)
-        # priority 排序：high 在前
-        assert items[0]["priority"] == "high"
+        assert items == []
 
 
 class TestTrackingCsvParsing:
@@ -143,19 +136,16 @@ class TestUserDataApi:
             yield c
 
     def test_tracking_list(self, client):
+        # tracking01.csv 只留表頭，預設清單為空
         d = client.get("/api/tracking/list").get_json()
-        assert d["count"] == 3
-        assert d["enabled"] == 3
-        aliases = {i["alias"] for i in d["items"]}
-        assert "福衛五號" in aliases
+        assert d["count"] == 0
+        assert d["enabled"] == 0
+        assert d["items"] == []
 
     def test_tracking_positions(self, client):
         d = client.get("/api/tracking/positions").get_json()
-        assert d["count"] == 3
-        assert d["ok_count"] == 3
-        by_id = {s["norad_id"]: s for s in d["satellites"]}
-        assert by_id[99001]["user_defined"] is True
-        assert "lat" in by_id[99001]
+        assert d["count"] == 0
+        assert d["ok_count"] == 0
 
     def test_tracking_positions_ids_param(self, client):
         d = client.get("/api/tracking/positions?ids=99001,123456").get_json()

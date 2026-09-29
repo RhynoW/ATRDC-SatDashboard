@@ -60,10 +60,8 @@ def api_starlink_deorbit_forecast():
 
 @bp.get("/api/starlink/v3_census")
 def api_starlink_v3_census():
-    """啟發式估計疑似 Starlink V3 部署數量（依公開已知部署時程＋初始入軌殼層推測）。"""
-    era_start = request.args.get("era_start", "").strip()
-    return json_response(count_v3_candidates(era_start) if era_start else count_v3_candidates(),
-                         max_age=300)
+    """依國際編號精確比對已編目 Starlink V3，並附 CelesTrak 補充檔之未編目暫定名單。"""
+    return json_response(count_v3_candidates(), max_age=300)
 
 
 @bp.get("/api/starlink/reentry_detail")

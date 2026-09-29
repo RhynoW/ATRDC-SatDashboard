@@ -120,44 +120,57 @@
   const V3 = {
     zh: {
       page_title: 'Starlink V3 佈署數量統計', loading: '載入中…',
-      page_sub: '追蹤疑似 Starlink V3（新一代營運衛星）的部署數量。目錄本身不含硬體世代標記，本頁以「公開已知部署時程＋初始入軌殼層」的啟發式間接推測，並非官方分類。',
-      stat_label: '目前偵測到的疑似 V3 衛星數', schedule_title: '已知部署紀錄（公開報導，非本系統可獨立驗證）',
-      schedule_note: 'Starship Flight 14 於 2026-09-28 12:46 UTC 自 Starbase 發射，首度進入軌道並部署 26 顆 Starlink V3，SpaceX 確認全數建立聯繫。V3 單顆約 2,000 kg（報導引述之標稱值；V2 Mini 約 800 kg）；26 顆合計約 52 公噸為換算值，非官方實測。新衛星須待 Space-Track 編目後才會出現在本系統。',
-      list_title: '已偵測到的疑似 V3 衛星清單', method_title: '判定方法與限制',
-      meta_zero: '目前尚未偵測到符合條件的衛星（新發射的衛星通常 1–2 天後才完成編目，這是預期中的結果，並非系統錯誤）。',
-      meta_found: '自 {era} 起、初始入軌高度落在已知規劃殼層者，本系統資料庫最新 TLE 時刻：{t}',
-      th_name: '衛星', th_norad: 'NORAD', th_first: '首次見於', th_alt: '初始高度 (km)',
-      method_p1: '由於 Space-Track／CelesTrak 的公開目錄不會標記衛星的硬體世代（v1.0／v1.5／v2 Mini／V3），本頁只能用兩個間接線索去猜：（1）該衛星在本系統資料庫中最早出現的 TLE 時刻是否在 V3 部署起算日之後；（2）該筆最早 TLE 的高度是否落在已知規劃的初始部署殼層內（±5 km 容許）。',
-      method_p2: '這是不精確的代理指標：無法排除同一時期剛好也在類似高度部署的其他世代衛星（例如 Falcon 9 發射的 V2 Mini），也可能因早期軌道尚未穩定而誤判。Flight 14 的發射批次 COSPAR ID 編目後，應改用它來精確辨識。',
-      method_p3: '本頁為即時查詢，不需要手動更新——一旦每日 TLE 管線抓到符合條件的新衛星，數字會自動反映。',
+      page_sub: '追蹤 Starlink V3（新一代營運衛星）的部署進度：以 TLE 國際編號精確比對已知的 Starship 部署批次，並列出 CelesTrak 補充檔中尚未正式編目的暫定名單。',
+      stat_label: '本系統已編目的 V3 衛星數', schedule_title: '已知的 V3 部署批次',
+      schedule_note: 'Starship Flight 14 於 2026-09-28 12:46 UTC 自 Starbase 發射，首度進入軌道並部署 26 顆 Starlink V3，SpaceX 確認全數建立聯繫。V3 單顆約 2,000 kg（報導引述之標稱值；V2 Mini 約 800 kg）；26 顆合計約 52 公噸為換算值，非官方實測。首批入軌高度約 270 km（低傾角停泊軌道），遠低於原先估計的工作殼層，之後仍會變軌抬升。',
+      list_title: '已編目的 V3 衛星清單', method_title: '判定方法與限制',
+      meta_line: '已知批次（{launches}）中，{n} 顆已完成 Space-Track 正式編目並進入本系統；資料庫最新 TLE 時刻：{t}',
+      th_name: '衛星', th_norad: 'NORAD', th_first: '首次見於', th_alt: '高度 (km)',
+      method_p1: '每次 Starship 部署一批 V3 都有固定的國際編號前綴（發射年＋當年度發射序號，例如 2026-225）。本頁直接解析 TLE 中的國際編號欄位、比對已知的部署批次清單，這是精確比對，不是猜測；清單見上方「已知的 V3 部署批次」。',
+      method_p2: '衛星從發射到 Space-Track 正式編目、TLE 進入本系統每日管線，通常需要 1–2 天空窗期。這段期間本頁改顯示下方 CelesTrak 補充檔的暫定名單（來自 SpaceX 自行提供的軌道根數），待正式編目後會自動轉入上方已編目清單並換成真正的 NORAD 編號。',
+      method_p3: '本頁為即時查詢，不需要手動更新；新增部署批次時需由本系統維護者將其國際編號前綴加入追蹤清單。',
+      provisional_title: 'CelesTrak 補充檔暫定名單（尚未正式編目）',
+      provisional_note: '以下資料來自 CelesTrak 補充檔（SpaceX 自行提供的軌道根數，非 Space-Track 官方編目）。NORAD 編號為 CelesTrak 暫用碼、非正式 SATCAT 號碼，不會寫入本系統資料庫；一旦正式編目即會改列入上方清單。',
+      provisional_zero: 'CelesTrak 補充檔目前查無暫定資料——可能是本批衛星已全數完成正式編目（請看上方清單），也可能是查詢暫時失敗。',
+      provisional_error: 'CelesTrak 暫定名單查詢失敗：{err}',
+      th_oid: '國際編號', th_incl: '傾角 (°)', th_epoch: 'Epoch (UTC)',
     },
     en: {
       page_title: 'Starlink V3 Deployment Count', loading: 'Loading…',
-      page_sub: 'Tracks the number of suspected Starlink V3 (next-generation operational) satellites deployed. Public catalogs carry no hardware-generation tag, so this page uses a heuristic — known deployment schedule plus initial insertion shell — as an indirect proxy; it is not an official classification.',
-      stat_label: 'Suspected V3 satellites currently detected', schedule_title: 'Known Deployment Record (public reports, not independently verified by this system)',
-      schedule_note: 'Starship Flight 14 launched from Starbase at 12:46 UTC on 2026-09-28, reached orbit for the first time and deployed 26 Starlink V3 satellites; SpaceX confirmed contact with all 26. Each V3 is about 2,000 kg (nominal figure quoted in reports; V2 Mini about 800 kg); the 26-satellite total of about 52 t is a derived figure, not an official measurement. New satellites appear in this system only after Space-Track catalogs them.',
-      list_title: 'Detected Suspected V3 Satellites', method_title: 'Method and Limitations',
-      meta_zero: 'No matching satellites detected yet (newly launched satellites are usually cataloged 1–2 days later; this is expected, not a system error).',
-      meta_found: "Satellites first seen on or after {era} with an initial insertion altitude in the known planned shells; this system's latest TLE timestamp: {t}",
-      th_name: 'Satellite', th_norad: 'NORAD', th_first: 'First Seen', th_alt: 'Initial Altitude (km)',
-      method_p1: "Because public Space-Track/CelesTrak catalogs do not tag hardware generation (v1.0 / v1.5 / v2 Mini / V3), this page can only guess using two indirect clues: (1) whether the satellite's earliest TLE epoch in this system is on or after the V3 deployment start date; (2) whether that earliest TLE's altitude falls within the known planned initial shells (±5 km tolerance).",
-      method_p2: 'This is an imprecise proxy: it cannot rule out other-generation satellites (e.g., V2 Mini launched on Falcon 9) deploying into a similar altitude during the same period, and early unstable orbits could cause misclassification. Once the Flight 14 launch COSPAR ID is cataloged, it should replace this heuristic.',
-      method_p3: "This is a live query and needs no manual update — once the daily TLE pipeline picks up a matching satellite, the count reflects it automatically.",
+      page_sub: 'Tracks Starlink V3 (next-generation) deployment progress: matches known Starship launch batches precisely via the TLE international designator, and lists provisional (not yet officially cataloged) satellites from the CelesTrak supplemental file.',
+      stat_label: 'V3 satellites cataloged in this system', schedule_title: 'Known V3 launch batches',
+      schedule_note: 'Starship Flight 14 launched from Starbase at 12:46 UTC on 2026-09-28, reached orbit for the first time and deployed 26 Starlink V3 satellites; SpaceX confirmed contact with all 26. Each V3 is about 2,000 kg (nominal figure quoted in reports; V2 Mini about 800 kg); the 26-satellite total of about 52 t is a derived figure, not an official measurement. The first batch reached an initial altitude of roughly 270 km (a low-inclination parking orbit), well below the previously assumed working shells, and will still raise orbit.',
+      list_title: 'Cataloged V3 satellites', method_title: 'Method and limitations',
+      meta_line: 'Of the known batches ({launches}), {n} satellites have been officially cataloged by Space-Track and are in this system; latest TLE timestamp in this database: {t}',
+      th_name: 'Satellite', th_norad: 'NORAD', th_first: 'First seen', th_alt: 'Altitude (km)',
+      method_p1: 'Each Starship V3 deployment batch has a fixed international-designator prefix (launch year + launch number of the year, e.g. 2026-225). This page parses that field directly from the TLE and matches it against a maintained list of known batches — an exact match, not a guess; see "Known V3 launch batches" above.',
+      method_p2: 'It usually takes 1–2 days from launch to official Space-Track cataloging and the TLE entering this system\'s daily pipeline. During that gap this page instead shows the provisional roster below, sourced from CelesTrak\'s supplemental file (orbital elements supplied by SpaceX itself); once officially cataloged, satellites move up to the cataloged list above under their real NORAD number.',
+      method_p3: "This page is a live query and needs no manual update; adding a new launch batch requires this system's maintainer to add its designator prefix to the tracked list.",
+      provisional_title: 'Provisional roster from CelesTrak supplemental file (not yet officially cataloged)',
+      provisional_note: 'The data below comes from the CelesTrak supplemental file (orbital elements supplied by SpaceX itself, not an official Space-Track catalog entry). NORAD numbers here are CelesTrak placeholder IDs, not official SATCAT numbers, and are not stored in this system\'s database; once officially cataloged, a satellite moves to the list above.',
+      provisional_zero: 'No provisional data found in the CelesTrak supplemental file — this batch may already be fully cataloged (see the list above), or the lookup may have failed temporarily.',
+      provisional_error: 'CelesTrak provisional roster lookup failed: {err}',
+      th_oid: 'Int\'l designator', th_incl: 'Inclination (°)', th_epoch: 'Epoch (UTC)',
     },
     ja: {
       page_title: 'Starlink V3 展開機数統計', loading: '読み込み中…',
-      page_sub: '疑わしいStarlink V3（新世代運用衛星）の展開機数を追跡します。公開カタログにはハードウェア世代のタグがないため、「既知の展開スケジュール＋初期投入軌道殻層」によるヒューリスティックな間接推定であり、公式な分類ではありません。',
-      stat_label: '現在検出されている疑わしいV3衛星数', schedule_title: '既知の展開記録（公開報道、本システムでは独自検証不可）',
-      schedule_note: 'Starship Flight 14 は 2026-09-28 12:46 UTC に Starbase から打ち上げられ、初めて軌道に到達して Starlink V3 を26機展開し、SpaceX は全機との通信確立を確認しました。V3 は1機約 2,000 kg（報道で引用された公称値；V2 Mini は約 800 kg）で、26機合計約52トンは換算値であり公式の実測値ではありません。新衛星は Space-Track に登録された後に本システムに表示されます。',
-      list_title: '検出された疑わしいV3衛星一覧', method_title: '判定方法と限界',
-      meta_zero: '現時点で条件に合致する衛星は検出されていません（新しく打ち上げられた衛星は通常1〜2日後に登録されます。想定内の結果であり、システムエラーではありません）。',
-      meta_found: '{era} 以降に初めて検出され、初期投入高度が既知の計画殻層内にある衛星。本システムの最新TLE時刻：{t}',
-      th_name: '衛星', th_norad: 'NORAD', th_first: '初検出', th_alt: '初期高度 (km)',
-      method_p1: 'Space-Track／CelesTrakの公開カタログには衛星のハードウェア世代（v1.0／v1.5／v2 Mini／V3）のタグがないため、2つの間接的な手がかりで推測しています：（1）当該衛星の最も早いTLEエポックがV3展開開始日以降であるか、（2）その最も早いTLEの高度が既知の初期展開殻層内（±5 km許容）にあるか。',
-      method_p2: 'これは不正確な代理指標です。同時期に類似高度へ展開された他世代の衛星（例：Falcon 9 で打ち上げられた V2 Mini）を排除できず、初期軌道が安定していないことによる誤判定もあり得ます。Flight 14 の COSPAR ID が登録され次第、それで正確に識別すべきです。',
-      method_p3: '本ページはリアルタイムクエリのため手動更新は不要です——日次TLEパイプラインが条件に合う新衛星を検知次第、数値に自動反映されます。',
+      page_sub: 'Starlink V3（新世代運用衛星）の展開状況を追跡します。TLEの国際標識でStarshipの既知の打ち上げバッチを正確に照合し、CelesTrak補足ファイルに掲載されている未登録の暫定機体も一覧表示します。',
+      stat_label: '本システムに登録済みのV3機数', schedule_title: '既知のV3打ち上げバッチ',
+      schedule_note: 'Starship Flight 14 は 2026-09-28 12:46 UTC に Starbase から打ち上げられ、初めて軌道に到達して Starlink V3 を26機展開し、SpaceX は全機との通信確立を確認しました。V3 は1機約 2,000 kg（報道で引用された公称値；V2 Mini は約 800 kg）で、26機合計約52トンは換算値であり公式の実測値ではありません。初期投入高度は約270 km（低傾斜角のパーキング軌道）で、想定していた運用殻層より大幅に低く、その後も軌道上昇を続けます。',
+      list_title: '登録済みのV3衛星一覧', method_title: '判定方法と限界',
+      meta_line: '既知のバッチ（{launches}）のうち、{n} 機が Space-Track に正式登録され本システムに反映済み。本システムの最新TLE時刻：{t}',
+      th_name: '衛星', th_norad: 'NORAD', th_first: '初検出', th_alt: '高度 (km)',
+      method_p1: 'Starship によるV3展開バッチにはそれぞれ固定の国際標識プレフィックス（打ち上げ年＋その年の打ち上げ通し番号、例：2026-225）があります。本ページはTLEのこのフィールドを直接解析し、追跡中の既知バッチ一覧と照合します——推測ではなく正確な照合です。一覧は上記「既知のV3打ち上げバッチ」を参照。',
+      method_p2: '打ち上げから Space-Track への正式登録、TLEが本システムの日次パイプラインに入るまで、通常1〜2日の空白期間があります。この間は下記のCelesTrak補足ファイルによる暫定機体一覧（SpaceX自身が提供する軌道要素）を表示します。正式登録後は自動的に上記の登録済み一覧に移り、正式なNORAD番号に置き換わります。',
+      method_p3: '本ページはリアルタイムクエリのため手動更新は不要です。新しい打ち上げバッチを追加する場合は、本システムの管理者が国際標識プレフィックスを追跡リストに追加する必要があります。',
+      provisional_title: 'CelesTrak補足ファイルによる暫定機体一覧（未登録）',
+      provisional_note: '以下のデータはCelesTrak補足ファイル（SpaceX自身が提供する軌道要素で、Space-Trackの正式登録ではありません）によるものです。ここに表示されるNORAD番号はCelesTrakの仮番号であり正式なSATCAT番号ではなく、本システムのデータベースには保存されません。正式登録され次第、上記の一覧に移動します。',
+      provisional_zero: 'CelesTrak補足ファイルに暫定データが見つかりませんでした——このバッチはすでに正式登録が完了している（上記の一覧を参照）か、取得が一時的に失敗した可能性があります。',
+      provisional_error: 'CelesTrak暫定機体一覧の取得に失敗しました：{err}',
+      th_oid: '国際標識', th_incl: '傾斜角 (°)', th_epoch: 'Epoch (UTC)',
     },
   };
+
   const v3 = {
     data: null, err: null,
     load() {
@@ -166,24 +179,44 @@
     },
     render() {
       const T = (k, v) => tr(V3, k, v), el = document.getElementById('panel-v3'), d = this.data;
-      let n = '—', meta = this.err ? `<span class="sl-err">${esc(this.err)}</span>` : T('loading'), list = '';
-      if (d && d.error) meta = `<span class="sl-err">${esc(d.error)}</span>`;
-      else if (d) {
-        n = d.candidate_count;
-        meta = d.candidate_count === 0 ? T('meta_zero')
-          : T('meta_found', { era: d.era_start, t: (d.db_latest_epoch || '').replace('T', ' ').slice(0, 19) + ' UTC' });
+      let statN = '—', meta = this.err ? `<span class="sl-err">${esc(this.err)}</span>` : T('loading');
+      let list = '', provBlock = '';
+      if (d && d.error) {
+        meta = `<span class="sl-err">${esc(d.error)}</span>`;
+      } else if (d) {
+        statN = fmtN(d.candidate_count);
+        meta = T('meta_line', {
+          launches: (d.intl_launches || []).join('、'), n: d.candidate_count,
+          t: (d.db_latest_epoch || '').replace('T', ' ').slice(0, 19) + ' UTC',
+        });
         if (d.items && d.items.length) {
           list = `<div class="sl-card"><h3>${T('list_title')}</h3><table class="sl-table"><thead><tr><th>${T('th_name')}</th>
             <th>${T('th_norad')}</th><th>${T('th_first')}</th><th>${T('th_alt')}</th></tr></thead><tbody>${
             d.items.map(it => `<tr><td>${esc(it.name)}</td><td class="num">${it.norad_id}</td>
               <td>${fmtT(it.first_epoch)}</td><td class="num">${it.alt_km}</td></tr>`).join('')}</tbody></table></div>`;
         }
+        const p = d.provisional || {};
+        let provInner;
+        if (p.error) {
+          provInner = `<div class="sl-err">${esc(T('provisional_error', { err: p.error }))}</div>`;
+        } else if (!p.items || !p.items.length) {
+          provInner = `<div class="sl-note">${T('provisional_zero')}</div>`;
+        } else {
+          provInner = `<table class="sl-table"><thead><tr><th>${T('th_oid')}</th><th>${T('th_name')}</th>
+            <th>${T('th_alt')}</th><th>${T('th_incl')}</th><th>${T('th_epoch')}</th></tr></thead><tbody>${
+            p.items.map(it => `<tr><td>${esc(it.object_id || '—')}</td><td>${esc(it.name || '—')}</td>
+              <td class="num">${it.alt_km ?? '—'}</td>
+              <td class="num">${it.inclination_deg != null ? Number(it.inclination_deg).toFixed(1) : '—'}</td>
+              <td>${fmtT(it.epoch)}</td></tr>`).join('')}</tbody></table>`;
+        }
+        provBlock = `<div class="sl-card"><h3>${T('provisional_title')}</h3><p class="sl-note">${T('provisional_note')}</p>${provInner}</div>`;
       }
       el.innerHTML = head(V3, '🚀') + `
-        <div class="sl-card"><div class="sl-stat-big"><div class="n">${n}</div><div class="l">${T('stat_label')}</div></div>
+        <div class="sl-card"><div class="sl-stat-big"><div class="n">${statN}</div><div class="l">${T('stat_label')}</div></div>
           <div class="sl-note">${meta}</div></div>
         <div class="sl-card"><h3>${T('schedule_title')}</h3><div class="sl-warn">${T('schedule_note')}</div></div>
         ${list}
+        ${provBlock}
         <div class="sl-card"><h3>${T('method_title')}</h3><p>${T('method_p1')}</p><p>${T('method_p2')}</p><p>${T('method_p3')}</p></div>`;
     },
   };

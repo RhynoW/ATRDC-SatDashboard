@@ -15,7 +15,8 @@ TLE 更新——會讓數字相差百餘顆。本模組把口徑攤開來看，�
   our_starlink_counts()       本系統依幾種常見口徑各算一次 Starlink 顆數。
   list_deorbiting_starlinks() 近期仍有 TLE、但半長軸快速下降的 Starlink（離軌候選）；
                               對每顆用簡單線性外推給一個「粗估剩餘天數」，非精確再入預測。
-  count_v3_candidates()       疑似 Starlink V3（新一代）部署數量之啟發式估計。
+  count_v3_candidates()       依國際編號精確比對 Starlink V3（新一代）已編目數量＋
+                              CelesTrak 補充檔暫定名單（尚未正式編目者）。
   estimate_reentry_detail()   單顆衛星之零階再入估算（SGP4 逐圈外推近地點）。
 """
 from __future__ import annotations
@@ -23,6 +24,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import math
 import re
 import time
 from datetime import datetime, timezone
@@ -284,11 +286,14 @@ def list_deorbiting_starlinks(limit: int = 60) -> dict[str, Any]:
 # launch_date（官方編目日期，可靠）對照「公開已知的世代量產時期」做近似切分。
 # 世代交界日期為近似值（實際交接通常有數週到數月的重疊過渡期，並非某天硬切換），
 # 僅供教學/展示用的粗略篩選，不是逐顆硬體序號比對的精確分類。
+# 這個日期只用於本頁「世代篩選」下拉選單的粗略分類；判定某顆衛星是否為 V3 的精確方法
+# 見下方 count_v3_candidates()（比對 TLE 國際編號，非本日期）。
+V3_GENERATION_START = "2026-09-28"   # Starship Flight 14 發射日
 GENERATION_BANDS: list[tuple[str, str | None, str | None]] = [
     # (代號, 起始日期含, 結束日期含；None 表示不設下限/上限)
     ("v1.0",   None,          "2021-05-31"),
     ("v1.5",   "2021-06-01",  "2022-12-31"),
-    ("v2mini", "2023-01-01",  None),   # 結束日在下方以 V3_ERA_START 動態代入
+    ("v2mini", "2023-01-01",  None),   # 結束日在 _generation_of() 內以 V3_GENERATION_START 動態代入
 ]
 GENERATION_LABELS = {"v1.0": "v1.0", "v1.5": "v1.5", "v2mini": "v2 Mini", "v3": "V3"}
 
@@ -296,7 +301,7 @@ GENERATION_LABELS = {"v1.0": "v1.0", "v1.5": "v1.5", "v2mini": "v2 Mini", "v3": 
 def _generation_of(launch_date_str: str | None) -> str:
     if not launch_date_str:
         return "unknown"
-    if launch_date_str >= V3_ERA_START:
+    if launch_date_str >= V3_GENERATION_START:
         return "v3"
     for gen, start, end in GENERATION_BANDS:
         if start and launch_date_str < start:
@@ -447,26 +452,104 @@ def starlink_shells() -> dict[str, Any]:
         return {"error": str(exc)}
 
 
-# ── Starlink V3 部署統計（啟發式，見 count_v3_candidates() 說明）──────────────
-# V3 規格與部署時程為公開報導之已知資訊（非本系統可獨立驗證）。Starship Flight 14 於
-# 2026-09-28 12:46 UTC 自 Starbase 發射，首度進入軌道並部署 26 顆 Starlink V3（SpaceX 確認
-# 全數建立聯繫）。起算日取發射日；此後 Falcon 9 發射的 V2 Mini 仍可能落入同一殼層而被誤判。
-V3_ERA_START = "2026-09-28"
-# 已知規劃之初始部署殼層（km），各留 ±5 km 容許範圍
-V3_ALT_BANDS_KM = [(323.0, 327.5), (473.0, 477.5)]
-V3_ALT_TOLERANCE_KM = 5.0
+# ── Starlink V3 部署統計（2026-09-29 改版：國際編號比對＋CelesTrak 補充檔暫定名單）──────
+# 舊版「部署時程 + 入軌殼層」啟發式已停用：Flight 14 實際入軌約 270 km（發射方位角 30.5°
+# 低傾角停泊軌道），遠低於原本估計的 323–327.5／473–477.5 km 工作殼層，證明入軌高度隨
+# 單次任務差異極大、不適合當通用判別依據。改為直接比對 TLE line1 之國際編號（第 10–14
+# 字元＝兩位發射年＋三位當年度發射序號，見 https://en.wikipedia.org/wiki/International_Designator）：
+# 每次已知的 Starship V3 部署批次，依公開報導／CelesTrak 補充檔確認後手動加入本清單。
+V3_INTL_LAUNCHES: list[tuple[int, int]] = [
+    (2026, 225),   # Starship Flight 14，2026-09-28 12:46 UTC 發射，26 顆 STARLINK-400xx
+]
+V3_PROVISIONAL_TTL_S = 4 * 3600     # CelesTrak 補充檔約每日 3 次更新（04:30/12:30/20:30 UTC）
+_V3_PROVISIONAL_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
-def count_v3_candidates(era_start: str = V3_ERA_START) -> dict[str, Any]:
-    """啟發式估計「疑似 Starlink V3」部署數量——即時查詢，非官方分類。
+def _v3_intl_sql_filter(column: str) -> str:
+    """組出以 TLE line1 國際編號欄位比對 V3_INTL_LAUNCHES 的 SQL 條件（1-indexed substr）。"""
+    if not V3_INTL_LAUNCHES:
+        return "1=0"
+    return " OR ".join(
+        f"(substr({column}, 10, 2) = '{yr % 100:02d}' AND substr({column}, 12, 3) = '{num:03d}')"
+        for yr, num in V3_INTL_LAUNCHES
+    )
+
+
+def fetch_v3_provisional_roster() -> dict[str, Any]:
+    """向 CelesTrak 補充檔（SpaceX 自行提供之軌道根數）即時查詢已知 V3 批次的暫定名單。
+
+    這些物件多數尚未取得正式 Space-Track NORAD 編號——回傳的 NORAD_CAT_ID 是 CelesTrak
+    的暫用佔位碼，本系統**不會**把它們寫入資料庫，以免日後正式編目後與真正的 NORAD 號碼
+    衝突。純粹用來顯示「已發射、SpaceX 已釋出軌道根數，但尚未進入本系統每日 TLE 管線」
+    這段空窗期的部署進度；失敗（CelesTrak 無回應等）時優雅降級為 {"error": ...}。
+    """
+    key = ",".join(f"{yr}-{num:03d}" for yr, num in V3_INTL_LAUNCHES)
+    now = time.monotonic()
+    cached = _V3_PROVISIONAL_CACHE.get(key)
+    if cached and (now - cached[0]) < V3_PROVISIONAL_TTL_S:
+        return cached[1]
+    import requests
+    items: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for yr, num in V3_INTL_LAUNCHES:
+        intdes = f"{yr}-{num:03d}"
+        try:
+            resp = requests.get(
+                "https://celestrak.org/NORAD/elements/supplemental/sup-gp.php",
+                params={"INTDES": intdes, "FORMAT": "json"},
+                headers={"User-Agent": _KEEPTRACK_UA}, timeout=15,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{intdes}：{exc}")
+            continue
+        if not isinstance(data, list):
+            continue
+        for o in data:
+            alt_km = None
+            try:
+                n_rad_s = float(o["MEAN_MOTION"]) * 2 * math.pi / 86400.0
+                alt_km = round((398600.4418 / n_rad_s ** 2) ** (1 / 3) - 6378.137, 1)
+            except (KeyError, TypeError, ValueError, ZeroDivisionError):
+                pass
+            items.append({
+                "name": o.get("OBJECT_NAME"), "object_id": o.get("OBJECT_ID"),
+                "provisional_norad_cat_id": o.get("NORAD_CAT_ID"), "epoch": o.get("EPOCH"),
+                "alt_km": alt_km, "inclination_deg": o.get("INCLINATION"),
+                "data_source": o.get("DATA_SOURCE"),
+            })
+    def _piece_key(oid: str | None) -> tuple[str, int, str]:
+        # COSPAR 發射片段序：A..Z, AA..AZ, BA.. — 依長度再依字母排（純字串排序 "AA" 會排在 "B" 之前）
+        oid = oid or ""
+        launch, _, piece = oid.rpartition("-")
+        return (launch, len(piece), piece)
+
+    items.sort(key=lambda x: _piece_key(x.get("object_id")))
+    result: dict[str, Any] = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "source": "CelesTrak 補充檔（sup-gp.php；SpaceX 自行提供之軌道根數，非 Space-Track 官方編目）",
+        "note": "暫定名單：NORAD 編號為 CelesTrak 暫用碼、非官方 SATCAT 號碼，不會寫入本系統資料庫。"
+                "一旦 Space-Track 正式編目、TLE 進入每日管線，會自動改列入上方「已編目」清單"
+                "（並改用真正的 NORAD 編號）。",
+        "count": len(items), "items": items,
+    }
+    if errors and not items:
+        result["error"] = "；".join(errors)
+    _V3_PROVISIONAL_CACHE[key] = (now, result)
+    return result
+
+
+def count_v3_candidates() -> dict[str, Any]:
+    """依國際編號精確辨識已正式編目的 Starlink V3，並附上尚未編目者的暫定名單。
 
     Space-Track／CelesTrak 的公開目錄不會標記衛星的硬體世代（v1.0／v1.5／v2 Mini／V3），
-    因此本函式只能用「公開已知的部署時程與初始入軌殼層」這兩個間接線索去猜：
-      1. 該 NORAD 在本系統資料庫中最早出現的 TLE epoch ≥ era_start（V3 開始部署的已知目標日期）；
-      2. 該筆最早 TLE 的高度落在已知規劃的初始部署殼層（323–327.5 km 或 473–477.5 km，±5 km）內。
-    這是不精確的代理指標：無法排除同一時期剛好也在類似高度部署的其他世代衛星（若仍有的話），
-    也可能因為早期軌道尚未穩定而誤判；隨著更多可靠的公開資料（例如官方確認的發射批次
-    COSPAR ID 清單）出現，應該用那些取代這裡的高度啟發式。
+    但每次 Starship 部署一批 V3 都有固定的國際編號前綴（發射年＋當年度發射序號），一旦
+    公開報導或 CelesTrak 補充檔確認即可精確比對——不必再靠「部署時程＋入軌殼層」這種
+    容易受單次任務差異影響的啟發式（Flight 14 實際入軌高度就與舊版估計差了 200 km 以上）。
+    比對用的國際編號直接取自 TLE line1，不依賴 sat_metadata.csv 的 intl_code 欄位（後者
+    來源另有時間差，可能落後於 TLE 攝入）。新衛星須待 Space-Track 正式編目、TLE 進入本
+    系統每日管線後才會計入 candidate_count／items；編目前的暫定名單見 provisional。
     """
     db = resolve_db()
     if db is None:
@@ -475,30 +558,22 @@ def count_v3_candidates(era_start: str = V3_ERA_START) -> dict[str, Any]:
     if not ids:
         return {"error": "sat_metadata.csv 內找不到任何 Starlink 衛星（檔案缺失或分類規則異常）"}
     try:
-        era_dt = datetime.fromisoformat(era_start).replace(tzinfo=timezone.utc)
-    except ValueError:
-        era_dt = datetime.fromisoformat(V3_ERA_START).replace(tzinfo=timezone.utc)
-
-    band_sql = " OR ".join(
-        f"(alt_km BETWEEN {lo - V3_ALT_TOLERANCE_KM} AND {hi + V3_ALT_TOLERANCE_KM})"
-        for lo, hi in V3_ALT_BANDS_KM
-    )
-    try:
         with duckdb.connect(str(db), read_only=True) as con:
             _register_starlink_ids(con, ids)
             sql = f"""
                 WITH first_seen AS (
                     SELECT r.norad_id,
                            min(r.epoch_utc) AS first_epoch,
-                           arg_min(r.sma_km, r.epoch_utc) - 6378.137 AS alt_km
+                           arg_min(r.sma_km, r.epoch_utc) - 6378.137 AS alt_km,
+                           arg_min(r.line1, r.epoch_utc) AS first_line1
                     FROM {settings.RAW_TABLE} r
                     JOIN starlink_ids s ON s.norad_id = r.norad_id
+                    WHERE r.line1 IS NOT NULL
                     GROUP BY r.norad_id
                 )
                 SELECT norad_id, first_epoch, alt_km
                 FROM first_seen
-                WHERE first_epoch >= TIMESTAMP '{era_dt.strftime('%Y-%m-%d %H:%M:%S')}'
-                  AND ({band_sql})
+                WHERE {_v3_intl_sql_filter("first_line1")}
                 ORDER BY first_epoch
             """
             rows = con.execute(sql).fetchdf()
@@ -514,18 +589,18 @@ def count_v3_candidates(era_start: str = V3_ERA_START) -> dict[str, Any]:
             })
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "era_start": era_dt.date().isoformat(),
-            "alt_bands_km": V3_ALT_BANDS_KM,
+            "intl_launches": [f"{yr}-{num:03d}" for yr, num in V3_INTL_LAUNCHES],
             "db_latest_epoch": latest.isoformat() if hasattr(latest, "isoformat") else str(latest),
             "candidate_count": len(items),
             "items": items,
+            "provisional": fetch_v3_provisional_roster(),
             "known_schedule_note": "公開報導（非本系統可獨立驗證）：Starship Flight 14 於 2026-09-28 "
                                    "12:46 UTC 發射，首度進入軌道並部署 26 顆 Starlink V3，SpaceX 確認全數建立聯繫。"
                                    "V3 單顆約 2,000 kg（報導引述之標稱值；V2 Mini 約 800 kg）；26 顆合計約 52 公噸"
-                                   "為換算值，非官方實測。新衛星須待 Space-Track 編目後才會出現在本系統。",
-            "method": "啟發式：以公開已知的部署時程（≥ era_start）與初始入軌殼層（±5 km 容許）"
-                      "間接推測，Space-Track/CelesTrak 目錄本身不含硬體世代標記，故本統計非官方分類，"
-                      "僅供追蹤部署進度參考。",
+                                   "為換算值，非官方實測。",
+            "method": "以 TLE 國際編號（發射年＋當年度發射序號）精確比對已知 V3 部署批次清單"
+                      "（見 intl_launches），非入軌高度或發射日期之啟發式猜測；"
+                      "尚未正式編目者見下方 provisional 暫定名單。",
         }
     except Exception as exc:  # noqa: BLE001
         logger.warning("count_v3_candidates 失敗：%s", exc)

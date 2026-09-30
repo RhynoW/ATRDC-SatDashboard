@@ -54,7 +54,8 @@
               "reentry",
               "revisit",
               "shells",
-              "faq"
+              "faq",
+              "image"
             ]
           },
           "title": {
@@ -181,6 +182,16 @@
           "site": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+          },
+          "src": {
+            "type": "string",
+            "format": "uri"
+          },
+          "alt": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
           },
           "qa": {
             "type": "array",
@@ -312,6 +323,20 @@
             "then": {
               "required": [
                 "qa"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "image"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "src"
               ]
             }
           }

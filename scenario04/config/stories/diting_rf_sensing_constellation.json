@@ -116,6 +116,24 @@
       "body": "單顆衛星只能判斷「某片區域出現了訊號」，無法精確定位發射源；若三顆衛星以受控幾何隊形同時接收同一訊號，則可比對訊號到達各星的細微差異來解算位置，相當於把地面無線電測向站搬上太空、且不受國界與地形限制。國際同類商用系統（如美商 HawkEye 360）公開採用的技術路徑可作為理解框架：TDOA（到達時差）——訊號到達三顆衛星的時間存在微小差異，任兩星的時間差對應一條「等時差雙曲線」（雙曲面與地球表面之交線），三顆衛星可組出兩條互相獨立的雙曲線，其交點即為發射源的概略位置，此法要求衛星間時鐘達奈秒級同步精度；FDOA（到達頻差／都卜勒頻差）——衛星以每秒約 7 公里以上相對地面運動，對同一發射源觀測到的都卜勒頻移因各星相對速度矢量不同而有差異，任兩星頻差同樣對應一條「等頻差曲線」（幾何上近似另一族雙曲線），可提供獨立於 TDOA 之第二組約束，尤其有助於解析窄頻訊號因時差量測模糊（ambiguity）而產生的多重候選解。實務上，地面處理鏈會將 TDOA 與 FDOA 聯合解算，輸出以「95% 信賴橢圓」表示之座標不確定範圍，橢圓大小（即定位精度）取決於訊號時長、頻寬、訊噪比、以及衛星相對發射源之幾何構型優劣（GDOP，Geometric Dilution of Precision）——幾何構型愈接近共線，解算誤差愈大。值得注意的是，多星編隊 TDOA／FDOA 並非唯一技術路徑：另一類公開商用系統（如法商 Unseenlabs）採「單星都卜勒」（monosatellite FDOA-only）路徑，僅憑單顆衛星在單次過境（pass）期間持續觀測同一訊號源的都卜勒頻移曲線即可解算位置，不需衛星編隊與星間時鐘同步，但需要較長的單次觀測窗口，且理論上無法如 TDOA 般於單一時間點瞬時定位。三星編隊與單星都卜勒是兩種不同的工程權衡（編隊複雜度與同步精度需求 vs. 觀測時間與單星妥善率），詳見下節商業模式比較。誠實註記：截至本篇更新日期，官方尚未公開「諦聽」的具體定位精度、衛星間同步方式或訊號處理細節；以上原理僅為此類系統的通用技術描述，並非對「諦聽」實際性能或內部架構之證實。"
     },
     {
+      "type": "image",
+      "title": "圖：雙曲線定位原理示意（Hyperbolic Navigation）",
+      "dur": 4,
+      "anchor": "img-hyperbolic-nav",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/9/91/Hyperbolic_Navigation.svg",
+      "alt": "三個接收站 A、B、C 與發射源之間依時間差構成雙曲線定位示意圖",
+      "caption": "三個位置已知的接收站 A、B、C 接收同一訊號源，任兩站之時間差對應一條等時差雙曲線，多條雙曲線之交點即為訊號源位置——此為③節 TDOA 原理之通用幾何示意圖，非「諦聽」或任何特定系統之實際架構圖。來源：[Wikipedia – Hyperbolic navigation](https://en.wikipedia.org/wiki/Hyperbolic_navigation)（CC0 公有領域，作者 Cosmia Nebula）"
+    },
+    {
+      "type": "image",
+      "title": "圖：TDOA 多站幾何示意（Surveillance System TDOA Geometry）",
+      "dur": 4,
+      "anchor": "img-tdoa-geometry",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/1/1c/TDOA_Geometry.png",
+      "alt": "發射源與多個接收站之距離差構成之 TDOA 幾何示意圖",
+      "caption": "發射源與多個接收站間之距離差（偽距差）構成等時差雙曲線之幾何關係，為③節「雙曲線交點解算位置」原理的另一種常見教科書畫法。來源：[Wikipedia – Pseudo-range multilateration](https://en.wikipedia.org/wiki/Pseudo-range_multilateration)（CC BY-SA 3.0／GFDL，作者 TinyPebble）"
+    },
+    {
       "type": "text",
       "title": "④ 商業模式與產業脈絡 [公開報導]",
       "dur": 6,
@@ -258,6 +276,14 @@
         [
           "[一箭9星背後：通感智算、太空算力，衛星「新品種」密集入軌（財聯社 CLS）](https://www.cls.cn/detail/2488115)",
           "確認發射時間、地點與同箭 9 星名單，並複述「諦聽 01 組 A／B／C 星為我國首次以三星編隊開展商業天基射頻數據採集的衛星星座」"
+        ],
+        [
+          "[Wikipedia – Hyperbolic navigation](https://en.wikipedia.org/wiki/Hyperbolic_navigation)",
+          "圖檔 Hyperbolic_Navigation.svg（作者 Cosmia Nebula，CC0 公有領域），用於③節後之雙曲線定位原理示意圖"
+        ],
+        [
+          "[Wikipedia – Pseudo-range multilateration](https://en.wikipedia.org/wiki/Pseudo-range_multilateration)",
+          "圖檔 TDOA_Geometry.png（作者 TinyPebble，CC BY-SA 3.0／GFDL），用於③節後之 TDOA 多站幾何示意圖"
         ],
         [
           "[HawkEye 360 - eoPortal](https://www.eoportal.org/satellite-missions/hawkeye-360)",

@@ -1489,6 +1489,11 @@ async function renderStory(sid){
       });
       h += '</table>';
       if(sec.note) h += '<div class="tbl-note">' + esc(sec.note) + '</div>';
+    }else if(sec.type === 'image'){
+      h += '<figure class="img-sec">' +
+           '<img src="' + esc(sec.src || '') + '" alt="' + esc(sec.alt || sec.title || '') + '" loading="lazy">' +
+           (sec.caption ? '<figcaption>' + mdCell(sec.caption) + '</figcaption>' : '') +
+           '</figure>';
     }else if(sec.type === 'sat'){
       h += satFrame(sec, i);
     }else if(sec.type === 'positions'){

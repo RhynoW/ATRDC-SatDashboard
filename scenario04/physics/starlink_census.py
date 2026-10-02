@@ -587,13 +587,21 @@ def count_v3_candidates() -> dict[str, Any]:
                 "first_epoch": r["first_epoch"].isoformat() if hasattr(r["first_epoch"], "isoformat") else str(r["first_epoch"]),
                 "alt_km": round(float(r["alt_km"]), 1),
             })
+        # items 非空＝已知批次至少有部分衛星正式編目入庫，代表「發射→編目」的空窗期已經
+        # 過了（本系統觀察到的歷史案例都是同批次一起編目，非逐顆分批），此時再查 CelesTrak
+        # 補充檔不會有任何資訊價值，只會多一次可能逾時的外部連線（見 2026-10-02 事故：
+        # celestrak.org 連線逾時，把原始例外字串整個丟到前端）。改為直接回傳「略過」，
+        # 前端已有對應文案（provisional_zero）可以優雅呈現。真正還沒有任何衛星入庫的
+        # 全新批次（items 為空）才去查暫定名單，這才是這個查詢原本要解決的空窗期。
+        provisional = ({"skipped_reason": "already_cataloged", "count": 0, "items": []}
+                       if items else fetch_v3_provisional_roster())
         return {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "intl_launches": [f"{yr}-{num:03d}" for yr, num in V3_INTL_LAUNCHES],
             "db_latest_epoch": latest.isoformat() if hasattr(latest, "isoformat") else str(latest),
             "candidate_count": len(items),
             "items": items,
-            "provisional": fetch_v3_provisional_roster(),
+            "provisional": provisional,
             "known_schedule_note": "公開報導（非本系統可獨立驗證）：Starship Flight 14 於 2026-09-28 "
                                    "12:46 UTC 發射，首度進入軌道並部署 26 顆 Starlink V3，SpaceX 確認全數建立聯繫。"
                                    "V3 單顆約 2,000 kg（報導引述之標稱值；V2 Mini 約 800 kg）；26 顆合計約 52 公噸"

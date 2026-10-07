@@ -9,6 +9,7 @@ rem
 rem  用法：update_slim_publish_hf.bat [dryrun] [skipbuild]
 rem    dryrun    = 只做本機步驟，不上傳、不重啟
 rem    skipbuild = 略過第 1 步，沿用頂層既有 slim DB；download_tle_unified.bat publish 會帶此參數
+rem    nofetch   = skip step 0 (daily Space-Track TLE fetch into master DB)
 rem
 rem  注意：本檔以 CP950+CRLF 儲存。echo 行一律只用 ASCII：
 rem    Big5 全形括號「）」的第二個位元組是 0x5E，也就是 cmd 的跳脫字元 ^，
@@ -21,11 +22,22 @@ set APP=%APP:~0,-1%
 for %%I in ("%APP%\..") do set PARENT=%%~fI
 set DRYRUN=0
 set SKIPBUILD=0
+set NOFETCH=0
 for %%A in (%*) do (
   if /i "%%~A"=="dryrun" set DRYRUN=1
   if /i "%%~A"=="skipbuild" set SKIPBUILD=1
+  if /i "%%~A"=="nofetch" set NOFETCH=1
 )
 
+rem [0/4] daily incremental TLE fetch (Space-Track -> master space_db.duckdb)
+rem       skipped by skipbuild (caller already fetched) or nofetch
+if "%SKIPBUILD%"=="1" goto :skipfetch
+if "%NOFETCH%"=="1" goto :skipfetch
+echo [%TIME:~0,8%] [0/4] Daily incremental TLE fetch from Space-Track ...
+cd /d "%PARENT%"
+python download_TLE_unified.py --mode spacetrack
+if errorlevel 1 goto :fail
+:skipfetch
 if "%SKIPBUILD%"=="1" (
   echo [%TIME:~0,8%] [1/4] skipbuild - reuse existing top-level slim DB
   goto :merge

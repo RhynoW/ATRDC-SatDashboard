@@ -674,7 +674,7 @@
   function drawRelWindow(nowMs) {
     if (!_relwin || !_relOn) return;
     var w = _relwin, cv = w.cv, meta = w.meta, dpr = window.devicePixelRatio || 1;
-    var CW = cv.clientWidth || 400, CH = 300;
+    var CW = cv.clientWidth || 460, CH = 330;
     if (cv.width !== CW * dpr || cv.height !== CH * dpr) { cv.width = CW * dpr; cv.height = CH * dpr; }
     var g = cv.getContext("2d");
     var sgn = _relCenterSec ? -1 : 1;   // 沿軌符號
@@ -691,7 +691,7 @@
       return [c - sp, c + sp];
     }
     var tr = pad(tmin, tmax, 10), rr = pad(rmin, rmax, 4);
-    var padL = 46, padR = 12, padT = 10, padB = 30;
+    var padL = 58, padR = 14, padT = 12, padB = 36;
     g.save(); g.scale(dpr, dpr);
     g.clearRect(0, 0, CW, CH);
     function X(t) { return padL + (t - tr[0]) / (tr[1] - tr[0]) * (CW - padL - padR); }
@@ -706,16 +706,16 @@
     g.moveTo(padL, Y(0)); g.lineTo(CW - padR, Y(0)); g.stroke();
     g.fillStyle = _relCenterSec ? SEC : PRIM;
     g.beginPath(); g.arc(X(0), Y(0), 4.5, 0, 6.283); g.fill();
-    g.fillStyle = "#dfe6f0"; g.font = "10px monospace";
-    g.fillText(cName, Math.min(X(0) + 7, CW - 96), Y(0) - 6);
+    g.fillStyle = "#dfe6f0"; g.font = "13px monospace";
+    g.fillText(cName, Math.min(X(0) + 8, CW - 126), Y(0) - 8);
     g.fillStyle = "#8b96a8";
-    g.fillText(t("axis_t"), CW - 104, CH - 8);
-    g.save(); g.translate(11, 190); g.rotate(-Math.PI / 2);
+    g.fillText(t("axis_t"), CW - 136, CH - 8);
+    g.save(); g.translate(13, 210); g.rotate(-Math.PI / 2);
     g.fillText(t("axis_dh"), 0, 0); g.restore();
-    g.fillText(tr[0].toFixed(0), padL, CH - 18);
-    g.fillText(tr[1].toFixed(0), CW - padR - 34, CH - 18);
-    g.fillText(rr[1].toFixed(1), 22, padT + 10);
-    g.fillText(rr[0].toFixed(1), 22, CH - padB - 2);
+    g.fillText(tr[0].toFixed(0), padL, CH - 22);
+    g.fillText(tr[1].toFixed(0), CW - padR - 44, CH - 22);
+    g.fillText(rr[1].toFixed(1), 18, padT + 12);
+    g.fillText(rr[0].toFixed(1), 18, CH - padB - 2);
     var n = w.pts.length, k = 0;
     while (k < n && w.pts[k].ms <= nowMs) k++;
     function path(arr, from, to, style, width) {
@@ -881,6 +881,33 @@
     // 預設第三方遠景綜觀事件；操作者可循 遠景→primary→secondary 切換
     setViewpoint("t");
     if (_comspocOn) setComspoc(true);
+
+    // 開場導覽：遠景播放 1 秒 → 自動切到太空飛機（Spacecraft）跟隨視角，
+    // 從 TCA 前 10 分鐘開始以 60 倍速播放，相機拉遠到兩星與軌跡同時入鏡。
+    // 以 ?intro=0 關閉。
+    var introOn = !/[?&]intro=0\b/.test(location.search);
+    var mySeq = _loadSeq;
+    if (introOn && !_comspocOn) {
+      setTimeout(function () {
+        if (mySeq !== _loadSeq || !viewer) return;          // 已切換到別的配對
+        var which = /SPACECRAFT/i.test(meta.primName) ? "p"
+                  : (/SPACECRAFT/i.test(meta.secName) ? "s" : "p");
+        // 目標：排除已合體（d<0.2 km，如部署前／回收後）樣本後的最接近點，兩物體才分得開
+        var jT = -1;
+        for (var q = 0; q < orbit.length; q++) if (orbit[q].d >= 0.2 && (jT < 0 || orbit[q].d < orbit[jT].d)) jT = q;
+        var oT = jT >= 0 ? orbit[jT] : om;
+        var D = Math.min(4.0e5, Math.max(5.0e3, (oT.d || 0) * 1000 * 20));   // 公尺：5–400 km
+        var off = new C.Cartesian3(0, -D, D * 0.45);                         // 南側、偏上俯視
+        [_eP, _eS].forEach(function (e) { if (e) e.viewFrom = off; });
+        var tca = C.JulianDate.fromIso8601(oT.t);
+        var start = C.JulianDate.addSeconds(tca, -600, new C.JulianDate());
+        if (C.JulianDate.lessThan(start, viewer.clock.startTime)) start = viewer.clock.startTime.clone();
+        viewer.clock.currentTime = start;
+        viewer.clock.multiplier = 60;
+        viewer.clock.shouldAnimate = true;
+        setViewpoint(which);
+      }, 1000);
+    }
 
     stat("stat_summary", { dmin: fmtRange(summary.d_min), pc: fmtPc(summary.pc_max).replace("&lt;", "<"), n: summary.n_orbit });
   }

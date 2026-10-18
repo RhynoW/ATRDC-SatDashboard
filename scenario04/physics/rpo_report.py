@@ -35,10 +35,12 @@ J2 = 1.08262668e-3
 TLE_FLOOR_KM = 1.0        # 公開 TLE 典型位置不確定度量級（沿軌可更大）
 DECAY_ALT_KM = 400.0      # 星座面板：低於此高度歸為「低軌／衰減中」
 HOLD_KM = 5.0             # 預測段全程維持在此距離內 → 研判伴飛
+FLYBY_KM = 50.0           # 預測段最接近低於此值且其後拉開 → 研判掠過（文字附相對速度以區分 RPO 與高速交會）
 JUMP_KM = 1.0             # 相鄰 elset 平均高度變化超過此值 → 標為機動
 INDET_DALT_KM = 0.1       # 兩星最後 elset 平均高度差低於此 → 相對漂移在 TLE 精度內，不判長期走向
 NMC_RATIO = (1.6, 2.4)    # NMC 判準：沿軌/徑向振幅比（CW 方程理論值 2）
 NMC_MIN_R_KM = 0.02       # 徑向振幅下限（過小＝純沿軌偏置，非繞飛）
+NMC_MAX_CENTER_KM = 50.0  # 橢圓中心須在此距離內：遠距（數千 km）之 RIC 振盪比值可巧合落入 1.6–2.4
 
 
 # ───────────────────────── 數值工具 ─────────────────────────
@@ -111,7 +113,7 @@ def _nmc_metrics(times: pd.DatetimeIndex, ric: np.ndarray, t_start, period_min: 
                  n_revs: int = 15) -> dict | None:
     """自 t_start 起逐圈量測相對橢圓：振幅（半峰峰值）、中心、沿軌中心漂移率。
 
-    NMC 判準：I/R 振幅比落於 NMC_RATIO、徑向振幅 ≥ NMC_MIN_R_KM；
+    NMC 判準：I/R 振幅比落於 NMC_RATIO、徑向振幅 ≥ NMC_MIN_R_KM、首圈中心 ≤ NMC_MAX_CENTER_KM；
     每圈中心漂移 > 0.5 × 沿軌振幅 → drifting NMC。"""
     tm = (times - pd.Timestamp(t_start)).total_seconds().to_numpy() / 60.0
     m = tm >= 0
@@ -142,7 +144,8 @@ def _nmc_metrics(times: pd.DatetimeIndex, ric: np.ndarray, t_start, period_min: 
         "i_center": float(a[0, 3]), "r_center": float(a[0, 4]),
         "drift_rev_km": drift_rev, "drift_day_km": drift_rev * 1440.0 / period_min,
         "n_revs": len(a),
-        "is_nmc": bool(NMC_RATIO[0] <= ratio <= NMC_RATIO[1] and r_amp >= NMC_MIN_R_KM),
+        "is_nmc": bool(NMC_RATIO[0] <= ratio <= NMC_RATIO[1] and r_amp >= NMC_MIN_R_KM
+                       and abs(a[0, 3]) <= NMC_MAX_CENTER_KM),
         "drifting": bool(abs(drift_rev) > 0.5 * i_amp),
     }
 
@@ -275,8 +278,8 @@ def compute_report_data(primary: int, secondary: int, *, db=None, catalog=None,
         verdict = "hold"           # 不再機動下仍全程維持接近
     elif indeterminate:
         verdict = "indeterminate"  # 高度差低於 TLE 可判精度：伴飛或漂離皆無法由 TLE 判定
-    elif tca_fc and tca_fc["d_km"] < HOLD_KM and fc_end > HOLD_KM:
-        verdict = "flyby"          # 預測段仍有近接，但其後拉開
+    elif tca_fc and tca_fc["d_km"] < FLYBY_KM and fc_end > 2 * tca_fc["d_km"]:
+        verdict = "flyby"          # 預測段有近接（含高速自然交會），其後拉開
     else:
         verdict = "separating"
 
@@ -320,7 +323,7 @@ _TXT = {
     "zh": {
         "verdict": {
             "hold": "若不再機動，預測期內仍維持 {fmax} 內——呈伴飛態勢",
-            "flyby": "彈道預測：{ft} 再近至約 {fmin}，其後拉開至 {fend}（若無後續機動）——要伴飛需再點火",
+            "flyby": "彈道預測：{ft} 以相對速度 {fdv} 掠過，最近約 {fmin}，其後拉開至 {fend}（若無後續機動）",
             "separating": "彈道預測：距離持續拉開至 {fend}（若無後續機動）",
             "indeterminate": "兩星平均高度差僅 {da:.2f} km，相對漂移低於公開 TLE 精度——伴飛或漂離無法判定，需更密集觀測",
             "nmc": "相對運動呈 NMC 繞飛：橢圓中心在 {p} {side} {ic:.1f} km，尺寸約 {ii:.1f}×{rr:.1f} km（沿軌×徑向，比值 {ratio:.1f}）",
@@ -354,7 +357,7 @@ _TXT = {
     "en": {
         "verdict": {
             "hold": "If no further maneuver, predicted to stay within {fmax} — consistent with co-location",
-            "flyby": "Ballistic forecast: ~{fmin} at {ft}, then reopening to {fend} if no further maneuver — holding would need another burn",
+            "flyby": "Ballistic forecast: pass at {ft} with rel. speed {fdv}, closest ~{fmin}, then reopening to {fend} if no further maneuver",
             "separating": "Ballistic forecast: separation keeps growing to {fend} if no further maneuver",
             "indeterminate": "Mean-altitude difference only {da:.2f} km — relative drift is below public-TLE precision; co-location vs. drift-off cannot be determined",
             "nmc": "Relative motion is an NMC: ellipse centred {ic:.1f} km {side} {p}, about {ii:.1f}×{rr:.1f} km (in-track×radial, ratio {ratio:.1f})",
@@ -453,6 +456,7 @@ def render_report_png(data: dict, lang: str = "zh", theme: str = "light", dpi: i
         verdict = T["verdict"][data["verdict"]].format(
             fmax=_fmt_km(data["fc_max_km"]), fend=_fmt_km(data["fc_end_km"]),
             fmin=_fmt_km(tf["d_km"]) if tf else "—", ft=f"{tf['t']:%m-%d %H:%MZ}" if tf else "—",
+            fdv=f"{tf['dv_ms']:.0f} m/s" if tf else "—",
             da=abs(data["dalt_last_km"]), p=p,
             side=T["ahead"] if nm.get("i_center", 0) > 0 else T["behind"],
             ic=abs(nm.get("i_center", 0)), ii=2 * nm.get("i_amp", 0), rr=2 * nm.get("r_amp", 0),
@@ -560,14 +564,18 @@ def render_report_png(data: dict, lang: str = "zh", theme: str = "light", dpi: i
             axD.plot(t[~ob], d[~ob], color=C_P, lw=2.2, ls=(0, (3, 2)), alpha=0.75, label=T["fc"])
             axD.axvspan(data["obs_end"], t[-1], color=K["fcband"], zorder=0)
         axD.axvline(data["obs_end"], color=C_MUTED, ls=":", lw=2.0, label=T["now"])   # 入圖例，免與曲線／圖例重疊
+        y_hi = max(d.max() * 2, 10)
         if to:
             axD.scatter([to["t"]], [to["d_km"]], s=130, c=C_S, zorder=5)
+            # 點位於 log 軸上段（>60%）時標註改往下擺，免撞面板標題
+            frac = math.log(to["d_km"] / dmin_plot) / math.log(y_hi / dmin_plot)
             axD.annotate(f"{_fmt_km(to['d_km'])} · {to['dv_ms']:.1f} m/s\n{to['t']:%m-%d %H:%MZ}",
-                         (to["t"], to["d_km"]), xytext=(-12, 48), textcoords="offset points",
+                         (to["t"], to["d_km"]), xytext=(-12, -70 if frac > 0.6 else 48),
+                         textcoords="offset points",
                          ha="right", fontsize=15, color=C_S,
                          arrowprops={"arrowstyle": "-|>", "color": C_S, "lw": 2.2})
         axD.set_yscale("log")
-        axD.set_ylim(dmin_plot, max(d.max() * 2, 10))
+        axD.set_ylim(dmin_plot, y_hi)
         axD.set_title(T["sep"].format(p=p), loc="left", fontsize=18, color=C_INK, pad=12)
         axD.set_ylabel(T["sep_y"], fontsize=16)
         axD.yaxis.set_major_locator(matplotlib.ticker.LogLocator(base=10))

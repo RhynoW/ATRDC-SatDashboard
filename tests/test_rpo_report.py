@@ -96,6 +96,17 @@ def test_nmc_metrics_drift_does_not_inflate_amplitude():
     assert abs(m["drift_rev_km"] - 1.0) < 0.05
 
 
+def test_far_ellipse_is_not_nmc():
+    """遠距（中心 5,000 km）即使振幅比巧合為 2，也不判 NMC（篩檢 COSMOS 2611×ICEYE-X37 誤判）。"""
+    period = 95.0
+    times = pd.date_range("2026-10-17", periods=int(5 * period * 2), freq="30s")
+    tm = (times - times[0]).total_seconds().to_numpy() / 60.0
+    ph = 2 * np.pi * tm / period
+    ric = np.stack([40 * np.cos(ph), 5000 - 80 * np.sin(ph), 0 * ph], axis=1)
+    m = rr._nmc_metrics(times, ric, times[0], period)
+    assert abs(m["ratio"] - 2.0) < 0.05 and not m["is_nmc"]
+
+
 def test_pure_intrack_offset_is_not_nmc(tmp_path):
     d = rr.compute_report_data(1, 2, db=_make_db(tmp_path), catalog={},
                                lookback_days=10, forecast_days=3, step_s=60)

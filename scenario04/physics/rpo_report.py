@@ -57,7 +57,9 @@ def _mm_from_df(df: pd.DataFrame) -> np.ndarray:
 
 def _sample_vec(recs, ep_ts, times: pd.DatetimeIndex):
     """向量化「最近 elset」SGP4：回傳 (r, v)，形狀 (N,3)，失敗點為 nan。"""
-    ts = times.asi8 / 1e9
+    # 先統一為 ns 再取整數：pandas 3 起 datetime 預設解析度為 µs，直接 asi8/1e9 會小 1000 倍，
+    # 使所有時刻都配到最早 elset（2026-10-18 HF Space 實際踩到：距離外推爆至上萬 km）
+    ts = times.as_unit("ns").asi8 / 1e9
     idx = np.abs(ts[:, None] - ep_ts[None, :]).argmin(axis=1)
     jf = np.array([jday(t.year, t.month, t.day, t.hour, t.minute,
                         t.second + t.microsecond / 1e6) for t in times])

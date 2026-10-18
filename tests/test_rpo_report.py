@@ -47,6 +47,18 @@ def _jumps(k_mid, k_back):
             {"t": t + timedelta(days=4), "dalt_km": 2.29, "suspect": False, "k": k_back}]
 
 
+def test_sample_vec_independent_of_datetime_unit():
+    """pandas 3 預設 µs 解析度：最近 elset 之配對不得因時間單位而改變。"""
+    from sgp4.api import Satrec
+    rec = Satrec.twoline2rv(_L1, _L2)
+    ep = np.array([pd.Timestamp("2024-01-01 12:00", tz="UTC").timestamp(),
+                   pd.Timestamp("2024-01-05 12:00", tz="UTC").timestamp()])
+    kw = dict(start="2024-01-05 06:00", periods=5, freq="30min", tz="UTC")
+    r_ns, _ = rr._sample_vec([rec, rec], ep, pd.date_range(**kw, unit="ns"))
+    r_us, _ = rr._sample_vec([rec, rec], ep, pd.date_range(**kw, unit="us"))
+    assert np.allclose(r_ns, r_us)
+
+
 def test_flag_reversals_single_elset_outlier_is_suspect():
     js = _jumps(12, 13)              # 中間高度只有 1 筆 elset → 離群
     rr._flag_reversals(js)

@@ -263,6 +263,20 @@ def compute_report_data(primary: int, secondary: int, *, db=None, catalog=None,
                       "suspect": False, "k": int(k)})
     _flag_reversals(jumps)
 
+    # 高度面板只呈現回溯窗 [t0, …]：保留窗前最後一筆並移至 t0，使階梯線自左緣接續
+    def _clip(h):
+        tt = pd.to_datetime(h.t, utc=True)
+        inside = np.flatnonzero(tt >= t0)
+        if not len(inside):
+            return h.iloc[-1:].assign(t=[t0])
+        k0 = inside[0]
+        out = h.iloc[max(k0 - 1, 0):].copy()
+        if k0 > 0:
+            out.iloc[0, out.columns.get_loc("t")] = t0
+        return out.reset_index(drop=True)
+    ph, sh = _clip(ph), _clip(sh)
+    jumps = [j for j in jumps if pd.Timestamp(j["t"]) >= t0]
+
     # NMC：自最後共同 elset 起逐圈量測相對橢圓（週期取主星最後 elset）
     period_min = 1440.0 / float(_mm_from_df(Pdf)[-1])
     nmc = _nmc_metrics(times, ric, obs_end, period_min)
@@ -537,11 +551,27 @@ def render_report_png(data: dict, lang: str = "zh", theme: str = "light", dpi: i
         ap, as_ = data["alt_p"], data["alt_s"]
         axA.step(ap.t, ap.alt, where="post", color=C_P, lw=3.6, label=p)
         axA.step(as_.t, as_.alt, where="post", color=C_S, lw=4.0, label=s)
+        # 顯示用：同向、相隔 < 1 天之跳變合併為一標籤（如 9/30 兩段點火合為一次升軌），標於末段
+        disp = []
         for j in data["jumps"]:
+            if (disp and not j.get("suspect") and not disp[-1].get("suspect")
+                    and j["dalt_km"] * disp[-1]["dalt_km"] > 0
+                    and (j["t"] - disp[-1]["t"]).total_seconds() < 86400):
+                disp[-1] = {**j, "dalt_km": disp[-1]["dalt_km"] + j["dalt_km"]}
+            else:
+                disp.append(dict(j))
+        level, prev = 0, None
+        for j in disp:
             y = np.interp(mdates.date2num(j["t"]), mdates.date2num(as_.t), as_.alt)
             sus = j.get("suspect")
+            # 僅同向且相隔 < 1.5 天者逐層錯開（反向者本即一上一下，不重疊）
+            close = (prev is not None and j["dalt_km"] * prev["dalt_km"] > 0
+                     and (j["t"] - prev["t"]).total_seconds() < 1.5 * 86400)
+            level = level + 1 if close else 0
+            prev = j
+            dy = 22 * level
             axA.annotate(T["suspect" if sus else "jump"].format(v=j["dalt_km"]), (j["t"], y),
-                         xytext=(0, 14 if j["dalt_km"] > 0 else -22), textcoords="offset points",
+                         xytext=(0, 14 + dy if j["dalt_km"] > 0 else -22 - dy), textcoords="offset points",
                          ha="center", fontsize=13 if sus else 16,
                          color=C_MUTED if sus else C_S)
         axA.axvline(data["obs_end"], color=C_MUTED, ls=":", lw=2.0)
@@ -551,6 +581,7 @@ def render_report_png(data: dict, lang: str = "zh", theme: str = "light", dpi: i
         lo_a = min(ap.alt.min(), as_.alt.min()); hi_a = max(ap.alt.max(), as_.alt.max())
         pad = max(5.0, (hi_a - lo_a) * 0.2)
         axA.set_ylim(lo_a - pad, hi_a + pad * 0.6)
+        axA.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=7))
         axA.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
 
         # ── 右下：距離（觀測實線／預測虛線、TLE 精度帶） ──
@@ -583,6 +614,7 @@ def render_report_png(data: dict, lang: str = "zh", theme: str = "light", dpi: i
         axD.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         axD.legend(loc="upper right", frameon=True, facecolor=K["bg"], edgecolor="none",
                    framealpha=0.9, fontsize=13)
+        axD.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=7))
         axD.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
 
         # ── 右：RIC 相對運動（R–I、C–I；最後共同 elset 起 24 h） ──

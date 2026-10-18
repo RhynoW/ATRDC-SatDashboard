@@ -32,6 +32,7 @@
       picker_label: "近距離配對（選擇即切換該對衛星視角）",
       thr_title: "篩選閾值 km",
       rescan_btn: "重新掃描",
+      report_btn: "報告 PNG",
       kpi_range: "目前距離",
       kpi_pc: "Pc（近似值）",
       kpi_alt_suffix: "{name} 高度",
@@ -96,6 +97,7 @@
       picker_label: "近接ペア（選択するとそのペアの視点に切替）",
       thr_title: "フィルタ閾値 km",
       rescan_btn: "再スキャン",
+      report_btn: "レポート PNG",
       kpi_range: "現在の距離",
       kpi_pc: "Pc（近似値）",
       kpi_alt_suffix: "{name} の高度",
@@ -162,6 +164,7 @@
       picker_label: "Close-approach pair (select to switch to that pair's viewpoint)",
       thr_title: "Filter threshold km",
       rescan_btn: "Rescan",
+      report_btn: "Report PNG",
       kpi_range: "Current Range",
       kpi_pc: "Pc (approximate)",
       kpi_alt_suffix: "{name} Altitude",
@@ -918,6 +921,13 @@
     var vq = _curV ? "variant=" + encodeURIComponent(_curV) : "";
     stat("loading_scene_pair", { p: primary, s: secondary });
     try { history.replaceState(null, "", "/rpo?primary=" + primary + "&secondary=" + secondary + (vq ? "&" + vq : "")); } catch (e) {}
+    // 靜態影像報告連結（五面板 PNG）：中文介面出中文版，其餘出英文版
+    var rl = document.getElementById("reportLink");
+    if (rl) {
+      var lang = "zh"; try { lang = localStorage.getItem("rpo3d_lang") || "zh"; } catch (e) {}
+      rl.href = "/api/rpo/" + primary + "/" + secondary + "/report.png?lang=" + (lang === "zh" ? "zh" : "en") +
+                (vq ? "&" + vq : "");
+    }
     fetch("/api/rpo/" + primary + "/" + secondary + (vq ? "?" + vq : "")).then(function (r) { return r.json(); }).then(function (data) {
       if (seq !== _loadSeq) return;                       // 已被更新的請求取代
       if (data.error) { stat("load_fail", { error: data.error }, true); return; }

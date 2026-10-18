@@ -12,6 +12,7 @@ waitress>=3.0
 scipy>=1.11
 PyYAML>=6.0
 jsonschema>=4.0
+matplotlib>=3.8   # /api/rpo/<p>/<s>/report.png 靜態影像報告
 
 # 開發/測試
 pytest>=8.0

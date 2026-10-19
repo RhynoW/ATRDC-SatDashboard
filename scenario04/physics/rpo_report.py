@@ -90,7 +90,7 @@ def _flag_reversals(jumps: list[dict], within_days: float = 2.0, tol: float = 0.
     （b.k − a.k ≤ 1）→ 多為單筆異常 elset（編目錯配／定軌離群），標 suspect，不當作機動。
 
     中間高度有 ≥2 筆一致 elset 者為真實相位調整：RPO 典型「先降軌追趕、再升軌同步」即呈正負抵銷
-    （例：COSMOS 2612 於 10/15 0223Z −3.6 km、10/16 0450–1106Z 回升，經 JCO 證實）。"""
+    （例：COSMOS 2612 於 10/15 降軌約 2.3 km、10/16 回升約 2.3 km，中間高度有多筆 elset 支持）。"""
     for a, b in zip(jumps, jumps[1:]):
         if ((b["t"] - a["t"]).total_seconds() <= within_days * 86400
                 and a["dalt_km"] * b["dalt_km"] < 0

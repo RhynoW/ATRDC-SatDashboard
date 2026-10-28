@@ -42,9 +42,9 @@ if "%SKIPBUILD%"=="1" (
   echo [%TIME:~0,8%] [1/4] skipbuild - reuse existing top-level slim DB
   goto :merge
 )
-echo [%TIME:~0,8%] [1/4] Rebuild top-level slim DB - recent 14 days plus whitelist history, 15-60 s ...
+echo [%TIME:~0,8%] [1/4] Rebuild top-level slim DB - recent 30 days plus whitelist history, 15-60 s ...
 cd /d "%PARENT%"
-python prc_maneuver\build_slim_db.py --slim-only --keep-lines --recent-days 14
+python prc_maneuver\build_slim_db.py --slim-only --keep-lines --recent-days 30
 if errorlevel 1 goto :fail
 
 :merge

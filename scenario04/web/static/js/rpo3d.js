@@ -654,6 +654,15 @@
 
     var t0 = C.JulianDate.fromIso8601(orbit[0].t);
     var t1 = C.JulianDate.fromIso8601(orbit[orbit.length - 1].t);
+    // 軌道參數連結改用本場景時段（前後各 30 天）：歷史案例（如 2024 年）落在預設「最近 1 年」之外
+    var ol = document.getElementById("orbitLink");
+    if (ol && _curP != null) {
+      var dpad = 30 * 86400000;
+      var dStr = function (ms) { return new Date(ms).toISOString().slice(0, 10); };
+      ol.href = "/orbit?norad=" + _curP + "," + _curS +
+                "&start=" + dStr(Date.parse(orbit[0].t) - dpad) +
+                "&end=" + dStr(Date.parse(orbit[orbit.length - 1].t) + dpad);
+    }
 
     var t0ms = C.JulianDate.toDate(t0).getTime();
     var stepMs = (summary.fine_step_s || 60) * 1000;

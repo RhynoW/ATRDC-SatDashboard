@@ -51,6 +51,12 @@ def orbit_page():
     return render_template("orbit.html")
 
 
+@bp.get("/track")
+def track_page():
+    """單顆衛星 2D 地面軌跡＋即時資料（Leaflet＋瀏覽器端 SGP4）；資料源 /api/sat_tle。"""
+    return render_template("track.html")
+
+
 @bp.get("/orbit-tuner")
 def orbit_tuner_page():
     """軌道六參數調整器介紹頁（仿 AGI Orbit Tuner）；CTA 連回 /?open=orbit6 開啟互動面板。"""

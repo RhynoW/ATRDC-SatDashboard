@@ -739,6 +739,13 @@ function _orbitLink(nids,label){
 
 // InfoBox 是沙盒 iframe（無 allow-popups-to-escape-sandbox），由它開的分頁會繼承沙盒而擋掉腳本，
 // /orbit 因此無法執行；改在主頁攔截 a[data-newtab] 點擊，以 window.open 開正常分頁
+// 2D 地面軌跡頁（/track）連結，樣式同 _orbitLink
+function _trackLink(nid){
+  return '<a data-newtab href="/track?norad='+nid+'" target="_blank" rel="noopener"'
+    +' style="display:inline-block;margin:8px 0 0 6px;padding:4px 10px;border-radius:5px;background:#2e7d32;color:#fff;'
+    +'text-decoration:none;font-size:12px">🗺 2D 地面軌跡</a>';
+}
+
 function _bindInfoBoxLinks(){
   const fr=viewer.infoBox&&viewer.infoBox.frame;
   if(!fr) return;
@@ -770,7 +777,7 @@ function _buildDesc(s){
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">年代</td><td>'+(s.era||'—')+'</td></tr>'
     +(s.constellation&&s.constellation!=='—'?'<tr><td style="padding:2px 10px 2px 0;color:#555">星座</td><td>'+s.constellation+'</td></tr>':'')
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">高度</td><td><b>'+(s.alt_km!=null?s.alt_km:'—')+' km</b></td></tr>'
-    +'</table>'+_orbitLink([s.norad_id])+'</div>';
+    +'</table>'+_orbitLink([s.norad_id])+_trackLink(s.norad_id)+'</div>';
 }
 
 async function loadConjunctions(){
@@ -1389,7 +1396,7 @@ function _buildTrackDesc(s,meta){
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">高度</td><td><b>'+(s.alt_km!=null?s.alt_km:'—')+' km</b></td></tr>'
     +(s.user_defined?'<tr><td style="padding:2px 10px 2px 0;color:#555">來源</td><td style="color:#7b1fa2">使用者自訂 TLE</td></tr>':'')
     +(s.notes?'<tr><td style="padding:2px 10px 2px 0;color:#555">備註</td><td>'+s.notes+'</td></tr>':'')
-    +'</table>'+_orbitLink([s.norad_id])+'</div>';
+    +'</table>'+_orbitLink([s.norad_id])+_trackLink(s.norad_id)+'</div>';
 }
 
 async function _loadTrackOrbit(nid,color){

@@ -256,6 +256,30 @@ def api_sat_orbit():
     })
 
 
+@bp.get("/api/sat_tle")
+def api_sat_tle():
+    """回傳單顆衛星 TLE 兩行＋基本分類，供 /track 2D 地面軌跡頁於瀏覽器端 SGP4 即時計算。"""
+    try:
+        norad_id = int(request.args.get("norad_id", 0))
+    except ValueError:
+        return jsonify({"error": "norad_id 必須為整數"}), 400
+    info = get_sat_index().get(norad_id)
+    if info is None:
+        return jsonify({"error": f"NORAD {norad_id} 不在索引中"}), 404
+    if not info.get("line1") or not info.get("line2"):
+        return jsonify({"error": f"NORAD {norad_id} 無 TLE 資料"}), 404
+    return jsonify({
+        "norad_id":      norad_id,
+        "name":          info["name"],
+        "line1":         info["line1"],
+        "line2":         info["line2"],
+        "country":       info.get("country"),
+        "purpose":       info.get("purpose"),
+        "era":           info.get("era"),
+        "constellation": info.get("constellation") or "—",
+    })
+
+
 @bp.get("/api/search")
 def api_search():
     q = request.args.get("q", "").strip()

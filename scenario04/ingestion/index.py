@@ -64,10 +64,20 @@ def _rows_to_index(rows: list[tuple]) -> dict[int, dict[str, Any]]:
     return idx
 
 
+def _tle_epoch(line1: str) -> float | None:
+    """TLE line1 第 19–32 欄（YYDDD.DDDDDDDD）→ 可比較的十進位年日數（如 2026182.508）；格式錯回傳 None。"""
+    try:
+        yy = int(line1[18:20])
+        return (2000 + yy if yy < 57 else 1900 + yy) * 1000 + float(line1[20:32])
+    except (ValueError, IndexError):
+        return None
+
+
 def _merge_user_defined(idx: dict[int, dict[str, Any]]) -> None:
     """把使用者自訂 TLE 與衛星目錄併入索引（就地修改）。
 
-    - user TLE：NORAD 已存在 → 覆蓋 line1/line2（與名稱，若有）；
+    - user TLE：NORAD 已存在 → 僅當 user TLE 曆元較新（或 DB 無 TLE）才覆蓋 line1/line2
+                （與名稱，若有）；較舊則保留 DB TLE 並記 warning（避免範例／過期檔蓋掉每日更新）；
                 不存在 → 新增條目。條目標記 user_defined=True。
     - user catalogue：覆寫名稱（中文優先）/國家/用途/星座/年代等中繼資料。
     """
@@ -87,6 +97,11 @@ def _merge_user_defined(idx: dict[int, dict[str, Any]]) -> None:
             }
             idx[nid] = entry
         else:
+            ep_db, ep_user = _tle_epoch(entry.get("line1") or ""), _tle_epoch(tle["line1"])
+            if ep_db is not None and (ep_user is None or ep_user <= ep_db):
+                logger.warning("user TLE %s NORAD %d 曆元 %s 不比 DB（%s）新，保留 DB TLE",
+                               tle["source_file"], nid, ep_user, ep_db)
+                continue
             entry["line1"] = tle["line1"]
             entry["line2"] = tle["line2"]
             if tle["name"]:

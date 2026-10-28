@@ -738,7 +738,7 @@ function _orbitLink(nids,label){
 }
 
 // InfoBox 是沙盒 iframe（無 allow-popups-to-escape-sandbox），由它開的分頁會繼承沙盒而擋掉腳本，
-// /orbit 因此無法執行；改在主頁攔截 a[data-newtab] 點擊，以 window.open 開正常分頁
+// /orbit 因此無法執行；改在主頁攔截 a[data-newtab] 點擊，由主頁開正常分頁
 // 2D 地面軌跡頁（/track）連結，樣式同 _orbitLink
 function _trackLink(nid){
   return '<a data-newtab href="/track?norad='+nid+'" target="_blank" rel="noopener"'
@@ -758,7 +758,10 @@ function _bindInfoBoxLinks(){
         const a=e.target.closest&&e.target.closest('a[data-newtab]');
         if(!a) return;
         e.preventDefault();
-        window.open(a.getAttribute('href'),'_blank','noopener');
+        // 以主頁上的一般 target=_blank 連結代點：行為同使用者點連結，必定開新分頁（window.open 帶 features 時部分瀏覽器會開彈出視窗或被擋）
+        const ln=document.createElement('a');
+        ln.href=a.getAttribute('href'); ln.target='_blank'; ln.rel='noopener';
+        document.body.appendChild(ln); ln.click(); ln.remove();
       });
     }catch(e){}
   };

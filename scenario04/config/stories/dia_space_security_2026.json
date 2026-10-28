@@ -2,7 +2,7 @@
   "id": "dia-space-security-2026",
   "title": "太空安全面臨的挑戰：層疊、競逐與合作（DIA 2026 互動導讀）",
   "subtitle": "依美國國防情報局（DIA）報告繁中譯稿 01–10 章整理：軌道統計、反太空威脅連續體、中俄伊北韓能力、2040 發展與附錄概念",
-  "hero_note": "原始資料來源：美國國防情報局（DIA）發布報告《太空安全面臨的挑戰：層疊、競逐與合作》（Challenges to Security in Space: Congestion, Competition, and Cooperation），[https://www.dia.mil/Military-Power-Publications/](https://www.dia.mil/Military-Power-Publications/)。本頁為學習用導讀，非 DIA 官方出版品，數字以原報告為準。",
+  "hero_note": "原始資料來源：美國國防情報局（DIA）發布報告《太空安全面臨的挑戰：層疊、競逐與合作》（Challenges to Security in Space: Congestion, Competition, and Cooperation），[https://www.dia.mil/Military-Power-Publications/](https://www.dia.mil/Military-Power-Publications/)。繁中譯本 PDF：[下載](/static/docs/Challenges_Security_Space_2026_zh-TW.pdf)。本頁為學習用導讀，非 DIA 官方出版品，數字以原報告為準。",
   "updated": "2026-10-28",
   "sections": [
     {
@@ -26,6 +26,10 @@
         [
           "原文網址",
           "[https://www.dia.mil/Military-Power-Publications/](https://www.dia.mil/Military-Power-Publications/)"
+        ],
+        [
+          "繁中譯本 PDF",
+          "[Challenges_Security_Space_2026_zh-TW.pdf（115 頁，含 12 幅中文重繪圖表）](/static/docs/Challenges_Security_Space_2026_zh-TW.pdf)；非官方譯本，如有歧義以英文原版為準"
         ],
         [
           "本頁性質",
@@ -59,7 +63,7 @@
       "anchor": "guide",
       "dur": 10,
       "url": "/static/docs/dia_space_security_2026.html",
-      "height": 1100
+      "height": 1200
     },
     {
       "type": "table",

@@ -76,7 +76,7 @@ section{scroll-margin-top:24px;display:flex;flex-direction:column;gap:20px;min-w
 .seg button{font:inherit;font-size:.82rem;border:0;background:transparent;color:var(--ink2);padding:5px 12px;cursor:pointer}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid2{display:grid;align-items:start;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 /* bars */
 .bars{display:flex;flex-direction:column;gap:10px}
 .bar{display:grid;grid-template-columns:150px minmax(0,1fr) 84px;gap:12px;align-items:center;cursor:pointer;border-radius:6px;padding:4px 6px;background:none;border:0;font:inherit;color:inherit;text-align:left}
@@ -152,6 +152,16 @@ svg text{font-family:var(--f-body)}
 .q-opts button.wrong{background:var(--threat-soft);border-color:var(--threat);color:var(--threat)}
 .q-fb{font-size:.86rem;color:var(--ink2)}
 .callout{border:1px dashed var(--warn);background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:.86rem;color:var(--ink)}
+.fig{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fig img{display:block;width:100%;height:auto;border-radius:8px;background:#141a24}
+.fig a:focus-visible img{outline:2px solid var(--accent);outline-offset:2px}
+.fig figcaption{display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted);line-height:1.5}
+.fig figcaption b{color:var(--ink);font-size:.86rem}
+.figs{display:grid;gap:18px}.figs.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.figs.c1{grid-template-columns:minmax(0,1fr)}
+.pdf-btn{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;padding:9px 16px;border-radius:8px;background:var(--accent);color:var(--surface);text-decoration:none;font-weight:700;font-size:.95rem}
+.pdf-btn small{font-weight:400;opacity:.85}
+.pdf-btn:hover{filter:brightness(1.08)}
+@media (max-width:900px){.figs.c2{grid-template-columns:minmax(0,1fr)}}
 footer{border-top:1px solid var(--line);padding-top:18px;font-size:.84rem;color:var(--muted);display:flex;flex-direction:column;gap:6px}
 @media (max-width:900px){
   .wrap{grid-template-columns:minmax(0,1fr);gap:24px}
@@ -199,6 +209,7 @@ html{scroll-behavior:smooth}
     <div class="stat"><b>35,000</b><small>≥10 公分的在軌物體（2026 年 7 月）</small></div>
   </div>
   <div class="callout" style="border-style:solid;border-color:var(--line);background:var(--surface)"><b>原始資料來源</b>：美國國防情報局（DIA）發布報告《太空安全面臨的挑戰：層疊、競逐與合作》（<i>Challenges to Security in Space: Congestion, Competition, and Cooperation</i>），<a href="https://www.dia.mil/Military-Power-Publications/" target="_blank" rel="noopener">https://www.dia.mil/Military-Power-Publications/</a>。本頁為依其繁中譯稿整理的學習導讀，非 DIA 官方出版品，數字以原報告為準。</div>
+  <a class="pdf-btn" href="https://rhynowu-atrdc-satdashboard-i18n.hf.space/static/docs/Challenges_Security_Space_2026_zh-TW.pdf" target="_blank" rel="noopener">繁中譯本 PDF<small>《太空安全面臨的挑戰：層疊、競逐與合作》· 115 頁 · 13.5 MB</small></a>
 </header>
 
 <!-- 01 -->
@@ -219,6 +230,7 @@ html{scroll-behavior:smooth}
     <div class="detail" id="orbitDetail"></div>
     <p class="note">VLEO（約 150–300 公里）報告未列衛星數。HEO 只有 22 顆，線性刻度下幾乎看不到，可切到對數刻度比較。</p>
   </div>
+  <div class="panel"><div class="panel-h"><h3>原書圖 1-1、1-2：軌道高度與衛星數</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c2"><figure class="fig"><a href="dia_svg/fig1-1.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig1-1.svg" alt="圖 1-1　各軌道衛星數量" loading="lazy"></a><figcaption><b>圖 1-1　各軌道衛星數量</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 1 頁（尾註 47–49）；本版依原圖以中文重繪。</span></figcaption></figure><figure class="fig"><a href="dia_svg/fig1-2.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig1-2.svg" alt="圖 1-2　各軌道太空任務" loading="lazy"></a><figcaption><b>圖 1-2　各軌道太空任務</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 2 頁（尾註 50–51）；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
 
   <div class="grid2">
     <div class="panel">
@@ -228,14 +240,14 @@ html{scroll-behavior:smooth}
     <div class="panel">
       <h3>地月空間</h3>
       <p>地月空間廣義上指受地球—月球系統重力影響的區域，包括地月之間的空間、月球軌道與拉格朗日點。拉格朗日點的重力與離心力相互平衡，衛星環繞時燃料需求較低。報告指出，中國等國家可能正在探索地月空間的軍事應用。</p>
-      <div class="chips"><span class="chip">L1 地月之間</span><span class="chip">L2 月球背面</span><span class="chip">L3 / L4 / L5</span></div>
+      <div class="chips"><span class="chip">L1 地月之間</span><span class="chip">L2 月球背面</span><span class="chip">L3 / L4 / L5</span></div><figure class="fig"><a href="dia_svg/fig1-3.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig1-3.svg" alt="圖 1-3　地月空間示意圖" loading="lazy"></a><figcaption><b>圖 1-3　地月空間示意圖</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 3 頁（尾註 52–54）；本版依原圖以中文重繪。</span></figcaption></figure>
     </div>
   </div>
 
   <div class="panel">
     <h3>發射統計比較（2018–2025）</h3>
     <p>發射嘗試次數可用來估算一國的太空發射能力，也反映其太空產業的狀況。報告的圖表比較中國、俄羅斯、伊朗、北韓與美國各年度的總發射嘗試次數。2022–2025 年的嘗試大多來自美國一家商業服務商發射的通信衛星。</p>
-    <div class="chips"><span class="chip">北韓 2023–2025：5 次嘗試</span><span class="chip">伊朗 2023–2025：7 次嘗試</span><span class="chip">俄羅斯 2022 年起替伊朗發射 2 顆遙測衛星</span></div>
+    <div class="chips"><span class="chip">北韓 2023–2025：5 次嘗試</span><span class="chip">伊朗 2023–2025：7 次嘗試</span><span class="chip">俄羅斯 2022 年起替伊朗發射 2 顆遙測衛星</span></div><figure class="fig"><a href="dia_svg/fig1-4.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig1-4.svg" alt="圖 1-4　各國年度軌道發射嘗試次數（2018–2025）" loading="lazy"></a><figcaption><b>圖 1-4　各國年度軌道發射嘗試次數（2018–2025）</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 4 頁（尾註 55–63）；本版依原圖以中文重繪。</span></figcaption></figure><p class="note">圖中數值依原圖判讀，為近似值；中國 2025 年 93 次依正文。</p>
   </div>
 </section>
 
@@ -251,6 +263,7 @@ html{scroll-behavior:smooth}
     <div class="cont" id="cont"></div>
     <div class="detail" id="contDetail"></div>
   </div>
+  <div class="panel"><div class="panel-h"><h3>原書圖 2-1：反太空威脅連續體</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c1"><figure class="fig"><a href="dia_svg/fig2-1.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig2-1.svg" alt="圖 2-1　反太空威脅連續體" loading="lazy"></a><figcaption><b>圖 2-1　反太空威脅連續體</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 6 頁；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
   <div class="panel">
     <div class="panel-h"><h3>四國反太空能力矩陣</h3><span class="note">依 03–05 章內容歸納；滑過格子看依據</span></div>
     <div class="tbl-wrap"><table class="mx" id="matrix"></table></div>
@@ -322,6 +335,8 @@ html{scroll-behavior:smooth}
     </div>
   </div>
 
+  <div class="panel"><div class="panel-h"><h3>原書圖 3-2、3-3：中國軍事與民用商業太空組織</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c2"><figure class="fig"><a href="dia_svg/fig3-2.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig3-2.svg" alt="圖 3-2　中國軍事太空組織" loading="lazy"></a><figcaption><b>圖 3-2　中國軍事太空組織</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 12 頁（尾註 203–213）；本版依原圖以中文重繪。</span></figcaption></figure><figure class="fig"><a href="dia_svg/fig3-3.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig3-3.svg" alt="圖 3-3　中國民用與商業太空組織" loading="lazy"></a><figcaption><b>圖 3-3　中國民用與商業太空組織</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 14 頁（尾註 238–241）；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
+  <div class="panel"><div class="panel-h"><h3>原書圖 3-4：中國太空發射載具</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c1"><figure class="fig"><a href="dia_svg/fig3-4.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig3-4.svg" alt="圖 3-4　中國太空發射載具" loading="lazy"></a><figcaption><b>圖 3-4　中國太空發射載具</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 15 頁（尾註 246–251）；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
   <div class="panel">
     <h3>中國太空探測任務</h3>
     <div class="tbl-wrap"><table>
@@ -375,6 +390,9 @@ html{scroll-behavior:smooth}
       </table></div>
     </div>
   </div>
+
+  <div class="panel"><div class="panel-h"><h3>原書圖 4-3、4-4：俄羅斯軍事太空結構與太空產業</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c2"><figure class="fig"><a href="dia_svg/fig4-3.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig4-3.svg" alt="圖 4-3　俄羅斯軍事太空結構" loading="lazy"></a><figcaption><b>圖 4-3　俄羅斯軍事太空結構</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 31 頁；本版依原圖以中文重繪。</span></figcaption></figure><figure class="fig"><a href="dia_svg/fig4-4.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig4-4.svg" alt="圖 4-4　俄羅斯太空產業" loading="lazy"></a><figcaption><b>圖 4-4　俄羅斯太空產業</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 32 頁（尾註 611–616）；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
+  <div class="panel"><div class="panel-h"><h3>原書圖 4-6：俄羅斯太空發射載具</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c1"><figure class="fig"><a href="dia_svg/fig4-6.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/fig4-6.svg" alt="圖 4-6　俄羅斯太空發射載具" loading="lazy"></a><figcaption><b>圖 4-6　俄羅斯太空發射載具</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 35 頁（尾註 650–654）；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
 </section>
 
 <!-- 05 -->
@@ -480,6 +498,7 @@ html{scroll-behavior:smooth}
     <div class="svg-wrap"><svg id="c2svg" viewBox="0 0 640 250" role="img" aria-label="衛星指揮管制架構示意" style="width:100%;min-width:480px;height:auto"></svg></div>
     <div class="detail" id="c2Detail"></div>
   </div>
+  <div class="panel"><div class="panel-h"><h3>原書圖 A-2：衛星指揮管制架構</h3><span class="note">原書圖表中文重繪；點圖可開新分頁放大</span></div><div class="figs c1"><figure class="fig"><a href="dia_svg/figA-2.svg" target="_blank" rel="noopener" title="開新分頁看大圖"><img src="dia_svg/figA-2.svg" alt="圖 A-2　衛星指揮管制架構" loading="lazy"></a><figcaption><b>圖 A-2　衛星指揮管制架構</b><span>來源：DIA，《Challenges to Security in Space 2026》，原書第 60 頁（尾註 1101）；本版依原圖以中文重繪。</span></figcaption></figure></div></div>
   <div class="grid2">
     <div class="panel">
       <h3>發射載具分類</h3>
@@ -577,7 +596,7 @@ html{scroll-behavior:smooth}
 </section>
 
 <footer>
-  <span>原始資料來源：美國國防情報局（DIA）《太空安全面臨的挑戰：層疊、競逐與合作》（Challenges to Security in Space: Congestion, Competition, and Cooperation），<a href="https://www.dia.mil/Military-Power-Publications/" target="_blank" rel="noopener">https://www.dia.mil/Military-Power-Publications/</a>。本頁依其繁中譯稿 01–10 章整理，為學習用導讀，非官方出版品；數字以原報告為準。</span>
+  <span>原始資料來源：美國國防情報局（DIA）《太空安全面臨的挑戰：層疊、競逐與合作》（Challenges to Security in Space: Congestion, Competition, and Cooperation），<a href="https://www.dia.mil/Military-Power-Publications/" target="_blank" rel="noopener">https://www.dia.mil/Military-Power-Publications/</a>。本頁依其繁中譯稿 01–10 章整理，為學習用導讀，非官方出版品；數字以原報告為準。繁中譯本 PDF：<a href="https://rhynowu-atrdc-satdashboard-i18n.hf.space/static/docs/Challenges_Security_Space_2026_zh-TW.pdf" target="_blank" rel="noopener">下載</a>；中文重繪圖表共 12 幅，分置各章。</span>
   <span>校對提示：譯稿「衛星通信」段寫「2022 年中國發射世界首顆量子通信衛星墨子號」，墨子號實為 2016 年 8 月發射，引用前請回查原文。</span>
 </footer>
 </main>

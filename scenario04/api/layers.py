@@ -93,7 +93,7 @@ def api_globe_texture_named(name: str):
     """動態底圖服務：依 name 回傳 BASEMAP_CATALOG 中對應的圖檔（single 類型）。"""
     entry = BASEMAP_CATALOG.get(name)
     if entry is None:
-        return make_response(f"未知底圖: {name}", 404)
+        return make_response(f"未知底圖: {name}", 404, {"Content-Type": "text/plain; charset=utf-8"})
     if entry.get("type") == "tms":
         return make_response("TMS 底圖請直接使用 tms_url", 400)
     path = next((p for p in entry["candidates"] if p.exists()), None)
@@ -261,7 +261,7 @@ def api_user_geojson_file(name: str):
         return make_response("無效檔名", 400)
     path = settings.USER_GEOJSON_DIR / name
     if not path.is_file():
-        return make_response(f"找不到圖層檔: {name}", 404)
+        return make_response(f"找不到圖層檔: {name}", 404, {"Content-Type": "text/plain; charset=utf-8"})
     try:
         data = path.read_bytes()
     except Exception as exc:

@@ -50,11 +50,10 @@ class TestSampleFiles:
 
     def test_sample_tles(self):
         tles = load_user_tles()
-        assert {99001, 25544, 42920} <= set(tles)
-        # 混用格式：99001/25544 為 3 行（有名稱），42920 為 2 行（無名稱）
+        assert 99001 in tles
         assert "測試衛星" in tles[99001]["name"]
-        assert tles[25544]["name"] == "ISS (ZARYA)"
-        assert tles[42920]["name"] == ""
+        # ISS(25544)、福衛五號(42920) 範例已註解停用：其 2026-07-01 舊 TLE 曾蓋掉每日更新的 DB TLE
+        assert 25544 not in tles and 42920 not in tles
 
     def test_sample_tle_propagates(self):
         """合成的 99001 TLE（改自福衛五號）必須可被 SGP4 解析並傳播。"""
@@ -107,17 +106,37 @@ class TestIndexMerge:
         assert e["era"] == "< 1 年"              # launch_date 2026-01-15
         assert e["line1"].startswith("1 99001")
 
-    def test_merge_overrides_existing_tle(self):
-        idx = {25544: {
-            "name": "OLD", "line1": "x", "line2": "y",
+    _DB_L1 = "1 25544U 98067A   26300.17675415  .00010000  00000-0  18000-3 0  9990"
+
+    def _idx(self):
+        return {25544: {
+            "name": "OLD", "line1": self._DB_L1, "line2": "2 25544 db",
             "country": "美國", "purpose": "有效載荷", "era": "> 10 年",
             "constellation": None,
         }}
+
+    def _user_tle(self, monkeypatch, epoch):
+        from scenario04.ingestion import index as ix
+        monkeypatch.setattr(ix, "load_user_tles", lambda: {25544: {
+            "name": "", "source_file": "t.tle", "line2": "2 25544 user",
+            "line1": "1 25544U 98067A   " + epoch + "  .00006185  00000-0  11827-3 0  9997"}})
+
+    def test_merge_overrides_when_user_tle_newer(self, monkeypatch):
+        self._user_tle(monkeypatch, "26301.00000000")
+        idx = self._idx()
         _merge_user_defined(idx)
         e = idx[25544]
-        assert e["line1"].startswith("1 25544")   # user TLE 覆蓋
-        assert e["name"] == "國際太空站"           # catalogue name_zh 覆寫
+        assert e["line2"] == "2 25544 user"         # 曆元較新 → 覆蓋
+        assert e["name"] == "國際太空站"             # catalogue name_zh 覆寫
         assert e["user_defined"] is True
+
+    def test_merge_keeps_db_when_user_tle_older(self, monkeypatch):
+        self._user_tle(monkeypatch, "26182.50817465")
+        idx = self._idx()
+        _merge_user_defined(idx)
+        e = idx[25544]
+        assert e["line1"] == self._DB_L1            # 曆元較舊 → 保留 DB TLE
+        assert not e.get("user_defined")
 
 
 class TestUserDataApi:
@@ -156,7 +175,7 @@ class TestUserDataApi:
 
     def test_user_tles_endpoint(self, client):
         d = client.get("/api/user/tles").get_json()
-        assert d["count"] == 3
+        assert d["count"] == 1                       # 只剩 99001 範例
         by_id = {s["norad_id"]: s for s in d["satellites"]}
         assert by_id[99001]["source_file"] == "user_tle01.tle"
 

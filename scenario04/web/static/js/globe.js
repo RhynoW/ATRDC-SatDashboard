@@ -730,6 +730,11 @@ function renderEntities(sats,ftype){
   });
 }
 
+// 衛星名稱/備註來自外部 TLE 來源與使用者 CSV，插入 HTML 前一律跳脫
+function _esc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // 衛星資訊框內的「軌道要素歷史」連結（/orbit；兩顆則為雙星比較）；點擊由主頁代開，見 _bindInfoBoxLinks
 function _orbitLink(nids,label){
   return '<a data-newtab href="/orbit?norad='+nids.join(',')+'" target="_blank" rel="noopener"'
@@ -757,10 +762,12 @@ function _bindInfoBoxLinks(){
       d.addEventListener('click',e=>{
         const a=e.target.closest&&e.target.closest('a[data-newtab]');
         if(!a) return;
+        const href=a.getAttribute('href')||'';
+        if(!/^\/(?!\/)/.test(href)) return;   // 只代開站內相對路徑（擋 javascript:、//外站 等注入連結）
         e.preventDefault();
         // 以主頁上的一般 target=_blank 連結代點：行為同使用者點連結，必定開新分頁（window.open 帶 features 時部分瀏覽器會開彈出視窗或被擋）
         const ln=document.createElement('a');
-        ln.href=a.getAttribute('href'); ln.target='_blank'; ln.rel='noopener';
+        ln.href=href; ln.target='_blank'; ln.rel='noopener';
         document.body.appendChild(ln); ln.click(); ln.remove();
       });
     }catch(e){}
@@ -772,13 +779,13 @@ function _bindInfoBoxLinks(){
 function _buildDesc(s){
   return '<style>body{background:#fff;color:#212121;margin:0}</style>'
     +'<div style="font-family:Tahoma,sans-serif;font-size:13px;padding:6px">'
-    +'<p style="color:#1565c0;font-weight:bold;margin-bottom:6px">'+s.name+'</p>'
+    +'<p style="color:#1565c0;font-weight:bold;margin-bottom:6px">'+_esc(s.name)+'</p>'
     +'<table style="border-collapse:collapse;color:#333;font-size:12px">'
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">NORAD</td><td><b>'+s.norad_id+'</b></td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">國家</td><td>'+(s.country||'—')+'</td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">用途</td><td>'+(s.purpose||'—')+'</td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">年代</td><td>'+(s.era||'—')+'</td></tr>'
-    +(s.constellation&&s.constellation!=='—'?'<tr><td style="padding:2px 10px 2px 0;color:#555">星座</td><td>'+s.constellation+'</td></tr>':'')
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">國家</td><td>'+_esc(s.country||'—')+'</td></tr>'
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">用途</td><td>'+_esc(s.purpose||'—')+'</td></tr>'
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">年代</td><td>'+_esc(s.era||'—')+'</td></tr>'
+    +(s.constellation&&s.constellation!=='—'?'<tr><td style="padding:2px 10px 2px 0;color:#555">星座</td><td>'+_esc(s.constellation)+'</td></tr>':'')
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">高度</td><td><b>'+(s.alt_km!=null?s.alt_km:'—')+' km</b></td></tr>'
     +'</table>'+_orbitLink([s.norad_id])+_trackLink(s.norad_id)+'</div>';
 }
@@ -1389,16 +1396,16 @@ function _buildTrackDesc(s,meta){
   return '<style>body{background:#fff;color:#212121;margin:0}</style>'
     +'<div style="font-family:Tahoma,sans-serif;font-size:13px;padding:6px">'
     +'<p style="color:#c2185b;font-weight:bold;margin-bottom:6px">🎯 '
-    +((meta&&meta.alias)||s.name)+'</p>'
+    +_esc((meta&&meta.alias)||s.name)+'</p>'
     +'<table style="border-collapse:collapse;color:#333;font-size:12px">'
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">NORAD</td><td><b>'+s.norad_id+'</b></td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">名稱</td><td>'+s.name+'</td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">國家</td><td>'+(s.country||'—')+'</td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">用途</td><td>'+(s.purpose||'—')+'</td></tr>'
-    +'<tr><td style="padding:2px 10px 2px 0;color:#555">優先度</td><td>'+pri+'</td></tr>'
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">名稱</td><td>'+_esc(s.name)+'</td></tr>'
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">國家</td><td>'+_esc(s.country||'—')+'</td></tr>'
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">用途</td><td>'+_esc(s.purpose||'—')+'</td></tr>'
+    +'<tr><td style="padding:2px 10px 2px 0;color:#555">優先度</td><td>'+_esc(pri)+'</td></tr>'
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">高度</td><td><b>'+(s.alt_km!=null?s.alt_km:'—')+' km</b></td></tr>'
     +(s.user_defined?'<tr><td style="padding:2px 10px 2px 0;color:#555">來源</td><td style="color:#7b1fa2">使用者自訂 TLE</td></tr>':'')
-    +(s.notes?'<tr><td style="padding:2px 10px 2px 0;color:#555">備註</td><td>'+s.notes+'</td></tr>':'')
+    +(s.notes?'<tr><td style="padding:2px 10px 2px 0;color:#555">備註</td><td>'+_esc(s.notes)+'</td></tr>':'')
     +'</table>'+_orbitLink([s.norad_id])+_trackLink(s.norad_id)+'</div>';
 }
 

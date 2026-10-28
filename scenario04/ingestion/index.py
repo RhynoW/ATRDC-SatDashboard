@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -28,6 +29,7 @@ _stats_loaded_at:         float = 0.0
 _stats_payload_cache:     dict[str, Any] = {}
 _stats_payload_loaded_at: float = 0.0
 _sat_index:               dict[int, dict[str, Any]] = {}
+_index_lock = threading.Lock()
 _index_loaded_at:         float = 0.0
 _db_mtime_at_load:        float = 0.0
 
@@ -217,16 +219,26 @@ def get_sat_index() -> dict[int, dict[str, Any]]:
             except OSError:
                 pass
     if ttl_expired or db_changed:
-        db = resolve_db()
-        _db_mtime_at_load = db.stat().st_mtime if db is not None else 0.0
-        _sat_index = build_sat_index()
-        _index_loaded_at = time.monotonic()
-        # 同步清除統計快取
-        global _stats_cache, _stats_loaded_at, _stats_payload_cache, _stats_payload_loaded_at
-        _stats_cache = {}
-        _stats_loaded_at = 0.0
-        _stats_payload_cache = {}
-        _stats_payload_loaded_at = 0.0
+        # 重建需掃 ~190 萬列＋建 3.2 萬筆（數秒）：同時只准一個請求重建（2026-10-28 架構檢查）。
+        # 已有舊索引時，搶不到鎖的請求直接回舊索引；冷啟動（尚無索引）才排隊等待。
+        if not _index_lock.acquire(blocking=not _sat_index):
+            return _sat_index
+        try:
+            # 二次檢查：排隊期間可能已由別的請求重建完成
+            if _sat_index and not db_changed and (time.monotonic() - _index_loaded_at) <= settings.INDEX_TTL:
+                return _sat_index
+            db = resolve_db()
+            _db_mtime_at_load = db.stat().st_mtime if db is not None else 0.0
+            _sat_index = build_sat_index()
+            _index_loaded_at = time.monotonic()
+            # 同步清除統計快取
+            global _stats_cache, _stats_loaded_at, _stats_payload_cache, _stats_payload_loaded_at
+            _stats_cache = {}
+            _stats_loaded_at = 0.0
+            _stats_payload_cache = {}
+            _stats_payload_loaded_at = 0.0
+        finally:
+            _index_lock.release()
     return _sat_index
 
 

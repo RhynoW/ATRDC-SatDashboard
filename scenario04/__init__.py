@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -31,6 +32,18 @@ def create_app() -> Flask:
         static_folder=str(_WEB_DIR / "static"),
     )
     CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # POST 本體上限：最大合法請求（/api/positions/active 100 顆、Starlink 遮蔽格）遠小於此
+    app.config["MAX_CONTENT_LENGTH"] = 256 * 1024
+
+    # 安全標頭（2026-10-28 架構檢查）。frame-ancestors 放行 HF Space 外框，故不用 X-Frame-Options
+    @app.after_request
+    def _security_headers(resp):
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        resp.headers.setdefault(
+            "Content-Security-Policy",
+            "frame-ancestors 'self' https://huggingface.co https://*.huggingface.co https://*.hf.space")
+        return resp
 
     # 靜態檔 cache-busting：url_for('static', …) 自動附 ?v=<mtime>，
     # 佈署更新後瀏覽器不會沿用快取的舊 JS/CSS（曾致前端修正未生效）。
@@ -56,7 +69,9 @@ def create_app() -> Flask:
         from werkzeug.exceptions import HTTPException
         if isinstance(err, HTTPException):
             return err
-        logger.exception("未預期例外")
-        return jsonify({"error": str(err)}), 500
+        # 對外只回固定訊息＋錯誤 ID；例外內容（含 DB 路徑等內部資訊）只寫 log
+        err_id = uuid.uuid4().hex[:8]
+        logger.exception("未預期例外 [%s]", err_id)
+        return jsonify({"error": "伺服器內部錯誤", "error_id": err_id}), 500
 
     return app

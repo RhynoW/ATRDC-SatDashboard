@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -422,6 +423,15 @@ def predict_taipei_passes_at(
         ts = ts.replace(tzinfo=timezone.utc)
     now = datetime.now(timezone.utc)
 
+    with _PASSES_AT_SEM:
+        return _predict_taipei_passes_at(ts, now, hours, step_sec, mask_deg, max_per_cat)
+
+
+# 同時最多 2 個時間軸過頂預報在算，其餘排隊（避免多請求疊加記憶體峰值）
+_PASSES_AT_SEM = threading.BoundedSemaphore(2)
+
+
+def _predict_taipei_passes_at(ts, now, hours, step_sec, mask_deg, max_per_cat) -> dict[str, Any]:
     idx = get_index_for_time(ts)
     candidates = get_overpass_candidates(idx)
     obs = TAIPEI_OBS
@@ -448,60 +458,64 @@ def predict_taipei_passes_at(
         if not nids or not HAS_SATREC_ARRAY:
             continue
 
-        line1s = [idx[n]["line1"] for n in nids]
-        line2s = [idx[n]["line2"] for n in nids]
-
-        try:
-            sa = _SatrecArray([Satrec.twoline2rv(l1, l2) for l1, l2 in zip(line1s, line2s)])
-            e_raw, r_raw, _ = sa.sgp4(jds, frs)
-        except Exception as exc:
-            logger.warning("時間軸過頂預報失敗 cat=%s: %s", cat, exc)
-            continue
-
         sl = obs["sl"]; cl = obs["cl"]; so = obs["so"]; co = obs["co"]
         x0 = obs["x0"]; y0 = obs["y0"]; z0 = obs["z0"]
         cat_passes: list[dict] = []
 
-        for sat_idx, nid in enumerate(nids):
-            r_ti = r_raw[sat_idx]; e_ti = e_raw[sat_idx]; ok = (e_ti == 0)
-            if not ok.any():
+        # 分塊：每塊 r/v 矩陣（n×T×3×8 B ×2）不超過 MAX_PASSES_MATRIX_MB，避免 hours=72、step=10 s
+        # 時對整個 Starlink 群組一次配置數 GB 而 OOM（2026-10-28 架構檢查）
+        chunk = max(1, int(settings.MAX_PASSES_MATRIX_MB * 1024 ** 2 / (n_steps * 6 * 8)))
+        for c0 in range(0, len(nids), chunk):
+            c_nids = nids[c0:c0 + chunk]
+            try:
+                sa = _SatrecArray([Satrec.twoline2rv(idx[n]["line1"], idx[n]["line2"]) for n in c_nids])
+                e_raw, r_raw, _ = sa.sgp4(jds, frs)
+            except Exception as exc:
+                logger.warning("時間軸過頂預報失敗 cat=%s: %s", cat, exc)
                 continue
-            xe = cg_all * r_ti[:, 0] + sg_all * r_ti[:, 1]
-            ye = -sg_all * r_ti[:, 0] + cg_all * r_ti[:, 1]
-            ze = r_ti[:, 2]
-            dx = xe - x0; dy = ye - y0; dz = ze - z0
-            U  = cl * co * dx + cl * so * dy + sl * dz
-            E  = -so * dx + co * dy
-            N  = -sl * co * dx - sl * so * dy + cl * dz
-            rng = np.sqrt(E**2 + N**2 + U**2)
-            safe = np.where(rng > 0.001, rng, 0.001)
-            el  = np.where(ok, np.rad2deg(np.arcsin(np.clip(U / safe, -1.0, 1.0))), -90.0)
-
-            above = el >= mask_deg
-            if not above.any():
-                continue
-
-            trans = np.diff(above.astype(int))
-            rises = list(np.where(trans == 1)[0] + 1)
-            sets  = list(np.where(trans == -1)[0] + 1)
-            if above[0]:  rises = [0] + rises
-            if above[-1]: sets  = sets + [n_steps - 1]
-
-            for ri, set_i in zip(rises, sets):
-                if ri >= set_i:
+            for sat_idx, nid in enumerate(c_nids):
+                r_ti = r_raw[sat_idx]; e_ti = e_raw[sat_idx]; ok = (e_ti == 0)
+                if not ok.any():
                     continue
-                seg = el[ri: set_i + 1]
-                mx  = int(np.argmax(seg))
-                cat_passes.append({
-                    "norad_id":   nid,
-                    "name":       idx[nid]["name"],
-                    "t_rise_utc": times[ri].isoformat(),
-                    "t_max_utc":  times[ri + mx].isoformat(),
-                    "t_set_utc":  times[min(set_i, n_steps - 1)].isoformat(),
-                    "max_el_deg": round(float(seg[mx]), 1),
-                    "duration_s": int((times[min(set_i, n_steps - 1)] - times[ri]).total_seconds()),
-                    "color":      cfg["color"],
-                })
+                xe = cg_all * r_ti[:, 0] + sg_all * r_ti[:, 1]
+                ye = -sg_all * r_ti[:, 0] + cg_all * r_ti[:, 1]
+                ze = r_ti[:, 2]
+                dx = xe - x0; dy = ye - y0; dz = ze - z0
+                U  = cl * co * dx + cl * so * dy + sl * dz
+                E  = -so * dx + co * dy
+                N  = -sl * co * dx - sl * so * dy + cl * dz
+                rng = np.sqrt(E**2 + N**2 + U**2)
+                safe = np.where(rng > 0.001, rng, 0.001)
+                el  = np.where(ok, np.rad2deg(np.arcsin(np.clip(U / safe, -1.0, 1.0))), -90.0)
+
+                above = el >= mask_deg
+                if not above.any():
+                    continue
+
+                trans = np.diff(above.astype(int))
+                rises = list(np.where(trans == 1)[0] + 1)
+                sets  = list(np.where(trans == -1)[0] + 1)
+                if above[0]:  rises = [0] + rises
+                if above[-1]: sets  = sets + [n_steps - 1]
+
+                for ri, set_i in zip(rises, sets):
+                    if ri >= set_i:
+                        continue
+                    seg = el[ri: set_i + 1]
+                    mx  = int(np.argmax(seg))
+                    cat_passes.append({
+                        "norad_id":   nid,
+                        "name":       idx[nid]["name"],
+                        "t_rise_utc": times[ri].isoformat(),
+                        "t_max_utc":  times[ri + mx].isoformat(),
+                        "t_set_utc":  times[min(set_i, n_steps - 1)].isoformat(),
+                        "max_el_deg": round(float(seg[mx]), 1),
+                        "duration_s": int((times[min(set_i, n_steps - 1)] - times[ri]).total_seconds()),
+                        "color":      cfg["color"],
+                    })
+
+                if len(cat_passes) >= max_per_cat:
+                    break
 
             if len(cat_passes) >= max_per_cat:
                 break

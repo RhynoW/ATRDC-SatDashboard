@@ -21,7 +21,7 @@ _cdm_cache_at:       dict[int, float] = {}
 @bp.get("/api/conjunctions")
 def api_conjunctions():
     threshold = parse_float_arg(
-        request.args, "threshold_km", settings.CONJ_THRESHOLD_KM, 1.0, 500.0)
+        request.args, "threshold_km", settings.CONJ_THRESHOLD_KM, 1.0, 50.0)   # 上限 50 km：大半徑配對數暴增
     try:
         max_pairs = int(request.args.get("max_pairs", 200))
         max_pairs = max(10, min(max_pairs, 2000))

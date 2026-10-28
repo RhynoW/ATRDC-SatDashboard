@@ -69,7 +69,7 @@ def cesium_static(filename: str):
     if not str(safe).startswith(str(settings.CESIUM_LOCAL_DIR.resolve())):
         return make_response("Forbidden", 403)
     if not safe.is_file():
-        return make_response(f"Cesium asset not found: {filename}", 404)
+        return make_response(f"Cesium asset not found: {filename}", 404, {"Content-Type": "text/plain; charset=utf-8"})
     return send_from_directory(str(settings.CESIUM_LOCAL_DIR), filename)
 
 

@@ -41,6 +41,27 @@ _computing_lock  = threading.Lock()
 
 C_KM_MS = 299792.458 / 1000.0   # km / ms（光速換算）
 
+# 資源上限（2026-10-28 架構檢查）：_do_compute 一次對整個 Starlink 群組（~1 萬顆）配置
+# 多個 n×T 陣列，hours=72、step=1 時峰值數 GB → 限制時間步數、同時背景工作數與快取筆數
+_MAX_STEPS     = 288      # 每份工作最多時間步（超過時自動放大 step_min）
+_MAX_JOBS      = 2        # 同時最多幾個背景計算；滿載時不開新工作，前端下次輪詢再試
+_MAX_CACHE     = 16       # _main_cache/_occ_cache 最多筆數，超過淘汰最舊
+
+
+def _clamp_step(hours: int, step_min: int) -> int:
+    """讓 hours*60/step_min ≤ _MAX_STEPS；回傳實際使用的步長（分）。"""
+    return max(step_min, -(-hours * 60 // _MAX_STEPS))
+
+
+def _evict_locked() -> None:
+    """呼叫端須持有 _cache_lock：刪除過期項，仍超量則依時間淘汰最舊者。"""
+    now = datetime.now(timezone.utc)
+    for k in [k for k, (_, ts) in _main_cache.items() if (now - ts).total_seconds() >= _CACHE_TTL_SEC]:
+        _main_cache.pop(k, None); _occ_cache.pop(k, None)
+    while len(_main_cache) > _MAX_CACHE:
+        k = min(_main_cache, key=lambda x: _main_cache[x][1])
+        _main_cache.pop(k, None); _occ_cache.pop(k, None)
+
 
 def _cache_key(lat: float, lon: float, mask_deg: float, hours: int, step_min: int,
                generation: str = "all", dropout_pct: float = 0.0,
@@ -72,6 +93,7 @@ def compute_starlink_visibility(
     exclude_deorbiting: 是否排除目前正在離軌的衛星（與 /starlink-deorbit 同一套判定
         口徑）——這些衛星即使還在目錄裡也已接近失效，預設排除以求更貼近實際服務能力。
     """
+    step_min = _clamp_step(hours, step_min)
     key = _cache_key(lat, lon, mask_deg, hours, step_min, generation, dropout_pct, exclude_deorbiting)
 
     with _cache_lock:
@@ -81,7 +103,7 @@ def compute_starlink_visibility(
                 return result, True
 
     with _computing_lock:
-        if key in _computing:
+        if key in _computing or len(_computing) >= _MAX_JOBS:
             return None, False
         _computing.add(key)
 
@@ -93,11 +115,13 @@ def compute_starlink_visibility(
             with _cache_lock:
                 _main_cache[key] = (result, now)
                 _occ_cache[key]  = occ_data
+                _evict_locked()
         except Exception as exc:
             logger.error("Starlink 可見性計算失敗: %s", exc, exc_info=True)
             err: dict[str, Any] = {"error": str(exc), "timeline": [], "stats": {}}
             with _cache_lock:
                 _main_cache[key] = (err, datetime.now(timezone.utc))
+                _evict_locked()
         finally:
             with _computing_lock:
                 _computing.discard(key)
@@ -124,6 +148,7 @@ def compute_obstruction_analysis(
     generation/dropout_pct/exclude_deorbiting 須與先前呼叫 compute_starlink_visibility()
     時的參數一致，才能命中同一份快取（見 _cache_key()）。
     """
+    step_min = _clamp_step(hours, step_min)
     key = _cache_key(lat, lon, mask_deg, hours, step_min, generation, dropout_pct, exclude_deorbiting)
 
     with _cache_lock:

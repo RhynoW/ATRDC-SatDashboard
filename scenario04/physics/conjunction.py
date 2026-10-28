@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -139,19 +140,30 @@ _conj_cache:     dict[str, Any] | None = None
 _conj_loaded_at: float = 0.0
 
 
+_conj_lock = threading.Lock()
+
+
 def get_conjunctions(
     threshold_km: float = settings.CONJ_THRESHOLD_KM,
     max_pairs:    int   = 200,
 ) -> dict[str, Any]:
     global _conj_cache, _conj_loaded_at
-    cache_key = f"conj:{threshold_km:.1f}"
+    # max_pairs 也進快取鍵（原本只用 threshold，換 max_pairs 會拿到筆數不對的舊結果）
+    cache_key = f"conj:{threshold_km:.1f}:{max_pairs}"
     cached = cache.cache_get(cache_key)
     if cached:
         return cached
-    if (_conj_cache is None
-            or (time.monotonic() - _conj_loaded_at) > settings.CONJ_TTL
-            or _conj_cache.get("threshold_km") != threshold_km):
-        _conj_cache     = build_conjunction_summary(threshold_km, max_pairs)
-        _conj_loaded_at = time.monotonic()
-    cache.cache_set(cache_key, _conj_cache, ttl=settings.CONJ_TTL)
-    return _conj_cache
+    # 全目錄 SGP4＋KD-tree 掃描數秒：加鎖並二次檢查，避免並行請求各自重算（2026-10-28 架構檢查）
+    with _conj_lock:
+        cached = cache.cache_get(cache_key)
+        if cached:
+            return cached
+        if (_conj_cache is None
+                or (time.monotonic() - _conj_loaded_at) > settings.CONJ_TTL
+                or _conj_cache.get("threshold_km") != threshold_km
+                or _conj_cache.get("max_pairs") != max_pairs):
+            _conj_cache     = build_conjunction_summary(threshold_km, max_pairs)
+            _conj_cache["max_pairs"] = max_pairs
+            _conj_loaded_at = time.monotonic()
+        cache.cache_set(cache_key, _conj_cache, ttl=settings.CONJ_TTL)
+        return _conj_cache

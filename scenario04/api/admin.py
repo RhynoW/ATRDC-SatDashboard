@@ -7,7 +7,10 @@ Phase 2.3「YAML 熱重載」模式套用到所有外部化資料：
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+import hmac
+import os
+
+from flask import Blueprint, jsonify, request
 
 from ..config.stations import reload_ssn_stations
 from ..ingestion.index import invalidate_index
@@ -18,9 +21,20 @@ from ..physics.coverage import reload_overpass_cats
 bp = Blueprint("admin", __name__)
 
 
+def _admin_allowed() -> bool:
+    """有設 ADMIN_TOKEN → 須帶相符的 X-Admin-Token 標頭；未設 → 僅限本機呼叫。
+    公開部署（HF Space）原本任何人可反覆 POST 觸發 3.2 萬筆索引重建（2026-10-28 架構檢查）。"""
+    token = os.getenv("ADMIN_TOKEN", "")
+    if token:
+        return hmac.compare_digest(request.headers.get("X-Admin-Token", ""), token)
+    return request.remote_addr in ("127.0.0.1", "::1")
+
+
 @bp.post("/api/admin/reload_cats")
 def api_reload_cats():
     """POST /api/admin/reload_cats — 熱重載所有外部化設定與使用者自訂資料。"""
+    if not _admin_allowed():
+        return jsonify({"error": "forbidden"}), 403
     from .layers import reset_borders_cache
 
     cats  = reload_overpass_cats()

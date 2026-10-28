@@ -96,11 +96,9 @@ if __name__ == "__main__":
             deorbit_forecast_service.start()
     if _prod:
         from waitress import serve
-        _threads = int(os.getenv("WAITRESS_THREADS", "64"))   # SSE 長連線各占一執行緒，須留足
+        _threads = int(os.getenv("WAITRESS_THREADS", "64"))
         logger.info("正式模式：waitress %s:%d（threads=%d）", settings.HOST, settings.PORT, _threads)
-        # send_bytes=1：SSE 小封包立即送出，不等緩衝滿；channel_timeout 大於 SSE keepalive 間隔
         serve(app, host=settings.HOST, port=settings.PORT, threads=_threads,
               send_bytes=1, channel_timeout=300, connection_limit=500, ident="SatDashboard")
     else:
-        # threaded=True：/api/broadcast/stream 為長連線 SSE，須並行處理其餘請求，否則會卡住整個開發伺服器
         app.run(host=settings.HOST, port=settings.PORT, debug=_debug, threaded=True)

@@ -20,6 +20,8 @@ const I18N = {
     status_loading: '載入中…',
     status_load_fail: '載入失敗：{error}',
     status_loaded: '<b>{name}</b>（NORAD {norad}）　{start} ~ {end}　逐日資料 <b>{n}</b> 天',
+    status_compare: '雙星比較　{start} ~ {end}', compare_time: '同一顆衛星：顏色淡→深＝時間早→晚',
+    compare_days: '{n} 天', stats_th_sat: '衛星', status_partial: '部分衛星載入失敗：{error}',
     tip_play: '播放/暫停',
     spd_5: '5 天/秒', spd_10: '10 天/秒', spd_20: '20 天/秒', spd_40: '40 天/秒',
     card_sma_title: '半長軸變化（圓形時間圖）',
@@ -52,6 +54,8 @@ const I18N = {
     status_loading: 'Loading…',
     status_load_fail: 'Load failed: {error}',
     status_loaded: '<b>{name}</b> (NORAD {norad})   {start} ~ {end}   <b>{n}</b> days of daily data',
+    status_compare: 'Two-satellite comparison   {start} ~ {end}', compare_time: 'Per satellite: light → dark = earlier → later',
+    compare_days: '{n} days', stats_th_sat: 'Satellite', status_partial: 'Some satellites failed to load: {error}',
     tip_play: 'Play / Pause',
     spd_5: '5 days/s', spd_10: '10 days/s', spd_20: '20 days/s', spd_40: '40 days/s',
     card_sma_title: 'Semi-Major Axis Change (Circular Time Chart)',
@@ -84,6 +88,8 @@ const I18N = {
     status_loading: '読み込み中…',
     status_load_fail: '読み込みに失敗しました：{error}',
     status_loaded: '<b>{name}</b>（NORAD {norad}）　{start} ～ {end}　日次データ <b>{n}</b> 日分',
+    status_compare: '2 機比較　{start} ～ {end}', compare_time: '各衛星：色の淡→濃＝時間の早→遅',
+    compare_days: '{n} 日分', stats_th_sat: '衛星', status_partial: '一部の衛星の読み込みに失敗しました：{error}',
     tip_play: '再生 / 一時停止',
     spd_5: '5日/秒', spd_10: '10日/秒', spd_20: '20日/秒', spd_40: '40日/秒',
     card_sma_title: '半長軸変化（円形タイムチャート）',
@@ -120,9 +126,22 @@ function tpl(key, vars){
 }
 
 /* ── 已載入時的狀態列文字（依目前語言重新組字，資料本身不翻譯）── */
-function renderLoadedStatus(d){
-  let s = tpl('status_loaded', {name: d.name, norad: d.norad, start: d.start, end: d.end, n: d.n_days});
-  if(d.note) s += '　<span style="color:#d29922">' + d.note + '</span>';
+function renderLoadedStatus(){
+  let s;
+  if(SATS.length === 1){
+    const d = SATS[0].data;
+    s = tpl('status_loaded', {name: d.name, norad: d.norad, start: d.start, end: d.end, n: d.n_days});
+    if(d.note) s += '　<span style="color:#d29922">' + d.note + '</span>';
+  }else{
+    s = tpl('status_compare', {start: UDATES[0], end: UDATES[UDATES.length - 1]});
+    SATS.forEach(o => {
+      s += '　<span class="lg"><i style="background:' + o.color + '"></i><b>' + o.data.name +
+           '</b>（NORAD ' + o.norad + '，' + tpl('compare_days', {n: o.data.n_days}) + '）</span>';
+    });
+    s += '　<span style="color:#8b949e">' + t('compare_time') + '</span>';
+    SATS.forEach(o => { if(o.data.note) s += '　<span style="color:#d29922">' + satTag(o) + o.data.note + '</span>'; });
+  }
+  if(LOAD_ERR) s += '　<span style="color:#f85149">' + tpl('status_partial', {error: LOAD_ERR}) + '</span>';
   $('status').innerHTML = s;
 }
 
@@ -147,28 +166,45 @@ function setLang(lang){
   });
 
   // 若已載入資料，重繪所有用到語系字串的動態內容
-  if(DATA){
-    renderLoadedStatus(DATA);
-    renderSatInfo(DATA);
-    renderStats(DATA);
+  if(SATS.length){
+    renderLoadedStatus();
+    renderSatInfo();
+    renderStats();
     redrawAll(HI);
   }
 }
 
-let SEL = null;          // {norad, name}
-let DATA = null;         // /api/orbit/history 回應
-let HI = null;           // 目前高亮之日索引（null=無）
+let SELS = [];           // 已選衛星 [{norad, name}]，最多 2 顆（雙星比較）
+let SATS = [];           // 已載入 [{norad, data, color, uidx}]；data = /api/orbit/history 回應
+let UDATES = [];         // 各星日期聯集（排序），播放軸與時間比例共用
+let LOAD_ERR = '';       // 雙星時部分失敗的訊息
+let HI = null;           // 目前高亮之聯集日索引（null=無）
 let TIMER = null;        // 播放計時器
 let AUTOPLAY = false;    // ?autoplay=1：載入後自動播放
 const PTS = {};          // canvasId -> [{x,y,label}] 供 hover
 
 const SPIRAL_A = 0.18, SPIRAL_B_FRAC = 0.82;   // r_norm = A + B·(day/maxDay)
 const DIM = '#2d333b';                          // 播放時未來點的淡出色
+const MAX_SATS = 2;
+const CMP_RGB = [[242, 167, 59], [53, 198, 244]];   // 與 /rpo primary（橘）/ secondary（青）一致
 
 function $(id){ return document.getElementById(id); }
 
-/* ── 顏色：時間 → HSV 色環 ── */
+/* ── 顏色：單星＝時間 → HSV 色環；雙星＝各星固定色、透明度表時間（淡→深）── */
 function timeColor(t){ return 'hsl(' + Math.round(t * 330) + ',85%,55%)'; }
+function seriesColor(k, t){
+  if(SATS.length === 1) return timeColor(t);
+  const c = CMP_RGB[k];
+  return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (0.22 + 0.78 * t).toFixed(3) + ')';
+}
+function satTag(o){ return SATS.length > 1 ? '[' + o.norad + '] ' : ''; }
+function uT(u){ return UDATES.length > 1 ? u / (UDATES.length - 1) : 0; }
+/* 某星在聯集索引 hi 時「當日或之前最後一筆」之索引（-1=尚無資料）*/
+function lastAt(o, hi){
+  let r = -1;
+  for(let i = 0; i < o.uidx.length && o.uidx[i] <= hi; i++) r = i;
+  return r;
+}
 
 /* ── canvas 準備（方形、HiDPI）── */
 function setupCanvas(cv){
@@ -202,49 +238,63 @@ function polarGrid(g, spokeLabelFn){
 }
 
 /* ── 當日高亮：白圈＋圓心指引線 ── */
-function highlightPoint(g, p, t){
+function highlightPoint(g, p, color){
   const {ctx, cx, cy} = g;
   ctx.save();
   ctx.strokeStyle = 'rgba(139,148,158,.55)';
   ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = timeColor(t);
+  ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI); ctx.fill();
   ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(p.x, p.y, 6.5, 0, 2 * Math.PI); ctx.stroke();
   ctx.restore();
 }
 
+/* 各星當日高亮＋說明列（雙星時兩筆以「｜」並列）*/
+function highlightAll(g, capId, perSat, hi){
+  if(hi == null) return;
+  const caps = [];
+  SATS.forEach((o, k) => {
+    const j = lastAt(o, hi);
+    if(j < 0) return;
+    highlightPoint(g, perSat[k][j], SATS.length === 1 ? timeColor(uT(hi)) : o.color);
+    caps.push(perSat[k][j].label);
+  });
+  $(capId).textContent = caps.join('　｜　');
+}
+
 /* ── Spiral Polar：角度=要素值（數學慣例 0°=右、逆時針）、半徑=時間 ── */
-function drawSpiral(cvId, capId, values, dates, hi){
+function drawSpiral(cvId, capId, key, hi){
   const cv = $(cvId), g = setupCanvas(cv);
   polarGrid(g, a => a + '°');
-  const n = values.length;
-  const pts = [];
-  for(let i = 0; i < n; i++){
-    const t = n > 1 ? i / (n - 1) : 0;
-    const rN = SPIRAL_A + SPIRAL_B_FRAC * t;
-    const rad = (values[i] % 360) * Math.PI / 180;
-    const x = g.cx + g.R * rN * Math.cos(rad);
-    const y = g.cy - g.R * rN * Math.sin(rad);
-    g.ctx.fillStyle = (hi != null && i > hi) ? DIM : timeColor(t);
-    g.ctx.beginPath(); g.ctx.arc(x, y, 2.6, 0, 2 * Math.PI); g.ctx.fill();
-    pts.push({x, y, label: dates[i] + ' · ' + values[i].toFixed(4) + '°'});
-  }
-  if(hi != null && hi < n){
-    highlightPoint(g, pts[hi], n > 1 ? hi / (n - 1) : 0);
-    $(capId).textContent = pts[hi].label;
-  }
-  PTS[cvId] = pts;
+  const all = [], perSat = [];
+  SATS.forEach((o, k) => {
+    const values = o.data[key], dates = o.data.dates, pts = [];
+    for(let i = 0; i < values.length; i++){
+      const t = uT(o.uidx[i]);
+      const rN = SPIRAL_A + SPIRAL_B_FRAC * t;
+      const rad = (values[i] % 360) * Math.PI / 180;
+      const x = g.cx + g.R * rN * Math.cos(rad);
+      const y = g.cy - g.R * rN * Math.sin(rad);
+      g.ctx.fillStyle = (hi != null && o.uidx[i] > hi) ? DIM : seriesColor(k, t);
+      g.ctx.beginPath(); g.ctx.arc(x, y, 2.6, 0, 2 * Math.PI); g.ctx.fill();
+      pts.push({x, y, label: satTag(o) + dates[i] + ' · ' + values[i].toFixed(4) + '°'});
+    }
+    perSat.push(pts); all.push(...pts);
+  });
+  highlightAll(g, capId, perSat, hi);
+  PTS[cvId] = all;
   attachHover(cv, cvId, capId);
 }
 
-/* ── SMA 圓形時間圖：0°=起始（上方）順時針、r=正規化 SMA 變化 ── */
-function drawSmaCircle(cvId, capId, sma, dates, hi){
+/* ── SMA 圓形時間圖：0°=起始（上方）順時針、r=正規化 SMA 變化（雙星共用同一尺度）── */
+function drawSmaCircle(cvId, capId, hi){
   const cv = $(cvId), g = setupCanvas(cv);
   const {ctx, cx, cy, R} = g;
-  const mn = Math.min(...sma), mx = Math.max(...sma), rg = mx - mn;
+  const allSma = [].concat(...SATS.map(o => o.data.sma_km));
+  const mn = Math.min(...allSma), mx = Math.max(...allSma), rg = mx - mn;
 
   ctx.strokeStyle = '#21262d'; ctx.fillStyle = '#8b949e';
   ctx.font = '10.5px Segoe UI'; ctx.lineWidth = 1;
@@ -256,47 +306,47 @@ function drawSmaCircle(cvId, capId, sma, dates, hi){
   ctx.fillText(mn.toFixed(1) + ' km (min)', cx + 4, cy + 12);
 
   // 時間刻度：0/90/180/270° → 起始與四分位日期
-  const n = sma.length;
+  const n = UDATES.length;
   [0, 0.25, 0.5, 0.75].forEach(f => {
     const rad = 2 * Math.PI * f;                       // 0=上方、順時針
     const x2 = cx + R * Math.sin(rad), y2 = cy - R * Math.cos(rad);
     ctx.strokeStyle = '#30363d';
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x2, y2); ctx.stroke();
     const di = Math.min(n - 1, Math.round(f * (n - 1)));
-    const lb = f === 0 ? dates[di] : dates[di].slice(5);   // 起始給全日期，餘 MM-DD
+    const lb = f === 0 ? UDATES[di] : UDATES[di].slice(5);   // 起始給全日期，餘 MM-DD
     ctx.fillStyle = '#8b949e';
     ctx.textAlign = f === 0.25 ? 'left' : (f === 0.75 ? 'right' : 'center');
     ctx.fillText(lb,
       cx + (R + 8) * Math.sin(rad), cy - (R + 14) * Math.cos(rad) + 4);
   });
 
-  const pts = [];
-  ctx.lineWidth = 1.4;
-  let prev = null;
-  for(let i = 0; i < n; i++){
-    const t = n > 1 ? i / (n - 1) : 0;
-    const rN = rg > 0 ? (sma[i] - mn) / rg : 0.5;
-    const rad = 2 * Math.PI * t;
-    const x = cx + R * rN * Math.sin(rad);
-    const y = cy - R * rN * Math.cos(rad);
-    if(prev){
-      ctx.strokeStyle = (hi != null && i > hi) ? DIM : timeColor(t);
-      ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(x, y); ctx.stroke();
+  const all = [], perSat = [];
+  SATS.forEach((o, k) => {
+    const sma = o.data.sma_km, dates = o.data.dates, pts = [];
+    ctx.lineWidth = 1.4;
+    let prev = null;
+    for(let i = 0; i < sma.length; i++){
+      const t = uT(o.uidx[i]);
+      const rN = rg > 0 ? (sma[i] - mn) / rg : 0.5;
+      const rad = 2 * Math.PI * t;
+      const x = cx + R * rN * Math.sin(rad);
+      const y = cy - R * rN * Math.cos(rad);
+      if(prev){
+        ctx.strokeStyle = (hi != null && o.uidx[i] > hi) ? DIM : seriesColor(k, t);
+        ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(x, y); ctx.stroke();
+      }
+      prev = {x, y};
+      pts.push({x, y, label: satTag(o) + dates[i] + ' · SMA ' + sma[i].toFixed(3) +
+                ' km（min+' + (sma[i] - mn).toFixed(3) + '）'});
     }
-    prev = {x, y};
-    pts.push({x, y, label: dates[i] + ' · SMA ' + sma[i].toFixed(3) +
-              ' km（min+' + (sma[i] - mn).toFixed(3) + '）'});
-  }
-  for(let i = 0; i < n; i++){                          // 點在線之上
-    const t = n > 1 ? i / (n - 1) : 0;
-    ctx.fillStyle = (hi != null && i > hi) ? DIM : timeColor(t);
-    ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 2.4, 0, 2 * Math.PI); ctx.fill();
-  }
-  if(hi != null && hi < n){
-    highlightPoint(g, pts[hi], n > 1 ? hi / (n - 1) : 0);
-    $(capId).textContent = pts[hi].label;
-  }
-  PTS[cvId] = pts;
+    for(let i = 0; i < sma.length; i++){               // 點在線之上
+      ctx.fillStyle = (hi != null && o.uidx[i] > hi) ? DIM : seriesColor(k, uT(o.uidx[i]));
+      ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 2.4, 0, 2 * Math.PI); ctx.fill();
+    }
+    perSat.push(pts); all.push(...pts);
+  });
+  highlightAll(g, capId, perSat, hi);
+  PTS[cvId] = all;
   attachHover(cv, cvId, capId);
 }
 
@@ -317,30 +367,35 @@ function attachHover(cv, cvId, capId){
 
 /* ── 全部重繪（hi=高亮日索引或 null）── */
 function redrawAll(hi){
-  if(!DATA) return;
+  if(!SATS.length) return;
   HI = hi;
-  drawSmaCircle('cv-sma', 'cap-sma', DATA.sma_km, DATA.dates, hi);
-  drawSpiral('cv-inc', 'cap-inc', DATA.inclination_deg, DATA.dates, hi);
-  drawSpiral('cv-raan', 'cap-raan', DATA.raan_deg, DATA.dates, hi);
-  drawSpiral('cv-argp', 'cap-argp', DATA.argp_deg, DATA.dates, hi);
+  drawSmaCircle('cv-sma', 'cap-sma', hi);
+  drawSpiral('cv-inc', 'cap-inc', 'inclination_deg', hi);
+  drawSpiral('cv-raan', 'cap-raan', 'raan_deg', hi);
+  drawSpiral('cv-argp', 'cap-argp', 'argp_deg', hi);
   updateCur(hi);
 }
 
 function updateCur(hi){
-  if(hi == null || !DATA){ $('cur').textContent = ''; return; }
-  const d = DATA;
-  $('cur').textContent = d.dates[hi] +
-    ' · SMA ' + d.sma_km[hi].toFixed(2) + ' km' +
-    ' · ' + t('label_inc_short') + ' ' + d.inclination_deg[hi].toFixed(3) + '°' +
-    ' · RAAN ' + d.raan_deg[hi].toFixed(2) + '°' +
-    ' · ARGP ' + d.argp_deg[hi].toFixed(2) + '°';
+  if(hi == null || !SATS.length){ $('cur').textContent = ''; return; }
+  const parts = [];
+  SATS.forEach(o => {
+    const d = o.data, j = lastAt(o, hi);
+    if(j < 0) return;
+    parts.push(satTag(o) + d.dates[j] +
+      ' · SMA ' + d.sma_km[j].toFixed(2) + ' km' +
+      ' · ' + t('label_inc_short') + ' ' + d.inclination_deg[j].toFixed(3) + '°' +
+      ' · RAAN ' + d.raan_deg[j].toFixed(2) + '°' +
+      ' · ARGP ' + d.argp_deg[j].toFixed(2) + '°');
+  });
+  $('cur').textContent = parts.length ? parts.join('　｜　') : UDATES[hi];
 }
 
 /* ── 播放控制 ── */
 function setPlaying(on){
   if(TIMER){ clearInterval(TIMER); TIMER = null; }
   $('play').innerHTML = on ? '&#10074;&#10074;' : '&#9654;';   // ⏸ / ▶
-  if(!on || !DATA) return;
+  if(!on || !SATS.length) return;
   const tl = $('tl');
   if(+tl.value >= +tl.max) tl.value = 0;                       // 播畢重播
   const spd = +$('spd').value;                                  // 天/秒
@@ -358,9 +413,9 @@ function bindPlayer(){
   $('spd').addEventListener('change', () => { if(TIMER) setPlaying(true); });
 }
 
-/* ── 衛星基本資料卡 ── */
-function renderSatInfo(d){
-  const box = $('satinfo');
+/* ── 衛星基本資料卡（雙星時並排兩張，標題前加色塊）── */
+function satInfoCard(o){
+  const d = o.data;
   const inf = d.info || {};
   const last = d.n_days - 1;
   const aKm = d.sma_km[last];
@@ -380,54 +435,95 @@ function renderSatInfo(d){
   ].filter(r => r[1] !== '' && r[1] != null);
   const alt = (inf.name_zh && inf.name_en && inf.name_zh !== inf.name_en)
     ? '<span>' + inf.name_en + '</span>' : '';
-  box.innerHTML = '<div class="ttl">' + (inf.name || d.name) + alt + '</div>' +
+  const sw = SATS.length > 1 ? '<i class="sw" style="background:' + o.color + '"></i>' : '';
+  return '<div class="ttl">' + sw + (inf.name || d.name) + alt + '</div>' +
     '<div class="grid">' +
     rows.map(r => '<div><b>' + r[0] + '</b>' + r[1] + '</div>').join('') +
     '</div>' +
     (inf.notes ? '<div class="notes">' + inf.notes + '</div>' : '');
+}
+
+function renderSatInfo(){
+  const box = $('satinfo');
+  box.classList.toggle('two', SATS.length > 1);
+  box.innerHTML = SATS.length > 1
+    ? SATS.map(o => '<div class="si">' + satInfoCard(o) + '</div>').join('')
+    : satInfoCard(SATS[0]);
   box.style.display = 'block';
 }
 
-/* ── 統計表 ── */
-function renderStats(d){
-  const rows = [
-    [t('stats_row_sma'), d.stats.sma_km],
-    [t('stats_row_inc'), d.stats.inclination_deg],
-    [t('stats_row_raan'), d.stats.raan_deg],
-    [t('stats_row_argp'), d.stats.argp_deg],
-  ];
-  let h = '<table><tr><th>' + t('stats_th_element') + '</th><th>' + t('stats_th_min') +
+/* ── 統計表（雙星時每要素兩列，首欄標衛星）── */
+function renderStats(){
+  const two = SATS.length > 1;
+  const keys = [['stats_row_sma', 'sma_km'], ['stats_row_inc', 'inclination_deg'],
+                ['stats_row_raan', 'raan_deg'], ['stats_row_argp', 'argp_deg']];
+  let h = '<table><tr><th>' + t('stats_th_element') + '</th>' +
+          (two ? '<th style="text-align:left">' + t('stats_th_sat') + '</th>' : '') +
+          '<th>' + t('stats_th_min') +
           '</th><th>' + t('stats_th_max') + '</th><th>' + t('stats_th_range') + '</th>' +
           '<th>' + t('stats_th_mean') + '</th><th>' + t('stats_th_std') + '</th></tr>';
-  rows.forEach(([lb, s]) => {
-    h += '<tr><td>' + lb + '</td><td>' + s.min + '</td><td>' + s.max +
-         '</td><td>' + s.range + '</td><td>' + s.mean + '</td><td>' + s.std + '</td></tr>';
+  keys.forEach(([lb, key]) => {
+    SATS.forEach((o, k) => {
+      const s = o.data.stats[key];
+      h += '<tr><td>' + (k === 0 ? t(lb) : '') + '</td>' +
+           (two ? '<td style="text-align:left"><i class="sw" style="background:' + o.color + '"></i>' + o.norad + '</td>' : '') +
+           '<td>' + s.min + '</td><td>' + s.max +
+           '</td><td>' + s.range + '</td><td>' + s.mean + '</td><td>' + s.std + '</td></tr>';
+    });
   });
   h += '</table>';
   $('stats').innerHTML = h;
 }
 
-/* ── 載入 ── */
+/* ── 載入（雙星時並行抓取；一顆失敗仍顯示另一顆）── */
+async function fetchHistory(sel){
+  const u = '/api/orbit/history?norad=' + sel.norad +
+            '&start=' + $('d0').value + '&end=' + $('d1').value;
+  const r = await fetch(u);
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.error || ('NORAD ' + sel.norad + '：HTTP ' + r.status));
+  return d;
+}
+
 async function load(){
-  if(!SEL){ $('status').textContent = t('status_select_first'); return; }
+  if(!SELS.length){ $('status').textContent = t('status_select_first'); return; }
   setPlaying(false);
   $('status').textContent = t('status_loading');
-  const u = '/api/orbit/history?norad=' + SEL.norad +
-            '&start=' + $('d0').value + '&end=' + $('d1').value;
   try{
-    const r = await fetch(u);
-    const d = await r.json();
-    if(!r.ok){ $('status').textContent = d.error || ('HTTP ' + r.status); return; }
-    DATA = d;
-    renderLoadedStatus(d);
+    const res = await Promise.allSettled(SELS.map(fetchHistory));
+    const errs = res.filter(x => x.status === 'rejected').map(x => x.reason && x.reason.message || x.reason);
+    const ok = [];
+    res.forEach((x, k) => { if(x.status === 'fulfilled') ok.push({norad: SELS[k].norad, data: x.value}); });
+    if(!ok.length){ $('status').textContent = errs.join('；'); return; }
+    LOAD_ERR = ok.length < SELS.length ? errs.join('；') : '';
+    const set = new Set();
+    ok.forEach(o => o.data.dates.forEach(d => set.add(d)));
+    UDATES = [...set].sort();
+    const pos = {};
+    UDATES.forEach((d, i) => { pos[d] = i; });
+    SATS = ok.map((o, k) => ({
+      norad: o.norad, data: o.data, uidx: o.data.dates.map(d => pos[d]),
+      color: 'rgb(' + CMP_RGB[k].join(',') + ')',
+    }));
+    renderLoadedStatus();
     const tl = $('tl');
-    tl.max = d.n_days - 1; tl.value = 0;
+    tl.max = UDATES.length - 1; tl.value = 0;
     $('player').style.display = 'flex';
-    renderSatInfo(d);
+    renderSatInfo();
     redrawAll(null);
-    renderStats(d);
+    renderStats();
     if(AUTOPLAY) setPlaying(true);
   }catch(e){ $('status').textContent = tpl('status_load_fail', {error: e}); }
+}
+
+/* 「A,B」或「A」形式的 NORAD 清單 → SELS（最多 2 顆）；格式不符回傳 false */
+function setSelsFromList(txt){
+  const v = (txt || '').replace(/\s+/g, '');
+  if(!/^\d+(,\d+)*$/.test(v)) return false;
+  const ids = [...new Set(v.split(',').map(Number))].slice(0, MAX_SATS);
+  SELS = ids.map(n => ({norad: n, name: 'NORAD ' + n}));
+  $('sel-info').textContent = ids.map(n => 'NORAD ' + n).join(' ＋ ');
+  return true;
 }
 
 /* ── 搜尋 ── */
@@ -437,7 +533,7 @@ function bindSearch(){
   q.addEventListener('input', () => {
     clearTimeout(_timer);
     const v = q.value.trim();
-    if(v.length < 2){ sug.style.display = 'none'; return; }
+    if(v.length < 2 || v.includes(',')){ sug.style.display = 'none'; return; }
     _timer = setTimeout(async () => {
       try{
         const r = await fetch('/api/search?q=' + encodeURIComponent(v));
@@ -449,7 +545,7 @@ function bindSearch(){
           it.innerHTML = '<b>' + m.name + '</b><span>NORAD ' + m.norad_id +
                          ' · ' + (m.constellation || '—') + '</span>';
           it.onclick = () => {
-            SEL = {norad: m.norad_id, name: m.name};
+            SELS = [{norad: m.norad_id, name: m.name}];
             q.value = m.name;
             $('sel-info').textContent = 'NORAD ' + m.norad_id;
             sug.style.display = 'none';
@@ -474,7 +570,11 @@ function init(){
   $('d0').value = past.toISOString().slice(0, 10);
   bindSearch();
   bindPlayer();
-  $('go').addEventListener('click', load);
+  $('go').addEventListener('click', () => {
+    // 搜尋框直接輸入「58573,59884」→ 雙星比較
+    if($('q').value.includes(',')) setSelsFromList($('q').value);
+    load();
+  });
   const qs = new URLSearchParams(location.search);
   if(qs.get('embed') === '1'){        // 故事頁內嵌模式：隱藏頁首/搜尋列
     $('hdr').style.display = 'none';
@@ -487,10 +587,9 @@ function init(){
   const D = /^\d{4}-\d{2}-\d{2}$/;
   if(D.test(qs.get('start') || '')) $('d0').value = qs.get('start');
   if(D.test(qs.get('end') || ''))   $('d1').value = qs.get('end');
-  const urlNorad = qs.get('norad');
-  if(urlNorad && /^\d+$/.test(urlNorad)){
-    SEL = {norad: parseInt(urlNorad), name: 'NORAD ' + urlNorad};
-    $('sel-info').textContent = 'NORAD ' + urlNorad;
+  // ?norad=58573 單星；?norad=58573,59884 雙星比較
+  if(setSelsFromList(qs.get('norad'))){
+    if(SELS.length > 1) $('q').value = SELS.map(o => o.norad).join(',');
     load();
   }
   window.addEventListener('resize', () => redrawAll(HI));

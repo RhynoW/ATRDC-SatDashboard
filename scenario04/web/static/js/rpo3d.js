@@ -33,6 +33,8 @@
       thr_title: "篩選閾值 km",
       rescan_btn: "重新掃描",
       report_btn: "報告 PNG",
+      orbit_btn: "📈 軌道參數",
+      orbit_title: "兩顆衛星軌道要素歷史疊圖比較（SMA／傾角／RAAN／ARGP）",
       kpi_range: "目前距離",
       kpi_pc: "Pc（近似值）",
       kpi_alt_suffix: "{name} 高度",
@@ -77,16 +79,6 @@
       pairs_summary: "{presets} 個精選案例 + {pairs} 個近距離配對（閾值 {thr} km）",
       pair_list_fail: "配對清單載入失敗：{error}",
       cesium_init_fail: "Cesium 初始化失敗：{error}",
-      bc_become_host: "🔴 開始直播",
-      bc_live_self: "🔴 直播中",
-      bc_end_host: "⏹ 結束直播",
-      bc_following: "👁 跟隨主播中",
-      bc_detach: "解除跟隨",
-      bc_detached: "🔓 已解除跟隨（手動操作中）",
-      bc_reattach: "重新跟隨",
-      bc_live_none: "尚無直播",
-      bc_claim_failed: "已有其他主播，無法搶下主播位",
-      bc_host_lost: "主播連線逾時或已被接管，已退回一般模式",
     },
     ja: {
       doc_title: "RPO 3D — 2衛星の近接運用と衝突確率（Pc）",
@@ -98,6 +90,8 @@
       thr_title: "フィルタ閾値 km",
       rescan_btn: "再スキャン",
       report_btn: "レポート PNG",
+      orbit_btn: "📈 軌道要素",
+      orbit_title: "2 機の軌道要素履歴を重ねて比較（SMA／傾斜角／RAAN／ARGP）",
       kpi_range: "現在の距離",
       kpi_pc: "Pc（近似値）",
       kpi_alt_suffix: "{name} の高度",
@@ -144,16 +138,6 @@
       pairs_summary: "{presets} 件の厳選事例 + {pairs} 件の近接ペア（閾値 {thr} km）",
       pair_list_fail: "ペア一覧の読み込み失敗：{error}",
       cesium_init_fail: "Cesiumの初期化に失敗しました：{error}",
-      bc_become_host: "🔴 配信を開始",
-      bc_live_self: "🔴 配信中",
-      bc_end_host: "⏹ 配信を終了",
-      bc_following: "👁 ホストに追従中",
-      bc_detach: "追従を解除",
-      bc_detached: "🔓 追従解除中（手動操作）",
-      bc_reattach: "追従を再開",
-      bc_live_none: "配信なし",
-      bc_claim_failed: "既に他のホストが配信中です",
-      bc_host_lost: "ホスト接続がタイムアウトまたは引き継がれたため、通常モードに戻りました",
     },
     en: {
       doc_title: "RPO 3D — Two-Satellite Proximity and Probability of Collision (Pc)",
@@ -165,6 +149,8 @@
       thr_title: "Filter threshold km",
       rescan_btn: "Rescan",
       report_btn: "Report PNG",
+      orbit_btn: "📈 Orbit elements",
+      orbit_title: "Overlay both satellites' orbital element history (SMA / inclination / RAAN / ARGP)",
       kpi_range: "Current Range",
       kpi_pc: "Pc (approximate)",
       kpi_alt_suffix: "{name} Altitude",
@@ -211,16 +197,6 @@
       pairs_summary: "{presets} curated cases + {pairs} close-approach pairs (threshold {thr} km)",
       pair_list_fail: "Failed to load pair list: {error}",
       cesium_init_fail: "Cesium initialization failed: {error}",
-      bc_become_host: "🔴 Start broadcast",
-      bc_live_self: "🔴 Broadcasting",
-      bc_end_host: "⏹ Stop broadcast",
-      bc_following: "👁 Following host",
-      bc_detach: "Detach",
-      bc_detached: "🔓 Detached (manual control)",
-      bc_reattach: "Resume following",
-      bc_live_none: "No live host",
-      bc_claim_failed: "Someone else is already hosting",
-      bc_host_lost: "Host session timed out or was taken over — back to normal mode",
     },
   };
   var LOCALE_MAP = { zh: "zh-Hant", en: "en-US", ja: "ja-JP" };
@@ -307,85 +283,8 @@
     });
 
     refreshDynamicUI();
-    if (window.SatBroadcast) window.SatBroadcast.refreshLabels();
   }
   window.setLang = setLang;
-
-  function broadcastLabels() {
-    return {
-      become_host: t("bc_become_host"), live_self: t("bc_live_self"), end_host: t("bc_end_host"),
-      following: t("bc_following"), detach: t("bc_detach"), detached: t("bc_detached"),
-      reattach: t("bc_reattach"), live_none: t("bc_live_none"),
-      claim_failed: t("bc_claim_failed"), host_lost: t("bc_host_lost"),
-    };
-  }
-
-  // ── 群播：收集目前狀態（主播端）／套用收到的狀態（觀眾端）────────────
-  function collectBroadcastState() {
-    var thrEl = document.getElementById("thr");
-    return {
-      pair: (_curP != null) ? { primary: _curP, secondary: _curS } : null,
-      hud: {
-        thr: thrEl ? parseFloat(thrEl.value) : undefined,
-        pcSphereChk: _pcSphereOn, relwinChk: _relOn, comspocChk: _comspocOn,
-      },
-      view: { vp: _vp, camMode: _camMode },
-      clock: (viewer && _meta) ? {
-        iso: C.JulianDate.toIso8601(viewer.clock.currentTime),
-        multiplier: viewer.clock.multiplier,
-        shouldAnimate: viewer.clock.shouldAnimate,
-      } : null,
-    };
-  }
-
-  function applyBroadcastRest(payload) {
-    if (payload.hud) {
-      var thrEl = document.getElementById("thr");
-      if (thrEl && payload.hud.thr != null && +thrEl.value !== +payload.hud.thr) thrEl.value = payload.hud.thr;
-      var pcChk = document.getElementById("pcSphereChk");
-      if (pcChk && payload.hud.pcSphereChk != null && pcChk.checked !== payload.hud.pcSphereChk) {
-        pcChk.checked = payload.hud.pcSphereChk;
-        _pcSphereOn = pcChk.checked;
-        _pcSpheres.forEach(function (e) { e.show = _pcSphereOn; });
-      }
-      var rwChk = document.getElementById("relwinChk");
-      if (rwChk && payload.hud.relwinChk != null && rwChk.checked !== payload.hud.relwinChk) {
-        rwChk.checked = payload.hud.relwinChk;
-        _relOn = rwChk.checked;
-        if (_relwin && _relwin.el) _relwin.el.style.display = _relOn ? "" : "none";
-      }
-      var ccChk = document.getElementById("comspocChk");
-      if (ccChk && payload.hud.comspocChk != null && ccChk.checked !== payload.hud.comspocChk) {
-        ccChk.checked = payload.hud.comspocChk;
-        setComspoc(ccChk.checked);
-      }
-    }
-    if (payload.view) {
-      if (payload.view.camMode && payload.view.camMode !== _camMode && _comspocOn) comspocCamera(payload.view.camMode);
-      if (payload.view.vp && payload.view.vp !== _vp) setViewpoint(payload.view.vp);
-    }
-    if (payload.clock && viewer && C) {
-      try {
-        var jd = C.JulianDate.fromIso8601(payload.clock.iso);
-        // 僅在偏差 > 2s 才校正時間，避免持續小幅跳動打斷播放動畫
-        if (Math.abs(C.JulianDate.secondsDifference(jd, viewer.clock.currentTime)) > 2) {
-          viewer.clock.currentTime = jd;
-        }
-        if (payload.clock.multiplier) viewer.clock.multiplier = payload.clock.multiplier;
-        if (typeof payload.clock.shouldAnimate === "boolean") viewer.clock.shouldAnimate = payload.clock.shouldAnimate;
-      } catch (e) {}
-    }
-  }
-
-  function applyBroadcastState(payload) {
-    if (!payload) return;
-    var pr = payload.pair;
-    if (pr && pr.primary != null && (pr.primary !== _curP || pr.secondary !== _curS)) {
-      loadScene(pr.primary, pr.secondary, function () { applyBroadcastRest(payload); });
-    } else {
-      applyBroadcastRest(payload);
-    }
-  }
 
   function warn(m) {
     _loadingIsDefault = false;
@@ -928,6 +827,9 @@
       rl.href = "/api/rpo/" + primary + "/" + secondary + "/report.png?lang=" + (lang === "zh" ? "zh" : "en") +
                 (vq ? "&" + vq : "");
     }
+    // 雙星軌道要素歷史比較（/orbit 疊圖模式）
+    var ol = document.getElementById("orbitLink");
+    if (ol) ol.href = "/orbit?norad=" + primary + "," + secondary;
     fetch("/api/rpo/" + primary + "/" + secondary + (vq ? "?" + vq : "")).then(function (r) { return r.json(); }).then(function (data) {
       if (seq !== _loadSeq) return;                       // 已被更新的請求取代
       if (data.error) { stat("load_fail", { error: data.error }, true); return; }
@@ -1027,15 +929,6 @@
 
     populatePairs(parseFloat((document.getElementById("thr") || {}).value) || 10);
     loadScene(initP, initS, null, _curV);
-
-    if (window.SatBroadcast) {
-      window.SatBroadcast.init({
-        getState: collectBroadcastState,
-        applyState: applyBroadcastState,
-        getLabels: broadcastLabels,
-        throttleMs: 400,
-      });
-    }
   };
 
   setLang(LANG);

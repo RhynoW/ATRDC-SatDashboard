@@ -107,6 +107,8 @@
         <a id="reportLink" href="#" target="_blank" rel="noopener" data-i18n="report_btn"
            style="background:var(--sec);color:#08131b;border-radius:7px;padding:7px 11px;font-weight:600;text-decoration:none;white-space:nowrap">報告 PNG</a>
       </div>
+      <a id="orbitLink" href="#" target="_blank" rel="noopener" data-i18n="orbit_btn" data-i18n-title="orbit_title" title="兩顆衛星軌道要素歷史疊圖比較（SMA／傾角／RAAN／ARGP）"
+         style="display:block;margin-top:7px;text-align:center;background:var(--prim);color:#08131b;border-radius:7px;padding:7px 11px;font-weight:600;text-decoration:none;white-space:nowrap">📈 軌道參數</a>
       <div class="stat" id="pstat"></div>
     </div>
     <div class="kpis">
@@ -146,11 +148,7 @@
     app.src="{{ url_for('static', filename='js/rpo3d.js') }}";
     app.onload=function(){ window.loadCesium(function(){ if(window.startRPO) window.startRPO(); else fail(tt('rpo3d.js 未載入','rpo3d.js が読み込まれていません','rpo3d.js failed to load')); }, function(){ fail(tt('本機 Cesium 未安裝（請將 CesiumJS 解壓至 data/cesium/）','ローカル Cesium が未インストールです（CesiumJS を data/cesium/ に展開してください）','Local Cesium is not installed (please extract CesiumJS into data/cesium/)')); }); };
     app.onerror=function(){ fail(tt('前端腳本 rpo3d.js 載入失敗','フロントエンドスクリプト rpo3d.js の読み込みに失敗しました','Failed to load frontend script rpo3d.js')); };
-    var bc=document.createElement('script');
-    bc.src="{{ url_for('static', filename='js/broadcast.js') }}";
-    bc.onload=function(){ document.head.appendChild(app); };
-    bc.onerror=function(){ document.head.appendChild(app); };  // 群播元件載入失敗不影響主場景
-    document.head.appendChild(bc);
+    document.head.appendChild(app);
   })();
   </script>
 </body>

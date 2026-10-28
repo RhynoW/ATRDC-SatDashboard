@@ -245,6 +245,7 @@ async function initCesium(){
   viewer=new Cesium.Viewer('cesiumContainer',opts);
   window.__cesiumViewer=viewer; // 供 orbit6_tuner.js 等外部模組疊加繪製使用
   viewer.cesiumWidget.creditContainer.style.display='none';
+  _bindInfoBoxLinks();
   viewer.scene.globe.enableLighting=true;
   viewer.scene.globe.depthTestAgainstTerrain=false;
   satDs=new Cesium.CustomDataSource('satellites');
@@ -729,6 +730,35 @@ function renderEntities(sats,ftype){
   });
 }
 
+// 衛星資訊框內的「軌道要素歷史」連結（/orbit；兩顆則為雙星比較）；點擊由主頁代開，見 _bindInfoBoxLinks
+function _orbitLink(nids,label){
+  return '<a data-newtab href="/orbit?norad='+nids.join(',')+'" target="_blank" rel="noopener"'
+    +' style="display:inline-block;margin-top:8px;padding:4px 10px;border-radius:5px;background:#1565c0;color:#fff;'
+    +'text-decoration:none;font-size:12px">📈 '+(label||'軌道要素歷史')+'</a>';
+}
+
+// InfoBox 是沙盒 iframe（無 allow-popups-to-escape-sandbox），由它開的分頁會繼承沙盒而擋掉腳本，
+// /orbit 因此無法執行；改在主頁攔截 a[data-newtab] 點擊，以 window.open 開正常分頁
+function _bindInfoBoxLinks(){
+  const fr=viewer.infoBox&&viewer.infoBox.frame;
+  if(!fr) return;
+  const bind=()=>{
+    try{
+      const d=fr.contentDocument;
+      if(!d||d._newtabBound) return;
+      d._newtabBound=true;
+      d.addEventListener('click',e=>{
+        const a=e.target.closest&&e.target.closest('a[data-newtab]');
+        if(!a) return;
+        e.preventDefault();
+        window.open(a.getAttribute('href'),'_blank','noopener');
+      });
+    }catch(e){}
+  };
+  fr.addEventListener('load',bind);
+  bind();
+}
+
 function _buildDesc(s){
   return '<style>body{background:#fff;color:#212121;margin:0}</style>'
     +'<div style="font-family:Tahoma,sans-serif;font-size:13px;padding:6px">'
@@ -740,7 +770,7 @@ function _buildDesc(s){
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">年代</td><td>'+(s.era||'—')+'</td></tr>'
     +(s.constellation&&s.constellation!=='—'?'<tr><td style="padding:2px 10px 2px 0;color:#555">星座</td><td>'+s.constellation+'</td></tr>':'')
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">高度</td><td><b>'+(s.alt_km!=null?s.alt_km:'—')+' km</b></td></tr>'
-    +'</table></div>';
+    +'</table>'+_orbitLink([s.norad_id])+'</div>';
 }
 
 async function loadConjunctions(){
@@ -837,7 +867,7 @@ function flyToPair(pair){
       +'<br>NORAD '+pair.primary_norad
       +'<br>高度 '+pair.primary_alt_km+' km'
       +'<br>位置 '+pair.primary_lat.toFixed(2)+'°, '+pair.primary_lon.toFixed(2)+'°'
-      +pcInfo+'</div>')
+      +pcInfo+_orbitLink([pair.primary_norad,pair.secondary_norad],'雙星軌道要素比較')+'</div>')
   });
   satDs.entities.add({id:'ca_b',name:pair.secondary_name,position:posB,
     point:{pixelSize:10,color:colB,outlineColor:Cesium.Color.WHITE,outlineWidth:2},
@@ -847,7 +877,7 @@ function flyToPair(pair){
       +'<br>NORAD '+pair.secondary_norad
       +'<br>高度 '+pair.secondary_alt_km+' km'
       +'<br>位置 '+pair.secondary_lat.toFixed(2)+'°, '+pair.secondary_lon.toFixed(2)+'°'
-      +pcInfo+'</div>')
+      +pcInfo+_orbitLink([pair.primary_norad,pair.secondary_norad],'雙星軌道要素比較')+'</div>')
   });
   satDs.entities.add({polyline:{
     positions:[posA,posB], width:2,
@@ -1359,7 +1389,7 @@ function _buildTrackDesc(s,meta){
     +'<tr><td style="padding:2px 10px 2px 0;color:#555">高度</td><td><b>'+(s.alt_km!=null?s.alt_km:'—')+' km</b></td></tr>'
     +(s.user_defined?'<tr><td style="padding:2px 10px 2px 0;color:#555">來源</td><td style="color:#7b1fa2">使用者自訂 TLE</td></tr>':'')
     +(s.notes?'<tr><td style="padding:2px 10px 2px 0;color:#555">備註</td><td>'+s.notes+'</td></tr>':'')
-    +'</table></div>';
+    +'</table>'+_orbitLink([s.norad_id])+'</div>';
 }
 
 async function _loadTrackOrbit(nid,color){

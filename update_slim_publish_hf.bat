@@ -36,7 +36,7 @@ if "%NOFETCH%"=="1" goto :skipfetch
 echo [%TIME:~0,8%] [0/4] Daily incremental TLE fetch from Space-Track ...
 cd /d "%PARENT%"
 python download_TLE_unified.py --mode spacetrack
-if errorlevel 1 goto :fail
+if not "%errorlevel%"=="0" goto :fail
 :skipfetch
 if "%SKIPBUILD%"=="1" (
   echo [%TIME:~0,8%] [1/4] skipbuild - reuse existing top-level slim DB
@@ -45,7 +45,7 @@ if "%SKIPBUILD%"=="1" (
 echo [%TIME:~0,8%] [1/4] Rebuild top-level slim DB - recent 30 days plus whitelist history, 15-60 s ...
 cd /d "%PARENT%"
 python prc_maneuver\build_slim_db.py --slim-only --keep-lines --recent-days 30
-if errorlevel 1 goto :fail
+if not "%errorlevel%"=="0" goto :fail
 
 :merge
 echo [%TIME:~0,8%] [2/4] Copy to app DB and merge StoryMap TLE, 10-30 s ...
@@ -54,14 +54,14 @@ if not exist "%PARENT%\space_db_slim.duckdb" (
   goto :fail
 )
 copy /y "%PARENT%\space_db_slim.duckdb" "%APP%\DB\space_db_slim.duckdb" >nul
-if errorlevel 1 goto :fail
+if not "%errorlevel%"=="0" goto :fail
 cd /d "%APP%"
 python tools\merge_storymap_tle.py
-if errorlevel 1 goto :fail
+if not "%errorlevel%"=="0" goto :fail
 
 echo [%TIME:~0,8%] [3/4] Copy to deploy copy scenario04\DB for local run.py ...
 copy /y "%APP%\DB\space_db_slim.duckdb" "%APP%\scenario04\DB\space_db_slim.duckdb" >nul
-if errorlevel 1 goto :fail
+if not "%errorlevel%"=="0" goto :fail
 for %%A in ("%APP%\scenario04\DB\space_db_slim.duckdb") do set /a DBMB=%%~zA/1048576
 echo            deploy copy ready: %DBMB% MB
 
@@ -71,7 +71,7 @@ if "%DRYRUN%"=="1" (
 )
 echo [%TIME:~0,8%] [4/4] Upload %DBMB% MB to HF Dataset, squash history, restart both Spaces, 1-10 min ...
 python tools\publish_db_to_dataset.py
-if errorlevel 1 goto :fail
+if not "%errorlevel%"=="0" goto :fail
 
 :ok
 python -c "import json,urllib.request as u;[print(s,'sha',(d.get('sha') or '')[:8],'stage',d.get('stage')) for s in ('RhynoWu/ATRDC-SatDashboard','RhynoWu/ATRDC-SatDashboard-i18n') for d in [json.load(u.urlopen('https://huggingface.co/api/spaces/'+s+'/runtime',timeout=30))]]"

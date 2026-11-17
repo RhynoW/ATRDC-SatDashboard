@@ -222,8 +222,16 @@ def compute_obstruction_analysis(
 
 
 # 作業殼層下限：近地點低於此高度者視為爬升中（剛發射）或衰減中，不提供服務，不列入可見性與 RTT。
-# 2026-11 資料庫：340–360 km 約 770 顆（低殼層）、460–500 km 約 9,100 顆（主力），330 km 以下約 160 顆。
-MIN_OPERATIONAL_PERIGEE_KM = 330.0
+# 門檻依當下近地點分布自動判定（operational_perigee_floor）；資料不足或判定結果離譜時退回預設值。
+# 2026-11 資料庫：340–360 km 約 710 顆（低殼層）、450–490 km 約 9,200 顆（主力），330 km 以下約 90 顆 → 自動判定 330 km。
+MIN_OPERATIONAL_PERIGEE_KM = 330.0          # 退回值
+_SHELL_BIN_KM = 10.0
+_SHELL_SCAN_KM = (150.0, 700.0)             # 直方圖範圍
+_SHELL_PEAK_MIN_KM = 250.0                  # 殼層峰值不得低於此（避免把成批爬升中的衛星當成殼層）
+_SHELL_PEAK_FRAC, _SHELL_PEAK_MIN_N = 0.02, 50   # 殼層峰值：該格 ≥ 總數 2% 且 ≥ 50 顆
+_SHELL_EDGE_FRAC = 0.05                     # 由峰值往下，密度跌破峰值 5% 處即殼層下緣
+_SHELL_FLOOR_CLAMP = (250.0, 450.0)
+_SHELL_MIN_SAMPLES = 500
 _MU = 398600.4418
 _RE = 6378.137
 
@@ -239,6 +247,37 @@ def _perigee_km(line2: str) -> float | None:
         return None
     a = (_MU / n ** 2) ** (1.0 / 3.0)
     return a * (1.0 - e) - _RE
+
+
+def operational_perigee_floor(perigees) -> tuple[float, str]:
+    """依近地點分布自動判定作業殼層下緣（km），回傳 (門檻, "auto"|"fallback")。
+
+    1. 以 10 km 一格做近地點直方圖（150–700 km）。
+    2. 由低往高找第一個「殼層峰值」：該格 ≥ 總數 2% 且 ≥ 50 顆、且不低於 250 km
+       （成批發射的爬升中衛星一批只有二、三十顆，達不到這個量）。
+    3. 由峰值往下走，直到某格數量跌破峰值的 5%：上一格的下界即殼層下緣。
+    4. 門檻 = 殼層下緣再往下一格（容許殼層內衛星的小幅衰減），夾在 250–450 km。
+    SpaceX 調整殼層高度時門檻自動跟著移動；樣本不足 500 顆或找不到峰值則退回 330 km。"""
+    pg = np.asarray([p for p in perigees if p is not None and np.isfinite(p)], dtype=float)
+    if pg.size < _SHELL_MIN_SAMPLES:
+        return MIN_OPERATIONAL_PERIGEE_KM, "fallback"
+    edges = np.arange(_SHELL_SCAN_KM[0], _SHELL_SCAN_KM[1] + _SHELL_BIN_KM, _SHELL_BIN_KM)
+    counts, edges = np.histogram(pg, bins=edges)
+    need = max(_SHELL_PEAK_MIN_N, _SHELL_PEAK_FRAC * pg.size)
+    peak = next((i for i, c in enumerate(counts)
+                 if c >= need and edges[i] >= _SHELL_PEAK_MIN_KM), None)
+    if peak is None:
+        return MIN_OPERATIONAL_PERIGEE_KM, "fallback"
+    # 峰值可能跨兩格：取相鄰較大者為峰值高度
+    while peak + 1 < len(counts) and counts[peak + 1] > counts[peak]:
+        peak += 1
+    cut = _SHELL_EDGE_FRAC * counts[peak]
+    i = peak
+    while i - 1 >= 0 and counts[i - 1] >= cut:
+        i -= 1
+    floor = float(edges[i] - _SHELL_BIN_KM)
+    lo, hi = _SHELL_FLOOR_CLAMP
+    return float(min(max(floor, lo), hi)), "auto"
 
 
 # ── 核心計算 ──────────────────────────────────────────────────────────────────
@@ -276,9 +315,11 @@ def _do_compute(
         excluded_deorbiting_count = before - len(candidate_nids)
 
     # 排除未進入作業殼層的衛星（爬升中／衰減中）：否則 RTT 下限會出現 2 ms（斜距約 300 km）
+    # 門檻依全體 Starlink（未經世代／備援篩選）的近地點分布自動判定
+    perigee = {n: _perigee_km(idx[n]["line2"]) for n in all_starlink_nids}
+    min_perigee_km, perigee_method = operational_perigee_floor(perigee.values())
     before = len(candidate_nids)
-    candidate_nids = [n for n in candidate_nids
-                      if (_perigee_km(idx[n]["line2"]) or 0.0) >= MIN_OPERATIONAL_PERIGEE_KM]
+    candidate_nids = [n for n in candidate_nids if (perigee.get(n) or 0.0) >= min_perigee_km]
     excluded_low_count = before - len(candidate_nids)
 
     # 備援情境模擬：隨機排除 dropout_pct% 衛星（固定種子，同參數可重現）
@@ -452,7 +493,8 @@ def _do_compute(
             "generation_filter": generation,
             "excluded_deorbiting_count": excluded_deorbiting_count,
             "excluded_low_orbit_count": excluded_low_count,
-            "min_operational_perigee_km": MIN_OPERATIONAL_PERIGEE_KM,
+            "min_operational_perigee_km": min_perigee_km,
+            "min_operational_perigee_method": perigee_method,
             "dropout_pct":       dropout_pct,
             "dropped_count":     dropped_count,
             "mean_visible":      round(float(vc.mean()), 1),

@@ -104,6 +104,7 @@ window.SL_TAB = new URLSearchParams(location.search).get('tab') || 'analysis';
     <div class="stat-card">
       <div class="sc-val" id="st-rtt-range">—</div>
       <div class="sc-label" data-i18n="stat_rtt_range">RTT 下限範圍</div>
+      <div id="st-opshell" style="font-size:9px;margin-top:2px;color:#8b949e"></div>
     </div>
     <div class="stat-card">
       <div class="sc-val" id="st-gaps">—</div>
@@ -205,7 +206,7 @@ window.SL_TAB = new URLSearchParams(location.search).get('tab') || 'analysis';
         </div>
         <div class="rm-card">
           <div class="rm-card-head"><span class="rm-badge done">&#9989; <span data-i18n="badge_done">已實作</span></span><h4 data-i18n="card1_5_title">傳播延遲下限估計</h4></div>
-          <p data-i18n="card1_5_desc">由最近可見衛星斜距計算光速往返時間（RTT floor）。只計入作業殼層（近地點 ≥ 330 km）的衛星：殼層高度約 340–560 km，衛星在天頂時往返約 2.3–3.7 ms，仰角越低越長；加上閘道路由後實際約 25–45 ms。</p>
+          <p data-i18n="card1_5_desc">由最近可見衛星斜距計算光速往返時間（RTT floor）。只計入作業殼層的衛星（門檻依近地點分布自動判定，本次數值見上方「RTT 下限範圍」卡片）：殼層高度約 340–560 km，衛星在天頂時往返約 2.3–3.7 ms，仰角越低越長；加上閘道路由後實際約 25–45 ms。</p>
         </div>
       </div>
     </div>

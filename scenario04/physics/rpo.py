@@ -50,7 +50,7 @@ _PRESETS: dict[tuple[int, int], dict] = {
             {"d": "2024-05-25", "t": "<b>首筆 elset</b>：59884 於 15:13 UTC 編目（分離後約 9–16 h）。"},
             {"d": "05-25 ~ 06-05", "t": "<b>離散</b>：沿軌分離穩定增長至約 1,720 km。"},
             {"d": "06-06 ~ 06-08", "t": "<b>再接近</b>：3 天內 1,439 km → 5.9 km；逆轉漂移需推力。"},
-            {"d": "06-08 ~ 06-18", "t": "<b>近接操作</b>：維持約 2–80 km 約 10 天；最接近約 1.20 km（06-14 10:08 UTC，SGP4 重建、60 秒取樣）。"},
+            {"d": "06-08 ~ 06-18", "t": "<b>近接操作</b>：維持約 2–80 km 約 10 天；最接近約 1.20 km（06-14 10:07:48 UTC，SGP4 重建、1 秒精算）。"},
         ],
     },
     # ── 2026 第4次任務（PRC Test Spacecraft 4 = 67689）——延續 58573×59884 之後續 ──
@@ -59,17 +59,17 @@ _PRESETS: dict[tuple[int, int], dict] = {
         "subtitle": (
             "PRC 太空梭 67689（2026-024A）於 2026-06-22 部署 Object H（69673，2026-024H）；"
             "H 機動接近由前次任務（2023-195）釋放之 Object G（59884，2023-195G，即 2024 年 58573 之 RPO 對象），"
-            "2026-07-04 最近約 6 km 後離去返回太空梭。與 LeoLabs 2026 報告一致。"
+            "本端 SGP4 重建（1 秒精算）2026-07-03 23:00 UTC 最近約 1.15 km（LeoLabs 2026 報告約 6 km），其後離去返回太空梭。"
             "碰撞機率 Pc 為 Chan 首階排序代理（proxy），非作業級數值。"
         ),
         "events": [
             {"t": "2026-06-22T00:00Z", "label": "DEPLOY（自 67689）"},
-            {"t": "2026-07-04T00:00Z", "label": "TCA ~6 km（H 近 G）"},
+            {"t": "2026-07-03T23:00Z", "label": "TCA ~1.15 km（H 近 G）"},
         ],
         "timeline": [
             {"d": "2026-06-22", "t": "<b>部署</b>：太空梭 67689 於 605 km 共軌釋放 Object H（69673）。"},
             {"d": "06-28 ~ 07-02", "t": "<b>轉移</b>：H 離開太空梭、機動接近 Object G（H–G 906→103 km）。"},
-            {"d": "2026-07-04", "t": "<b>最接近 G</b>：H–G 約 6 km（訪問前任務釋放物）。"},
+            {"d": "2026-07-03", "t": "<b>最接近 G</b>：H–G 約 1.15 km（23:00:19 UTC，SGP4 重建、1 秒精算；LeoLabs 報告約 6 km）。"},
             {"d": "07-06 ~ 07-08", "t": "<b>離去</b>：H 離開 G 附近（H–G 21→722 km），返回太空梭。"},
             {"d": "07-14 起", "t": "<b>背離</b>：H 隨太空梭與 G 漸行漸遠（H–G 升至約 800 km）。"},
         ],
@@ -136,7 +136,7 @@ _PRESETS: dict[tuple[int, int], dict] = {
             {"d": "2023-11-03", "t": "<b>發射</b>：TJS-10（CZ-7A），任務未公開；定點東經約 173°，與 TJS-3 同軌道面。"},
             {"d": "2024-03 ~ 05-14", "t": "<b>東側伴飛</b>：位於 TJS-3 東側 170→360 km（Δ經度 +0.2°→+0.5°），4/9 一度收至 150 km。"},
             {"d": "05-15 ~ 05-16", "t": "<b>西漂啟動</b>：兩次升軌 SMA +11.4 / +11.8 km（42,163→42,187 km），開始向西漂移。"},
-            {"d": "2024-05-16/17", "t": "<b>越過 TJS-3</b>：5/16 18:00–5/17 00:00 最近約 15 km（20:10 UTC），由東側換至西側。"},
+            {"d": "2024-05-16/17", "t": "<b>越過 TJS-3</b>：5/16 18:00–5/17 00:00 最近約 15 km（20:12 UTC，1 秒精算 14.76 km），由東側換至西側。"},
             {"d": "05-18 ~ 05-19", "t": "<b>剎車</b>：兩次降軌 −11.1 / −11.8 km 回到 GEO 同步高度；慣性超越至西側約 320 km。"},
             {"d": "05-20 ~ 05-27", "t": "<b>回漂</b>：緩慢向東漂回（320→110 km）；5/27 −4.9 / +10.5 km 微調停漂。"},
             {"d": "2024-06 ~ 07", "t": "<b>西側定位</b>：維持 TJS-3 西側約 65–85 km，同軌道面——COMSPOC 判為在軌測試。"},
@@ -506,6 +506,25 @@ def _sample(Precs, Pep, Srecs, Sep, t0: datetime, t1: datetime, step_s: float):
     return out
 
 
+TCA_REFINE_S = 1.0          # TCA 精算步長（秒）
+TCA_REFINE_MAX_HALF_S = 3600.0
+
+
+def _refine_tca(Precs, Pep, Srecs, Sep, t_c: datetime, half_s: float, lo: datetime, hi: datetime):
+    """在取樣最小值 t_c 前後 ± half_s（一個取樣步長）內逐秒重算，回傳 (t, dist_km) 或 None。
+
+    細取樣（LEO 60 s、GEO 600 s）的最小值與真正最接近時刻可差到半個步長，
+    相對速度數 m/s～數十 m/s 時距離可差數十公尺；逐秒重算讓說明文字與計算值一致。"""
+    half = min(max(half_s, TCA_REFINE_S), TCA_REFINE_MAX_HALF_S)
+    a = max(lo, t_c - timedelta(seconds=half))
+    b = min(hi, t_c + timedelta(seconds=half))
+    pts = _sample(Precs, Pep, Srecs, Sep, a, b, TCA_REFINE_S)
+    if not pts:
+        return None
+    best = min(pts, key=lambda x: (x[3], abs((x[0] - t_c).total_seconds())))   # 同距離取最接近原取樣點
+    return best[0], best[3]
+
+
 def _index_name(nid: int):
     """自衛星索引取名（延遲匯入避免循環相依）；查無則 None。"""
     try:
@@ -651,6 +670,13 @@ def compute_rpo_scene(
             }
 
     imin = int(np.argmin([o["d"] for o in orbit]))
+    # TCA 精算：取樣最小值前後一個步長內逐秒重算（orbit 動畫仍用原取樣）
+    step_used = fine_step_s if fine is not coarse else coarse_step_min * 60.0
+    ref = _refine_tca(Precs, Pep, Srecs, Sep, fine[imin][0], step_used, lo, hi)
+    if ref is not None and ref[1] < fine[imin][3]:
+        tca_t, tca_d = ref
+    else:
+        tca_t, tca_d = fine[imin][0], fine[imin][3]
     # 全窗最小（可能為釋放瞬間之近乎共位）另記於 summary，供對照
     g_i = int(np.argmin([c[3] for c in coarse]))
     g_d, g_t = round(coarse[g_i][3], 3), _iso(coarse[g_i][0])
@@ -675,7 +701,9 @@ def compute_rpo_scene(
                       "SGP4/TEME 幾何重建，公開 TLE 級精度",
     }
     summary = {
-        "d_min": orbit[imin]["d"], "t_min": orbit[imin]["t"], "pc_max": orbit[imin]["pc"],
+        "d_min": round(float(tca_d), 4), "t_min": _iso(tca_t), "pc_max": compute_pc_chan(float(tca_d)),
+        "d_min_sampled": orbit[imin]["d"], "t_min_sampled": orbit[imin]["t"],
+        "tca_refine_s": TCA_REFINE_S,
         "d_min_global": g_d, "t_min_global": g_t,
         "n_orbit": len(orbit), "fine_step_s": fine_step_s,
         "n_series": len(series), "coarse_step_min": round(coarse_step_min, 1),
@@ -717,16 +745,26 @@ def get_rpo_scene(primary: int = 58573, secondary: int = 59884,
         return _SCENE_CACHE[key]
 
     cf = _cache_file(primary, secondary, variant)
+    stale = None
     if not refresh and cf.exists():
         try:
             data = json.loads(cf.read_text(encoding="utf-8"))
             _refresh_meta(data, preset_for(primary, secondary, variant))
-            _SCENE_CACHE[key] = data
-            return data
+            if "tca_refine_s" in data.get("summary", {}):
+                _SCENE_CACHE[key] = data
+                return data
+            stale = data          # 舊版快取（TCA 未精算）→ 嘗試重算，失敗時仍供應舊快取
         except Exception:
             logger.warning("RPO 場景快取讀取失敗、改為重算：%s", cf)
 
-    data = compute_rpo_scene(primary, secondary, variant=variant)
+    try:
+        data = compute_rpo_scene(primary, secondary, variant=variant)
+    except Exception:
+        if stale is None:
+            raise
+        logger.warning("RPO 場景重算失敗，沿用舊快取：%s", cf, exc_info=True)
+        _SCENE_CACHE[key] = stale
+        return stale
     data.setdefault("meta", {})["variant"] = variant
     _SCENE_CACHE[key] = data
     try:

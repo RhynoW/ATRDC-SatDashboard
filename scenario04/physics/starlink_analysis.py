@@ -221,6 +221,26 @@ def compute_obstruction_analysis(
     }, True
 
 
+# 作業殼層下限：近地點低於此高度者視為爬升中（剛發射）或衰減中，不提供服務，不列入可見性與 RTT。
+# 2026-11 資料庫：340–360 km 約 770 顆（低殼層）、460–500 km 約 9,100 顆（主力），330 km 以下約 160 顆。
+MIN_OPERATIONAL_PERIGEE_KM = 330.0
+_MU = 398600.4418
+_RE = 6378.137
+
+
+def _perigee_km(line2: str) -> float | None:
+    """由 TLE 第 2 行的平均運動與離心率估算近地點高度（km）。"""
+    try:
+        n = float(line2[52:63]) * 2.0 * np.pi / 86400.0     # rad/s
+        e = float("0." + line2[26:33].strip())
+    except (ValueError, IndexError):
+        return None
+    if n <= 0:
+        return None
+    a = (_MU / n ** 2) ** (1.0 / 3.0)
+    return a * (1.0 - e) - _RE
+
+
 # ── 核心計算 ──────────────────────────────────────────────────────────────────
 
 def _do_compute(
@@ -254,6 +274,12 @@ def _do_compute(
         before = len(candidate_nids)
         candidate_nids = [n for n in candidate_nids if n not in deorbiting]
         excluded_deorbiting_count = before - len(candidate_nids)
+
+    # 排除未進入作業殼層的衛星（爬升中／衰減中）：否則 RTT 下限會出現 2 ms（斜距約 300 km）
+    before = len(candidate_nids)
+    candidate_nids = [n for n in candidate_nids
+                      if (_perigee_km(idx[n]["line2"]) or 0.0) >= MIN_OPERATIONAL_PERIGEE_KM]
+    excluded_low_count = before - len(candidate_nids)
 
     # 備援情境模擬：隨機排除 dropout_pct% 衛星（固定種子，同參數可重現）
     dropout_pct = max(0.0, min(float(dropout_pct), 90.0))
@@ -425,6 +451,8 @@ def _do_compute(
             "total_known_starlink": len(all_starlink_nids),
             "generation_filter": generation,
             "excluded_deorbiting_count": excluded_deorbiting_count,
+            "excluded_low_orbit_count": excluded_low_count,
+            "min_operational_perigee_km": MIN_OPERATIONAL_PERIGEE_KM,
             "dropout_pct":       dropout_pct,
             "dropped_count":     dropped_count,
             "mean_visible":      round(float(vc.mean()), 1),

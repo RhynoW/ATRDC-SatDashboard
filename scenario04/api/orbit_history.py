@@ -160,6 +160,38 @@ def _fetch_spacetrack(norad: int, start_d: date, end_d: date) -> dict[str, tuple
     return daily
 
 
+_limits_cache: tuple[float, dict] | None = None
+
+
+@bp.get("/api/orbit/limits")
+def orbit_limits():
+    """本地資料保留範圍與是否能向 Space-Track 補抓；/orbit 頁據此決定預設區間並提示使用者。"""
+    global _limits_cache
+    now = time.monotonic()
+    if _limits_cache and now - _limits_cache[0] < 3600:
+        return json_response(_limits_cache[1])
+    out = {"spacetrack": _st_credentials() is not None, "local_start": None, "local_end": None, "local_days": None}
+    db = _resolve_history_db()
+    if db:
+        try:
+            with duckdb.connect(str(db), read_only=True) as con:
+                # 多數衛星的保留天數（中位數）：精簡版資料庫只有少數 RPO 案例衛星保留完整歷史，
+                # 整體最早日期不能代表一般衛星；最新日期排除曆元在未來的異常 TLE
+                days, hi = con.execute("""
+                    SELECT median(d), (SELECT CAST(max(epoch_utc) AS DATE) FROM raw_tle_archive
+                                       WHERE epoch_utc <= now())
+                    FROM (SELECT datediff('day', min(epoch_utc), max(epoch_utc)) + 1 AS d
+                          FROM raw_tle_archive GROUP BY norad_id)""").fetchone()
+            if days and hi:
+                days = int(days)
+                out.update(local_start=(hi - timedelta(days=days - 1)).isoformat(),
+                           local_end=hi.isoformat(), local_days=days)
+        except duckdb.Error as exc:
+            logger.warning("讀取資料範圍失敗：%s", exc)
+    _limits_cache = (now, out)
+    return json_response(out)
+
+
 @bp.get("/api/orbit/history")
 def orbit_history():
     """
@@ -200,6 +232,9 @@ def orbit_history():
         fetched = _fetch_spacetrack(norad, start_d, end_d)
         if isinstance(fetched, str):
             note = fetched
+            if daily:
+                ds = sorted(daily)
+                note += f"（本站資料庫此衛星只有 {ds[0]} ～ {ds[-1]} 共 {len(ds)} 天）"
         else:
             fetched.update(daily)   # archive/既有快取優先
             daily = fetched

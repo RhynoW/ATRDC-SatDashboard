@@ -18,6 +18,25 @@ from .propagate import HAS_SATREC_ARRAY, sgp4_propagate_raw
 
 logger = logging.getLogger(__name__)
 
+# 太空站群組：以核心艙為中心、STATION_RADIUS_KM 內的物件（艙段、對接中的太空船）視為同一座太空站。
+# 這些物件常共用同一組 TLE（距離 0 km），不是接近事件，兩端都在同一群組的配對不列入。
+STATION_ANCHORS = {25544: "ISS", 48274: "CSS"}   # ISS (ZARYA)、天宮 天和核心艙
+STATION_RADIUS_KM = 1.0
+
+
+def station_groups(nids: list, r: np.ndarray) -> dict:
+    """回傳 {陣列索引: 太空站代號}：位於核心艙 STATION_RADIUS_KM 內的物件（含核心艙本身）。"""
+    pos = {n: i for i, n in enumerate(nids)}
+    out: dict = {}
+    for anchor, tag in STATION_ANCHORS.items():
+        i = pos.get(anchor)
+        if i is None:
+            continue
+        near = np.flatnonzero(np.linalg.norm(r - r[i], axis=1) <= STATION_RADIUS_KM)
+        for k in near:
+            out[int(k)] = tag
+    return out
+
 try:
     from scipy.spatial import cKDTree as _cKDTree
     HAS_KDTREE = True
@@ -94,8 +113,13 @@ def build_conjunction_summary(
         len(filt_nids), threshold_km, len(pairs_set), t_sgp4, t_kd,
     )
 
+    groups = station_groups(filt_nids, filt_r)
+    docked_excluded = 0
     pairs: list[dict[str, Any]] = []
     for i, j in pairs_set:
+        if i in groups and groups.get(i) == groups.get(j):
+            docked_excluded += 1           # 同一座太空站的艙段／對接中太空船
+            continue
         miss = float(np.linalg.norm(filt_r[i] - filt_r[j]))
         nid_a, nid_b = filt_nids[i], filt_nids[j]
         pc = compute_pc_chan(miss)
@@ -129,6 +153,7 @@ def build_conjunction_summary(
         "max_pairs":     max_pairs,
         "pairs":         pairs,
         "total_scanned": len(filt_nids),
+        "docked_excluded": docked_excluded,
         "elapsed_sec":   round(elapsed, 2),
         "vectorized":    HAS_SATREC_ARRAY,
         "timestamp":     datetime.now(timezone.utc).isoformat(),

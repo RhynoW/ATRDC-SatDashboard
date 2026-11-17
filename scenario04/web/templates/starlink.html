@@ -205,7 +205,7 @@ window.SL_TAB = new URLSearchParams(location.search).get('tab') || 'analysis';
         </div>
         <div class="rm-card">
           <div class="rm-card-head"><span class="rm-badge done">&#9989; <span data-i18n="badge_done">已實作</span></span><h4 data-i18n="card1_5_title">傳播延遲下限估計</h4></div>
-          <p data-i18n="card1_5_desc">由最近可見衛星斜距計算光速往返時間（RTT floor）。Starlink 在台灣典型約 4–9 ms，加上閘道路由後實際約 25–45 ms。</p>
+          <p data-i18n="card1_5_desc">由最近可見衛星斜距計算光速往返時間（RTT floor）。只計入作業殼層（近地點 ≥ 330 km）的衛星：殼層高度約 340–560 km，衛星在天頂時往返約 2.3–3.7 ms，仰角越低越長；加上閘道路由後實際約 25–45 ms。</p>
         </div>
       </div>
     </div>
@@ -244,7 +244,7 @@ window.SL_TAB = new URLSearchParams(location.search).get('tab') || 'analysis';
 
     <div style="margin-top:12px;padding:10px 12px;background:#161b22;border:1px solid #30363d;
                 border-radius:6px;font-size:11px;color:#8b949e;line-height:1.6">
-      &#128204; <strong style="color:#c9d1d9" data-i18n="status_note_label">現況說明</strong>：<span data-i18n="status_note_body">《電信管理法》第 36 條修正案已於 2026 年 7 月 21 日三讀通過，取消外資持股上限，改由主管機關依國家安全等 7 項標準逐案審核核准；惟截至目前 Starlink 尚未取得正式核准、也還未在台灣商轉。本工具基於公開 TLE 資料計算純幾何可用性，供技術評估與政策討論參考。</span>
+      &#128204; <strong style="color:#c9d1d9" data-i18n="status_note_label">現況說明</strong>：<span data-i18n="status_note_body">《電信管理法》第 36 條修正案於 2026 年 7 月 21 日三讀、8 月 5 日公布：以衛星通信技術申請者，經主管機關依國家安全等 7 款事項審酌核准後，得不受外資持股上限與董事長國籍限制；但該條第 9、10 項的施行日期由行政院另定，截至本頁更新時尚未施行；惟截至目前 Starlink 尚未取得正式核准、也還未在台灣商轉。本工具基於公開 TLE 資料計算純幾何可用性，供技術評估與政策討論參考。</span>
     </div>
   </div>
 

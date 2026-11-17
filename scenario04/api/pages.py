@@ -14,7 +14,8 @@ bp = Blueprint("pages", __name__)
 
 @bp.get("/")
 def index():
-    return render_template("globe.html")
+    # 沒有 Logo 檔（線上版刻意不放）就不輸出 Logo 元素，避免每次開頁 /api/logo 404
+    return render_template("globe.html", has_logo=settings.LOGO_FILE.exists())
 
 
 @bp.get("/taipei")

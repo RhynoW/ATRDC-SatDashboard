@@ -38,19 +38,19 @@ _PRESETS: dict[tuple[int, int], dict] = {
         "title": "神龍太空梭 — 在軌釋放與再接近（58573 × 59884）",
         "subtitle": (
             "中國可重複使用太空飛機 58573 於 2024-05-24 在約 605 km 釋放 59884，"
-            "離散至約 1,700 km 後於 6 月再接近至約 1.4 km——逆轉自然沿軌漂移需要推力。"
+            "離散至約 1,700 km 後於 6 月再接近至約 1.2 km——逆轉自然沿軌漂移需要推力。"
             "碰撞機率 Pc 為 Chan 首階排序代理（proxy），非作業級數值。"
         ),
         "events": [
             {"t": "2024-05-24T16:30Z", "label": "DEPLOY"},
-            {"t": "2024-06-14T10:13Z", "label": "TCA ~1.4 km"},
+            {"t": "2024-06-14T10:08Z", "label": "TCA ~1.20 km"},
         ],
         "timeline": [
             {"d": "2024-05-24", "t": "<b>釋放</b>：於 16:30–22:50 UTC 窗、約 605 km 釋放次物體。"},
             {"d": "2024-05-25", "t": "<b>首筆 elset</b>：59884 於 15:13 UTC 編目（分離後約 9–16 h）。"},
             {"d": "05-25 ~ 06-05", "t": "<b>離散</b>：沿軌分離穩定增長至約 1,720 km。"},
             {"d": "06-06 ~ 06-08", "t": "<b>再接近</b>：3 天內 1,439 km → 5.9 km；逆轉漂移需推力。"},
-            {"d": "06-08 ~ 06-18", "t": "<b>近接操作</b>：維持約 2–80 km 約 10 天；最接近約 1.41 km（06-14 10:13 UTC）。"},
+            {"d": "06-08 ~ 06-18", "t": "<b>近接操作</b>：維持約 2–80 km 約 10 天；最接近約 1.20 km（06-14 10:08 UTC，SGP4 重建、60 秒取樣）。"},
         ],
     },
     # ── 2026 第4次任務（PRC Test Spacecraft 4 = 67689）——延續 58573×59884 之後續 ──
@@ -601,7 +601,7 @@ def compute_rpo_scene(
     series = [{"t": _iso(t), "d": round(d, 3), "pc": compute_pc_chan(d)}
               for (t, _rp, _rs, d) in coarse]
 
-    # 聚焦中心：優先採已知案例之標註 TCA 事件（如神龍 6/14 再接近 ~1.4 km，對應影片
+    # 聚焦中心：優先採已知案例之標註 TCA 事件（如神龍 6/14 再接近 ~1.2 km，對應影片
     # 「約 1 公里量級」之機動再接近），而非釋放瞬間之近乎共位；未知案例退回全窗最小距離。
     focus_center = _pick_focus_center(preset, coarse, lo, hi)
 
@@ -695,6 +695,14 @@ def _cache_file(primary: int, secondary: int, variant: str | None = None):
     return settings.DB_DIR / f"rpo_scene_{int(primary)}_{int(secondary)}{suffix}.json"
 
 
+def _refresh_meta(data: dict, preset: dict) -> None:
+    """檔案快取的說明文字（標題、事件、時間軸）改用目前的案例預設，修改文字後不必刪快取重算。"""
+    meta = data.setdefault("meta", {})
+    for k in ("title", "subtitle", "events", "timeline", "phases"):
+        if k in preset:
+            meta[k] = preset[k]
+
+
 def get_rpo_scene(primary: int = 58573, secondary: int = 59884,
                   refresh: bool = False, variant: str | None = None) -> dict:
     """帶記憶體＋檔案快取之場景取得。
@@ -712,6 +720,7 @@ def get_rpo_scene(primary: int = 58573, secondary: int = 59884,
     if not refresh and cf.exists():
         try:
             data = json.loads(cf.read_text(encoding="utf-8"))
+            _refresh_meta(data, preset_for(primary, secondary, variant))
             _SCENE_CACHE[key] = data
             return data
         except Exception:

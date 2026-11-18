@@ -45,6 +45,17 @@ COV_STEP_LEO_S = 20.0                 # RK4 誤差 ∝ h⁴：60 s 相對誤差 
 COV_STEP_GEO_S = 300.0
 COV_JAC_DR_KM = 1.0e-3               # 帶諧加速度 Jacobian 中央差分步長
 
+# 避碰決策（Sprint 2）
+MAN_N_TIMES = 48                     # 機動時刻網格點數（機動窗內等分，對齊協方差步長）
+MAN_N_DV = 20                        # Δv 量級數（dv_ms 區間內等分）
+MAN_MAX_VERIFY = 10                  # 非線性驗證的候選上限
+MAN_DV_MS_DEFAULT = (0.05, 2.0)
+MAN_MIN_MISS_DEFAULT_KM = 1.0        # 未指定 pc_target 與 min_miss_km 時的距離目標；亦為新增交會的拒收距離
+MAN_G0_MS2 = 9.80665
+MAN_PREFILTER_MARGIN_KM = 25.0       # 二次篩選近遠地點預篩的額外餘裕（涵蓋 J2 短週期振幅）
+MAN_TARGET_MATCH_FRAC_PERIOD = 0.25  # 機動後目標事件：與參考 TCA 相差 ≤ 0.25 週期的極小值
+MAN_PLOT_POINTS = 241                # 3D 與距離歷程取樣點數
+
 # 二維 Pc 適用性啟發式篩選初始判定值（v0.3 第 5 節；待 Sprint 4 以 Monte Carlo 校正）
 SCREEN_K_SIGMA = 5.0
 SCREEN_TENC_MAX_FRAC_PERIOD = 0.01

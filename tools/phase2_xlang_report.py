@@ -7,6 +7,7 @@
   L-algo   相同二體解析軌跡 → 近接極小值、Pc、適用性篩選
   L-schema 相同場景案例 → 錯誤代碼集合
   L-e2e    相同場景 → 端到端報告
+  L-maneuver 相同避碰場景（maneuver_cases.json 套用 ops）→ 狀態、原因、候選方案與驗證結果（Sprint 2）
 用法：py -3.13 tools/phase2_xlang_report.py  （需先 cargo build --release --bin phase2_cli）
 輸出：scenario04/phase2/reports/xlang_report.{json,md}
 """
@@ -25,7 +26,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scenario04.phase2 import e2e, frames as F, kepler, pc as PC  # noqa: E402
+from scenario04.phase2 import e2e, frames as F, kepler, maneuver, pc as PC  # noqa: E402
 from scenario04.phase2.constants import GM_KM3_S2  # noqa: E402
 from scenario04.phase2.eop import SNAPSHOT, TESTDATA, load_snapshot  # noqa: E402
 from scenario04.phase2.forces import ForceModel  # noqa: E402
@@ -233,6 +234,55 @@ def layer_e2e():
     return out
 
 
+def _apply_ops(doc, ops):
+    out = json.loads(json.dumps(doc))
+    for op in ops:
+        tgt = out
+        for k in op["path"][:-1]:
+            tgt = tgt[k]
+        if op["op"] == "set":
+            tgt[op["path"][-1]] = op["value"]
+        else:
+            del tgt[op["path"][-1]]
+    return out
+
+
+def layer_maneuver():
+    cases = json.loads((TESTDATA / "maneuver_cases.json").read_text(encoding="utf-8"))
+    base = json.loads((TESTDATA / cases["base"]).read_text(encoding="utf-8"))
+    rows = []
+    for c in cases["cases"]:
+        sc = _apply_ops(base, c["ops"])
+        py = maneuver.run(sc, load_snapshot())
+        rs = rust("maneuver", sc, SNAPSHOT)
+        cp, cr = py.get("candidates") or [], rs.get("candidates") or []
+        # 機動時刻以 1e-6 s 容差比對（tca0 來自基準篩選，跨語言差約 1e-11 s）；方向與 Δv 量級須完全相同
+        same_list = len(cp) == len(cr) and all(
+            abs(a["burn_tau_s"] - b["burn_tau_s"]) <= 1e-6 and a["direction"] == b["direction"] and a["dv_ms"] == b["dv_ms"]
+            for a, b in zip(cp, cr))
+        dmiss = dlin = dpc = dtau = dda = dburn = 0.0
+        same_pass = True
+        if same_list:
+            for a, b in zip(cp, cr):
+                same_pass &= a["passed"] == b["passed"] and a["checks"] == b["checks"]
+                dburn = max(dburn, abs(a["burn_tau_s"] - b["burn_tau_s"]))
+                dlin = max(dlin, abs(a["linear"]["miss_km"] - b["linear"]["miss_km"]) * 1000.0)
+                dda = max(dda, abs(a["delta_a_km"] - b["delta_a_km"]) * 1000.0)
+                if a.get("event") and b.get("event"):
+                    dmiss = max(dmiss, abs(a["event"]["miss_km"] - b["event"]["miss_km"]) * 1000.0)
+                    dtau = max(dtau, abs(a["event"]["tca_tau_s"] - b["event"]["tca_tau_s"]))
+                    pa, pb = a.get("pc_after"), b.get("pc_after")
+                    if pa is not None and pb is not None:
+                        dpc = max(dpc, abs(pa - pb) / max(abs(pa), 1e-300))
+        lm_eq = [r["min_dv_ms"] for r in py.get("linear_map") or []] == [r["min_dv_ms"] for r in rs.get("linear_map") or []]
+        rows.append({"case": c["name"], "status_py": py["status"], "status_rs": rs["status"],
+                     "reason_equal": py.get("reason") == rs.get("reason"), "candidates_equal": same_list,
+                     "pass_checks_equal": same_pass, "linear_map_equal": lm_eq, "n_candidates": len(cp),
+                     "max_dmiss_m": dmiss, "max_dtau_s": dtau, "max_dlin_m": dlin, "max_pc_rel_diff": dpc,
+                     "max_dda_m": dda, "max_dburn_s": dburn})
+    return rows
+
+
 def layer_adaptive():
     from scenario04.phase2.ephemeris import RelativeState, Sgp4Ephemeris
     from scenario04.phase2.tca import find_minima_adaptive
@@ -341,6 +391,13 @@ def to_md(rep: dict) -> str:
         for r in e["events"]:
             L.append(f"| {r['tca_utc']} | {r['dtau_s']:.2e} | {r['dmiss_m']:.2e} | {r['pc_foster_py']:.3e} | "
                      f"{r['pc_foster_rel_diff']:.2e} | {r['screen_equal']} |")
+    L += ["", "## L-maneuver（相同避碰場景）", "",
+          "| 案例 | 狀態 Py／Rs | 原因一致 | 候選相同 | 檢查一致 | 線性圖一致 | 候選數 | 最大 Δ機動時刻 s | 最大 Δ距離 m | 最大 ΔTCA s | 最大 Δ線性距離 m | Pc 相對差 | 最大 Δa 差 m |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in s["maneuver"]:
+        L.append(f"| {r['case']} | {r['status_py']}／{r['status_rs']} | {r['reason_equal']} | {r['candidates_equal']} | "
+                 f"{r['pass_checks_equal']} | {r['linear_map_equal']} | {r['n_candidates']} | {r['max_dburn_s']:.1e} | {r['max_dmiss_m']:.2e} | "
+                 f"{r['max_dtau_s']:.2e} | {r['max_dlin_m']:.2e} | {r['max_pc_rel_diff']:.2e} | {r['max_dda_m']:.2e} |")
     L += ["", "## 結論與容差建議", ""] + [f"- {x}" for x in rep["conclusions"]]
     return "\n".join(L) + "\n"
 
@@ -352,7 +409,8 @@ def main():
            "eop": load_snapshot().version(),
            "layers": {"sgp4": sg, "frames": layer_frames(teme), "integration": layer_integration(),
                       "algorithm": layer_algorithm(), "schema": layer_schema_compare(), "e2e": layer_e2e(),
-                      "adaptive": layer_adaptive(), "covprop": layer_covprop(), "csv_batch": layer_csv_batch()}}
+                      "adaptive": layer_adaptive(), "covprop": layer_covprop(), "csv_batch": layer_csv_batch(),
+                      "maneuver": layer_maneuver()}}
     s = rep["layers"]
     leo_max = s["sgp4"]["pos_diff_m"]["leo"].get("max", 0.0)
     deep_max = s["sgp4"]["pos_diff_m"]["deep"].get("max", 0.0)
@@ -374,6 +432,11 @@ def main():
         f"協方差傳播層：最大相對差 {max(r['max_rel_diff'] for r in s['covprop']):.1e}。",
         f"CSV 解析一致：{s['csv_batch']['csv_equal']}；批次配對狀態全部一致："
         f"{all(r['status_equal'] for r in s['csv_batch']['batch_pairs'])}。",
+        f"避碰層：{len(s['maneuver'])} 案例狀態全部一致 "
+        f"{all(r['status_py'] == r['status_rs'] and r['reason_equal'] for r in s['maneuver'])}；候選方案與檢查結果全部相同 "
+        f"{all(r['candidates_equal'] and r['pass_checks_equal'] and r['linear_map_equal'] for r in s['maneuver'])}；"
+        f"機動後距離最大差 {max(r['max_dmiss_m'] for r in s['maneuver']):.1e} m、"
+        f"Pc 相對差最大 {max(r['max_pc_rel_diff'] for r in s['maneuver']):.1e}。",
     ]
     (OUT / "xlang_report.json").write_text(json.dumps(rep, indent=1, ensure_ascii=False), encoding="utf-8")
     (OUT / "xlang_report.md").write_text(to_md(rep), encoding="utf-8")

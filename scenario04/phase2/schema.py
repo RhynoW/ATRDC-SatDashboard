@@ -72,6 +72,9 @@ def validate(sc: dict) -> dict:
         cov = o.get("covariance") or {}
         if "epoch" in cov:
             times.append(cov["epoch"])
+    for o in ((sc.get("maneuver_search") or {}).get("secondary_screening") or {}).get("objects") or []:
+        if o["ephemeris"]["type"] == "state":
+            times.append(o["ephemeris"]["epoch"])
     for t in times:
         try:
             UtcTime.parse(t)

@@ -6,6 +6,8 @@ POST /api/lab/scenario    場景 JSON → 端到端報告
 POST /api/lab/batch       主星＋次星清單（CSV 文字或陣列）→ 批次會合結果
 POST /api/lab/batch.csv   {"events": [...]} → 結果 CSV（下載）
 POST /api/lab/csv/parse   CSV 文字 → 解析結果與錯誤（前端預覽）
+GET  /api/lab/maneuver/demo  避碰示範案例（maneuver_cases.json 套用 ops 後的完整場景）
+POST /api/lab/maneuver    {"scenario": 場景, "screening_norad_ids": [...]} → 避碰決策報告（Sprint 2）
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ from flask import Blueprint, Response, render_template, request
 
 from . import json_response
 from ..ingestion.index import get_sat_index
-from ..phase2 import e2e
+from ..phase2 import e2e, maneuver
 from ..phase2.batch import run_batch
 from ..phase2.csvio import events_to_csv, parse_secondaries
 from ..phase2.eop import TESTDATA, default_eop
@@ -26,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 DEMOS = ("e2e_leo_synthetic.json", "e2e_leo_propagated.json", "e2e_tle_iss_css.json")
 MAX_SECONDARIES = 200
+MAX_SCREENING_OBJECTS = 200
 
 
 def _lookup(norad: int):
@@ -102,3 +105,69 @@ def lab_batch_csv():
     text = events_to_csv(body.get("events") or [])
     return Response("﻿" + text, mimetype="text/csv; charset=utf-8",
                     headers={"Content-Disposition": "attachment; filename=conjunction_events.csv"})
+
+
+def apply_ops(doc: dict, ops: list) -> dict:
+    """schema_cases／maneuver_cases 的 ops：set 設值、del 刪除；path 為鍵或索引。"""
+    out = json.loads(json.dumps(doc))
+    for op in ops:
+        tgt = out
+        for k in op["path"][:-1]:
+            tgt = tgt[k]
+        if op["op"] == "set":
+            tgt[op["path"][-1]] = op["value"]
+        else:
+            del tgt[op["path"][-1]]
+    return out
+
+
+@bp.get("/api/lab/maneuver/demo")
+def lab_maneuver_demo():
+    cases = json.loads((TESTDATA / "maneuver_cases.json").read_text(encoding="utf-8"))
+    base = json.loads((TESTDATA / cases["base"]).read_text(encoding="utf-8"))
+    out = [{"id": c["name"], "scenario": apply_ops(base, c["ops"])} for c in cases["cases"]]
+    return json_response({"description": base.get("description", ""), "scenarios": out}, max_age=3600)
+
+
+@bp.post("/api/lab/maneuver")
+def lab_maneuver():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("scenario"), dict):
+        return json_response({"status": "error", "error": "需要 {\"scenario\": 場景 JSON}"}), 400
+    sc = json.loads(json.dumps(body["scenario"]))
+    ids = body.get("screening_norad_ids") or []
+    if not isinstance(ids, list):
+        return json_response({"status": "error", "error": "screening_norad_ids 須為陣列"}), 400
+    unresolved = []
+    if ids:
+        ms = sc.get("maneuver_search")
+        if not isinstance(ms, dict):
+            return json_response({"status": "error", "error": "場景缺 maneuver_search"}), 400
+        ss = ms.setdefault("secondary_screening", {})
+        if not isinstance(ss, dict) or not isinstance(ss.setdefault("objects", []), list):
+            return json_response({"status": "error", "error": "secondary_screening 須為物件、objects 須為陣列"}), 400
+        objs = ss["objects"]
+        have = {o.get("norad_id") for o in objs if isinstance(o, dict)}
+        for x in ids:
+            try:
+                nid = int(x)
+            except (TypeError, ValueError):
+                unresolved.append(x)
+                continue
+            if nid in have:
+                continue
+            hit = _lookup(nid)
+            if hit is None:
+                unresolved.append(nid)
+                continue
+            objs.append({"name": hit[0], "norad_id": nid,
+                         "ephemeris": {"type": "TLE", "line1": hit[1], "line2": hit[2]}})
+            have.add(nid)
+        if len(objs) > MAX_SCREENING_OBJECTS:
+            return json_response({"status": "error", "error": f"二次篩選物體最多 {MAX_SCREENING_OBJECTS} 顆"}), 400
+    try:
+        rep = maneuver.run(sc, default_eop())
+    except ValueError as ex:
+        return json_response({"status": "error", "error": str(ex)}), 400
+    rep["screening_unresolved"] = unresolved
+    return json_response(rep, default=_float_default)

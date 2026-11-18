@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-18T04:17:17+00:00",
+ "generated_utc": "2026-11-18T05:22:54+00:00",
  "eop": {
   "file": "eop_snapshot_20261118.csv",
   "sha256": "346d920b48a5e16a",
@@ -57,23 +57,23 @@
    "gcrf_pos_diff_m": {
     "n": 120,
     "max": 2.737941617577302e-09,
-    "p99": 2.074371943474103e-09,
+    "p99": 2.0839141575178655e-09,
     "median": 9.270291343190064e-10,
-    "mean": 9.554906943177287e-10
+    "mean": 9.350053494261081e-10
    },
    "gcrf_vel_diff_mm_s": {
     "n": 120,
     "max": 2.6668472207145994e-09,
     "p99": 2.1494617070533574e-09,
     "median": 9.930136612989093e-10,
-    "mean": 9.717203838660659e-10
+    "mean": 9.690235601836953e-10
    },
    "itrf_pos_diff_m": {
     "n": 120,
     "max": 1.8189894035458565e-09,
-    "p99": 1.3166768672494096e-09,
+    "p99": 1.7177631678813571e-09,
     "median": 4.547473508864641e-10,
-    "mean": 4.707880593028614e-10
+    "mean": 4.528773318990102e-10
    }
   },
   "integration": {
@@ -82,17 +82,17 @@
     {
      "case": "LEO 500 km J2–J4",
      "pos_diff_m_by_3h": [
-      2.2737367544323206e-10,
-      1.8000690813407448e-07,
-      9.696254350148676e-08,
-      6.849799434694356e-08,
-      5.325788505418077e-08,
-      1.513571070673896e-07,
-      5.713267641482676e-07,
-      1.0270373278417052e-06,
-      1.912504578163523e-06
+      0.0,
+      4.288284999832708e-08,
+      2.2623406485431603e-07,
+      2.7023014572174185e-07,
+      2.805640059804023e-07,
+      2.3414366584071872e-07,
+      1.8863027552363278e-07,
+      5.478483190401629e-07,
+      7.347075019966159e-07
      ],
-     "max_m": 1.912504578163523e-06
+     "max_m": 7.347075019966159e-07
     },
     {
      "case": "LEO 400 km J2–J4＋阻力",
@@ -201,7 +201,7 @@
    ]
   },
   "schema": {
-   "n_cases": 32,
+   "n_cases": 37,
    "mismatches": []
   },
   "e2e": {
@@ -318,19 +318,19 @@
   "covprop": [
    {
     "tau_s": 3600.0,
-    "max_rel_diff": 1.7447926008088968e-13
+    "max_rel_diff": 4.698173247056151e-13
    },
    {
     "tau_s": 10800.0,
-    "max_rel_diff": 7.844603974457161e-12
+    "max_rel_diff": 1.7879318008603477e-12
    },
    {
     "tau_s": 20000.0,
-    "max_rel_diff": 1.4378242820484343e-11
+    "max_rel_diff": 1.3635533337931678e-11
    },
    {
     "tau_s": 43200.0,
-    "max_rel_diff": 4.0621992062915626e-11
+    "max_rel_diff": 4.1414187813793976e-11
    }
   ],
   "csv_batch": {
@@ -389,7 +389,169 @@
      "max_dmiss_m": 0.0
     }
    ]
-  }
+  },
+  "maneuver": [
+   {
+    "case": "base_feasible",
+    "status_py": "feasible_solution_found",
+    "status_rs": "feasible_solution_found",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 6,
+    "max_dmiss_m": 1.96739691205039e-06,
+    "max_dtau_s": 5.4569682106375694e-11,
+    "max_dlin_m": 1.1664331722727184e-06,
+    "max_pc_rel_diff": 4.154634331408865e-10,
+    "max_dda_m": 2.7284841053187847e-09,
+    "max_dburn_s": 1.0913936421275139e-11
+   },
+   {
+    "case": "notice_window_conflict",
+    "status_py": "infeasible_constraints",
+    "status_rs": "infeasible_constraints",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 0,
+    "max_dmiss_m": 0.0,
+    "max_dtau_s": 0.0,
+    "max_dlin_m": 0.0,
+    "max_pc_rel_diff": 0.0,
+    "max_dda_m": 0.0,
+    "max_dburn_s": 0.0
+   },
+   {
+    "case": "window_before_data_start",
+    "status_py": "infeasible_constraints",
+    "status_rs": "infeasible_constraints",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 0,
+    "max_dmiss_m": 0.0,
+    "max_dtau_s": 0.0,
+    "max_dlin_m": 0.0,
+    "max_pc_rel_diff": 0.0,
+    "max_dda_m": 0.0,
+    "max_dburn_s": 0.0
+   },
+   {
+    "case": "dv_budget_below_min",
+    "status_py": "infeasible_constraints",
+    "status_rs": "infeasible_constraints",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 0,
+    "max_dmiss_m": 0.0,
+    "max_dtau_s": 0.0,
+    "max_dlin_m": 0.0,
+    "max_pc_rel_diff": 0.0,
+    "max_dda_m": 0.0,
+    "max_dburn_s": 0.0
+   },
+   {
+    "case": "no_along_track_thrust",
+    "status_py": "infeasible_constraints",
+    "status_rs": "infeasible_constraints",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 0,
+    "max_dmiss_m": 0.0,
+    "max_dtau_s": 0.0,
+    "max_dlin_m": 0.0,
+    "max_pc_rel_diff": 0.0,
+    "max_dda_m": 0.0,
+    "max_dburn_s": 0.0
+   },
+   {
+    "case": "no_solution_small_dv",
+    "status_py": "no_solution_found",
+    "status_rs": "no_solution_found",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 3,
+    "max_dmiss_m": 4.3009101835522756e-07,
+    "max_dtau_s": 1.8189894035458565e-11,
+    "max_dlin_m": 4.948890741651724e-07,
+    "max_pc_rel_diff": 5.660001296162234e-11,
+    "max_dda_m": 9.094947017729282e-10,
+    "max_dburn_s": 1.0913936421275139e-11
+   },
+   {
+    "case": "no_maneuver_required",
+    "status_py": "no_maneuver_required",
+    "status_rs": "no_maneuver_required",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 0,
+    "max_dmiss_m": 0.0,
+    "max_dtau_s": 0.0,
+    "max_dlin_m": 0.0,
+    "max_pc_rel_diff": 0.0,
+    "max_dda_m": 0.0,
+    "max_dburn_s": 0.0
+   },
+   {
+    "case": "target_not_found",
+    "status_py": "target_not_found",
+    "status_rs": "target_not_found",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 0,
+    "max_dmiss_m": 0.0,
+    "max_dtau_s": 0.0,
+    "max_dlin_m": 0.0,
+    "max_pc_rel_diff": 0.0,
+    "max_dda_m": 0.0,
+    "max_dburn_s": 0.0
+   },
+   {
+    "case": "demo_covariance_miss_only",
+    "status_py": "feasible_solution_found",
+    "status_rs": "feasible_solution_found",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 6,
+    "max_dmiss_m": 1.5213716952899858e-06,
+    "max_dtau_s": 8.36735125631094e-11,
+    "max_dlin_m": 1.1945411326763633e-06,
+    "max_pc_rel_diff": 2.345550340494148e-09,
+    "max_dda_m": 1.8189894035458565e-09,
+    "max_dburn_s": 1.0913936421275139e-11
+   },
+   {
+    "case": "new_conjunction_rejects_best",
+    "status_py": "feasible_solution_found",
+    "status_rs": "feasible_solution_found",
+    "reason_equal": true,
+    "candidates_equal": true,
+    "pass_checks_equal": true,
+    "linear_map_equal": true,
+    "n_candidates": 6,
+    "max_dmiss_m": 1.96739691205039e-06,
+    "max_dtau_s": 5.4569682106375694e-11,
+    "max_dlin_m": 1.1664331722727184e-06,
+    "max_pc_rel_diff": 4.154634331408865e-10,
+    "max_dda_m": 2.7284841053187847e-09,
+    "max_dburn_s": 1.0913936421275139e-11
+   }
+  ]
  },
  "tolerance_recommendation": {
   "tle_input_position_eps_abs_m": 0.001,
@@ -398,11 +560,12 @@
  "conclusions": [
   "SGP4 層：近地物體最大差 1.24e-06 m、深空物體最大差 2.91e-04 m；建議第 10 節「TLE 輸入（經 SGP4）的位置」容差 ε_abs = 1 mm（實測最大值約 3 倍餘裕）。兩邊皆採 WGS-72、opsmode 'i'；Rust sgp4 crate 的 Constants::from_elements 預設為 WGS-84，不可使用。",
   "框架層：GCRF 最大差 2.7e-09 m，遠低於 1 mm 容差。",
-  "積分層：最大差 LEO 500 km J2–J4 1.9e-06 m、LEO 400 km J2–J4＋阻力 1.0e-06 m、GEO J2–J4 4.7e-08 m。",
+  "積分層：最大差 LEO 500 km J2–J4 7.3e-07 m、LEO 400 km J2–J4＋阻力 1.0e-06 m、GEO J2–J4 4.7e-08 m。",
   "演算法層：ΔTCA 最大 5.7e-14 s，Pc 相對差最大 2.5e-10；篩選狀態全部一致。",
-  "Schema 層：32 案例代碼不一致 0 個。",
+  "Schema 層：37 案例代碼不一致 0 個。",
   "自適應搜尋層：25544×48274 極小值 32／32、ΔTCA ≤ 1.5e-11 s；59103×68762 極小值 16／16、ΔTCA ≤ 1.5e-09 s；69673×67689 極小值 31／31、ΔTCA ≤ 9.3e-02 s。",
   "協方差傳播層：最大相對差 4.1e-11。",
-  "CSV 解析一致：True；批次配對狀態全部一致：True。"
+  "CSV 解析一致：True；批次配對狀態全部一致：True。",
+  "避碰層：10 案例狀態全部一致 True；候選方案與檢查結果全部相同 True；機動後距離最大差 2.0e-06 m、Pc 相對差最大 2.3e-09。"
  ]
 }

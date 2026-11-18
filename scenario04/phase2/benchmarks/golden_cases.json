@@ -1,0 +1,350 @@
+{
+ "title": "第二階段凍結基準清單",
+ "version": "golden-v1",
+ "frozen_utc": "2026-11-18",
+ "common": {
+  "constants": {
+   "version": "phase2-constants-v1",
+   "GM_km3_s2": 398600.4418,
+   "Re_km": 6378.137,
+   "J2": 0.00108262668355,
+   "J3": -2.53265648533e-06,
+   "J4": -1.61962159137e-06,
+   "omega_e_rad_s": 7.292115146706979e-05,
+   "ellipsoid": "WGS-84"
+  },
+  "time_frames": {
+   "time": "UTC 輸入／輸出；TT、UT1 依 v0.3 第 3 節",
+   "frame": "GCRF（IAU-2006/2000A CIO，含 dX/dY）",
+   "eop": {
+    "file": "eop_snapshot_20261118.csv",
+    "sha256": "346d920b48a5e16a",
+    "mjd_range": [
+     60310.0,
+     61542.0
+    ],
+    "last_observed": "2026-11-17"
+   }
+  },
+  "internal_integrator": {
+   "method": "RK4 fixed-step",
+   "step_s": {
+    "LEO": 10,
+    "GEO": 60
+   },
+   "interpolation": "quintic Hermite"
+  }
+ },
+ "cases": [
+  {
+   "id": "G1",
+   "name": "LEO 二體 7 天",
+   "layer": "L2",
+   "force_model": {
+    "two_body": true,
+    "zonal": null,
+    "drag": null
+   },
+   "initial_state": {
+    "epoch": "2026-11-20T00:00:00Z",
+    "frame": "GCRF",
+    "r_km": [
+     215.3357059388151,
+     4740.941021012885,
+     4969.580669570353
+    ],
+    "v_kms": [
+     -6.9546790172395765,
+     -2.089713045506579,
+     2.2894798706190342
+    ]
+   },
+   "duration_s": 604800,
+   "outputs": "每 3 小時 GCRF 位置速度",
+   "acceptance": "位置差 ≤ 1 m",
+   "reference_tools": [
+    "解析二體（內部）",
+    "Orekit KeplerianPropagator",
+    "STK TwoBody"
+   ],
+   "reference_settings": "積分器容差不適用（解析）",
+   "owner": "待指派",
+   "status": "輸入凍結，待執行"
+  },
+  {
+   "id": "G2",
+   "name": "LEO J2–J4 7 天",
+   "layer": "L2",
+   "force_model": {
+    "two_body": true,
+    "zonal": "J2-J4（僅帶諧，不含田諧）",
+    "drag": null
+   },
+   "initial_state": {
+    "epoch": "2026-11-20T00:00:00Z",
+    "frame": "GCRF",
+    "r_km": [
+     215.3357059388151,
+     4740.941021012885,
+     4969.580669570353
+    ],
+    "v_kms": [
+     -6.9546790172395765,
+     -2.089713045506579,
+     2.2894798706190342
+    ]
+   },
+   "duration_s": 604800,
+   "outputs": "每 3 小時 GCRF 位置速度",
+   "acceptance": "位置差 ≤ 10 m",
+   "reference_tools": [
+    "Orekit NumericalPropagator（HolmesFeatherstone 4×0，DormandPrince853 相對容差 1e-12）",
+    "STK HPOP（重力場 4×0、無其他攝動）"
+   ],
+   "reference_settings": "重力場須用本清單常數；EOP 用同一快照",
+   "owner": "待指派",
+   "status": "輸入凍結，待執行"
+  },
+  {
+   "id": "G3",
+   "name": "GEO J2–J4 7 天",
+   "layer": "L2",
+   "force_model": {
+    "two_body": true,
+    "zonal": "J2-J4",
+    "drag": null
+   },
+   "initial_state": {
+    "epoch": "2026-11-20T00:00:00Z",
+    "frame": "GCRF",
+    "r_km": [
+     22766.901615225703,
+     35483.6022559974,
+     30.965292352235405
+    ],
+    "v_kms": [
+     -2.587801603965644,
+     1.6609925695809316,
+     0.001449489827467308
+    ]
+   },
+   "duration_s": 604800,
+   "outputs": "每 6 小時 GCRF 位置速度",
+   "acceptance": "位置差 ≤ 10 m",
+   "reference_tools": [
+    "Orekit NumericalPropagator",
+    "STK HPOP"
+   ],
+   "reference_settings": "同 G2",
+   "owner": "待指派",
+   "status": "輸入凍結，待執行"
+  },
+  {
+   "id": "G4",
+   "name": "LEO 400 km 指數大氣阻力 1 天",
+   "layer": "L2（僅報告）",
+   "force_model": {
+    "two_body": true,
+    "zonal": "J2-J4",
+    "drag": {
+     "model": "單層指數大氣 h0=400 km、ρ0=3.725e-12 kg/m³、H=58.515 km",
+     "ballistic_Cd_A_over_m_m2_kg": 0.022,
+     "atmosphere": "共轉"
+    }
+   },
+   "initial_state": {
+    "epoch": "2026-11-20T00:00:00Z",
+    "frame": "GCRF",
+    "r_km": [
+     -2522.82335964911,
+     -4842.567580676011,
+     4019.7869307978226
+    ],
+    "v_kms": [
+     -3.1065901244762406,
+     -3.452197448270553,
+     -6.099099140135502
+    ]
+   },
+   "duration_s": 86400,
+   "outputs": "每 3 小時 GCRF 位置",
+   "acceptance": "僅報告差異（大氣模型實作差異）",
+   "reference_tools": [
+    "Orekit SimpleExponentialAtmosphere",
+    "STK HPOP Exponential"
+   ],
+   "reference_settings": "高度以 WGS-84 大地高計算",
+   "owner": "待指派",
+   "status": "輸入凍結，待執行"
+  },
+  {
+   "id": "G5",
+   "name": "固定幾何 Pc（4 例）",
+   "layer": "L4",
+   "inputs": [
+    {
+     "miss": [
+      0.2,
+      0.0
+     ],
+     "c2": [
+      [
+       0.05,
+       -0.03
+      ],
+      [
+       -0.03,
+       1.0
+      ]
+     ],
+     "hbr_km": 0.01,
+     "expected_internal": {
+      "foster": 0.00015014168252575617,
+      "chan": 0.00015014061452750245
+     }
+    },
+    {
+     "miss": [
+      0.0,
+      0.0
+     ],
+     "c2": [
+      [
+       0.01,
+       0.0
+      ],
+      [
+       0.0,
+       0.04
+      ]
+     ],
+     "hbr_km": 0.02,
+     "expected_internal": {
+      "foster": 0.009937806042729244,
+      "chan": 0.009950166250831945
+     }
+    },
+    {
+     "miss": [
+      1.0,
+      0.5
+     ],
+     "c2": [
+      [
+       0.3,
+       0.1
+      ],
+      [
+       0.1,
+       0.2
+      ]
+     ],
+     "hbr_km": 0.5,
+     "expected_internal": {
+      "foster": 0.09703676997096439,
+      "chan": 0.1129913560940455
+     }
+    },
+    {
+     "miss": [
+      3.0,
+      0.0
+     ],
+     "c2": [
+      [
+       0.05,
+       0.0
+      ],
+      [
+       0.0,
+       1.0
+      ]
+     ],
+     "hbr_km": 0.01,
+     "expected_internal": {
+      "foster": 1.9154101327499502e-43,
+      "chan": 1.8505278002226786e-43
+     }
+    }
+   ],
+   "acceptance": "Pc ≥ 1e-6：相對差 ≤ 5%；以下：絕對差 ≤ 1e-8",
+   "reference_tools": [
+    "NASA CARA Analysis Tools（Pc2D_Foster）",
+    "STK CAT／AdvCAT（Foster 1992）"
+   ],
+   "reference_settings": "HBR 為圓盤；協方差為交會平面 2×2；不含速度不確定性",
+   "owner": "待指派",
+   "status": "輸入凍結，內部值已算出，待外部比對"
+  },
+  {
+   "id": "G6",
+   "name": "合成 LEO 會合端到端",
+   "layer": "L0／L4",
+   "inputs": "testdata/e2e_leo_synthetic.json",
+   "expected_internal": {
+    "tca_utc": "2026-11-20T05:59:59.953373Z",
+    "miss_km": 0.23157618339677885,
+    "v_rel_kms": 5.9274593241826254,
+    "pc_foster": 0.0001440885963897957
+   },
+   "acceptance": "TCA 差 ≤ 1 ms（同力模型）；最小距離差 ≤ 1 m；Pc 依 G5 門檻",
+   "reference_tools": [
+    "STK AdvCAT（HPOP 4×0）",
+    "Orekit 自行搜尋"
+   ],
+   "reference_settings": "協方差：主星 RTN σ=(0.1,0.5,0.1) km、次星 (0.2,1.0,0.2) km，獨立、忽略相關項；HBR 合計 10 m",
+   "owner": "待指派",
+   "status": "輸入凍結，待執行"
+  },
+  {
+   "id": "G7",
+   "name": "TEME→ITRF→GCRF（Vallado 2006 範例）",
+   "layer": "L1",
+   "inputs": {
+    "utc": "2004-04-06T07:51:28.386009Z",
+    "r_teme_km": [
+     5094.1801621,
+     6127.6446505,
+     6380.3445327
+    ],
+    "v_teme_kms": [
+     -4.746131487,
+     0.785818041,
+     5.531931288
+    ],
+    "eop": {
+     "xp_arcsec": -0.140682,
+     "yp_arcsec": 0.333309,
+     "ut1_utc_s": -0.4399619,
+     "lod_s": 0.0015563,
+     "dx_arcsec": -0.000205,
+     "dy_arcsec": -0.000136,
+     "dat_s": 32
+    }
+   },
+   "expected": {
+    "r_itrf_km": [
+     -1033.479383,
+     7901.2952754,
+     6380.3565958
+    ],
+    "r_gcrf_km": [
+     5102.508958,
+     6123.011401,
+     6378.136928
+    ]
+   },
+   "acceptance": "位置差 ≤ 2 cm（參考值有效位數限制）",
+   "reference_tools": [
+    "Vallado (2006) AIAA 2006-6753 範例"
+   ],
+   "owner": "自動測試（tests/test_phase2.py、cargo test）",
+   "status": "已通過（Python 與 Rust）"
+  }
+ ],
+ "rules": [
+  "清單凍結後，輸入、常數與門檻的任何修改須升版本號並記錄理由",
+  "外部工具版本、執行者與執行日期於結果回填時記錄",
+  "比對結果存於 benchmarks/results/<id>/"
+ ]
+}

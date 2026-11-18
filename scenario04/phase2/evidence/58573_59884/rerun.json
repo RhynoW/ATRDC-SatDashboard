@@ -1,0 +1,60 @@
+{
+ "meta": {
+  "case": "58573×59884",
+  "variant": null,
+  "generated_utc": "2026-11-18T03:26:19+00:00",
+  "data_source": {
+   "db_file": "space_db_slim.duckdb",
+   "db_size_bytes": 204484608,
+   "db_mtime_utc": "2026-11-18T00:29:33.469690+00:00",
+   "table": "raw_tle_archive",
+   "origin": "Space-Track gp_history／CelesTrak（經本系統資料管線匯入）"
+  },
+  "filters": {
+   "window": null,
+   "span": null,
+   "exclude_epochs": {},
+   "dedup": "同一 epoch 只保留一筆",
+   "propagation": "每個時刻取 epoch 最接近的 elset 以 SGP4 傳播"
+  },
+  "program": {
+   "repo": "scenario-advanced01",
+   "commit": "2e0b5c524a34288a17569b2e9d082c9801e30bc3",
+   "rpo_py_modified_since_commit": false,
+   "module": "scenario04/physics/rpo.py compute_rpo_scene"
+  },
+  "disclaimer": "重建結果代表在上述 TLE 輸入、篩選規則與 SGP4 模型下的計算值，不作為軌道真值、實際碰撞機率或接近意圖的判讀依據。"
+ },
+ "summary": {
+  "d_min": 1.2027,
+  "t_min": "2024-06-14T10:07:48Z",
+  "pc_max": 2.98e-06,
+  "d_min_sampled": 1.203,
+  "t_min_sampled": "2024-06-14T10:08:00Z",
+  "tca_refine_s": 1.0,
+  "d_min_global": 0.179,
+  "t_min_global": "2024-05-28T06:01:20.552839Z",
+  "n_orbit": 1441,
+  "fine_step_s": 60.0,
+  "n_series": 1501,
+  "coarse_step_min": 99.1
+ },
+ "events": [
+  {
+   "t": "2024-05-24T16:30Z",
+   "label": "DEPLOY"
+  },
+  {
+   "t": "2024-06-14T10:08Z",
+   "label": "TCA ~1.20 km"
+  }
+ ],
+ "focus": [
+  "2024-06-13T22:08:00Z",
+  "2024-06-14T22:08:00Z"
+ ],
+ "overlap": [
+  "2024-05-25T15:13:49.446912Z",
+  "2024-09-05T21:51:39.417696Z"
+ ]
+}

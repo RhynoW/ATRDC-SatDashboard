@@ -1,0 +1,75 @@
+{
+ "meta": {
+  "case": "58204×43874",
+  "variant": null,
+  "generated_utc": "2026-11-18T03:26:19+00:00",
+  "data_source": {
+   "db_file": "space_db_slim.duckdb",
+   "db_size_bytes": 204484608,
+   "db_mtime_utc": "2026-11-18T00:29:33.469690+00:00",
+   "table": "raw_tle_archive",
+   "origin": "Space-Track gp_history／CelesTrak（經本系統資料管線匯入）"
+  },
+  "filters": {
+   "window": [
+    "2024-03-01",
+    "2024-08-01"
+   ],
+   "span": [
+    "2024-03-01",
+    "2024-07-31"
+   ],
+   "exclude_epochs": {},
+   "dedup": "同一 epoch 只保留一筆",
+   "propagation": "每個時刻取 epoch 最接近的 elset 以 SGP4 傳播"
+  },
+  "program": {
+   "repo": "scenario-advanced01",
+   "commit": "2e0b5c524a34288a17569b2e9d082c9801e30bc3",
+   "rpo_py_modified_since_commit": false,
+   "module": "scenario04/physics/rpo.py compute_rpo_scene"
+  },
+  "disclaimer": "重建結果代表在上述 TLE 輸入、篩選規則與 SGP4 模型下的計算值，不作為軌道真值、實際碰撞機率或接近意圖的判讀依據。"
+ },
+ "summary": {
+  "d_min": 14.7615,
+  "t_min": "2024-05-16T20:12:21Z",
+  "pc_max": 0.0,
+  "d_min_sampled": 14.765,
+  "t_min_sampled": "2024-05-16T20:10:00Z",
+  "tca_refine_s": 1.0,
+  "d_min_global": 15.777,
+  "t_min_global": "2024-05-16T19:27:21.600000Z",
+  "n_orbit": 1153,
+  "fine_step_s": 600.0,
+  "n_series": 1501,
+  "coarse_step_min": 145.9,
+  "n_trail": 7297
+ },
+ "events": [
+  {
+   "t": "2024-05-15T13:56Z",
+   "label": "TJS-10 升軌 +11 km（西漂啟動）"
+  },
+  {
+   "t": "2024-05-16T20:10Z",
+   "label": "TCA ~15 km（越過 TJS-3）"
+  },
+  {
+   "t": "2024-05-18T14:13Z",
+   "label": "TJS-10 剎車 −11 km"
+  },
+  {
+   "t": "2024-05-27T15:31Z",
+   "label": "停漂微調 +10 km"
+  }
+ ],
+ "focus": [
+  "2024-05-12T20:10:00Z",
+  "2024-05-20T20:10:00Z"
+ ],
+ "overlap": [
+  "2024-03-01T00:00:00Z",
+  "2024-07-31T00:00:00Z"
+ ]
+}

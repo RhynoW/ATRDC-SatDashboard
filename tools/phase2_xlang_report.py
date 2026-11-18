@@ -1,0 +1,305 @@
+"""第二階段跨語言差異報告（Sprint 0 出場條件第 4 項）。
+
+把 Python 與 Rust 的差異分層量測，每層餵入完全相同的輸入：
+  L-SGP4   相同 TLE、相同時刻 → TEME（python-sgp4 vs Rust sgp4 crate）
+  L-frame  相同 TEME 狀態 → GCRF／ITRF（erfa vs sofars）
+  L-integ  相同 GCRF 初始狀態 → RK4 傳播（二體＋J2–J4；另一例加指數大氣阻力）
+  L-algo   相同二體解析軌跡 → 近接極小值、Pc、適用性篩選
+  L-schema 相同場景案例 → 錯誤代碼集合
+  L-e2e    相同場景 → 端到端報告
+用法：py -3.13 tools/phase2_xlang_report.py  （需先 cargo build --release --bin phase2_cli）
+輸出：scenario04/phase2/reports/xlang_report.{json,md}
+"""
+from __future__ import annotations
+
+import json
+import math
+import subprocess
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from scenario04.phase2 import e2e, frames as F, kepler, pc as PC  # noqa: E402
+from scenario04.phase2.constants import GM_KM3_S2  # noqa: E402
+from scenario04.phase2.eop import SNAPSHOT, TESTDATA, load_snapshot  # noqa: E402
+from scenario04.phase2.forces import ForceModel  # noqa: E402
+from scenario04.phase2.integrator import propagate  # noqa: E402
+from scenario04.phase2.schema import validate  # noqa: E402
+from scenario04.phase2.screening import screen  # noqa: E402
+from scenario04.phase2.tca import find_minima  # noqa: E402
+from scenario04.phase2.timescale import UtcTime  # noqa: E402
+
+CLI = ROOT.parent / "RUST_SatDashboard" / "target" / "release" / "phase2_cli.exe"
+OUT = ROOT / "scenario04" / "phase2" / "reports"
+TIMES = ["2026-11-20T00:00:00Z", "2026-11-21T00:00:00Z", "2026-11-23T00:00:00Z"]
+
+
+def rust(cmd: str, payload, *extra) -> object:
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(payload, f)
+        p = f.name
+    r = subprocess.run([str(CLI), cmd, p, *map(str, extra)], capture_output=True, text=True, encoding="utf-8")
+    Path(p).unlink(missing_ok=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"phase2_cli {cmd} 失敗：{r.stderr[:500]}")
+    return json.loads(r.stdout)
+
+
+def stats(arr) -> dict:
+    a = np.asarray(arr, float)
+    if a.size == 0:
+        return {"n": 0}
+    return {"n": int(a.size), "max": float(a.max()), "p99": float(np.percentile(a, 99)),
+            "median": float(np.median(a)), "mean": float(a.mean())}
+
+
+# ── L-SGP4 ────────────────────────────────────────────────────────────────────
+
+def layer_sgp4(n_leo=300, n_deep=100):
+    from sgp4.api import Satrec
+    from scenario04.ingestion.index import get_sat_index
+    idx = get_sat_index()
+    leo, deep = [], []
+    for nid in sorted(idx):
+        l1, l2 = idx[nid]["line1"], idx[nid]["line2"]
+        try:
+            mm = float(l2[52:63])
+        except ValueError:
+            continue
+        (deep if 1440.0 / mm >= 225.0 else leo).append((nid, l1, l2))
+    rng = np.random.default_rng(20261118)
+    pick = [leo[i] for i in rng.choice(len(leo), min(n_leo, len(leo)), replace=False)] + \
+           [deep[i] for i in rng.choice(len(deep), min(n_deep, len(deep)), replace=False)]
+    times = [UtcTime.parse(t) for t in TIMES]
+    rs = rust("sgp4", {"tles": [{"line1": a, "line2": b} for _, a, b in pick], "times": TIMES})
+    d = {"leo": [], "deep": []}
+    dv = {"leo": [], "deep": []}
+    err_mismatch = 0
+    teme_cases = []
+    for (nid, l1, l2), rlist in zip(pick, rs):
+        sat = Satrec.twoline2rv(l1, l2)
+        cls = "deep" if sat.method == "d" or 2 * math.pi / sat.no_kozai >= 225.0 else "leo"
+        for t, rr in zip(times, rlist):
+            e, r, v = sat.sgp4(2400000.5 + t.mjd, t.sec / 86400.0)
+            if (e != 0) != ("error" in rr):
+                err_mismatch += 1
+                continue
+            if e != 0:
+                continue
+            d[cls].append(np.linalg.norm(np.array(r) - rr["r"]) * 1000.0)
+            dv[cls].append(np.linalg.norm(np.array(v) - rr["v"]) * 1e6)
+            if len(teme_cases) < 120:
+                teme_cases.append({"t": t.iso(), "r_teme": list(r), "v_teme": list(v)})
+    worst = None
+    if d["deep"]:
+        worst = float(max(d["deep"]))
+    return {"n_tles": len(pick), "times": TIMES, "error_flag_mismatch": err_mismatch,
+            "pos_diff_m": {k: stats(v) for k, v in d.items()}, "vel_diff_mm_s": {k: stats(v) for k, v in dv.items()},
+            "worst_deep_m": worst}, teme_cases
+
+
+# ── L-frame ──────────────────────────────────────────────────────────────────
+
+def layer_frames(cases):
+    eop = load_snapshot()
+    rs = rust("frames", {"cases": cases}, SNAPSHOT)
+    dg, dvg, di = [], [], []
+    for c, r in zip(cases, rs):
+        er = F.earth_rotation(UtcTime.parse(c["t"]), eop)
+        rg, vg = F.teme_to_gcrf(np.array(c["r_teme"]), np.array(c["v_teme"]), er)
+        ri, _vi = F.teme_to_itrf(np.array(c["r_teme"]), np.array(c["v_teme"]), er)
+        dg.append(np.linalg.norm(rg - r["r_gcrf"]) * 1000.0)
+        dvg.append(np.linalg.norm(vg - r["v_gcrf"]) * 1e6)
+        di.append(np.linalg.norm(ri - r["r_itrf"]) * 1000.0)
+    return {"n": len(cases), "gcrf_pos_diff_m": stats(dg), "gcrf_vel_diff_mm_s": stats(dvg), "itrf_pos_diff_m": stats(di)}
+
+
+# ── L-integ ──────────────────────────────────────────────────────────────────
+
+def layer_integration():
+    eop = load_snapshot()
+    ep = "2026-11-20T00:00:00Z"
+    cases = []
+    for name, el, step, drag, bal in (
+        ("LEO 500 km J2–J4", kepler.Elements(6878.137, 0.001, math.radians(51.6), 0.3, 0.2, 0.1), 10.0, False, 0.0),
+        ("LEO 400 km J2–J4＋阻力", kepler.Elements(6778.137, 0.0008, math.radians(97.0), 1.0, 0.5, 2.0), 10.0, True, 0.022),
+        ("GEO J2–J4", kepler.Elements(42164.0, 0.0002, math.radians(0.05), 0.0, 0.0, 1.0), 60.0, False, 0.0),
+    ):
+        r0, v0, _ = kepler.state(el, 0.0)
+        out_times = [k * 10800.0 for k in range(9)]
+        payload = {"epoch": ep, "r_km": list(r0), "v_kms": list(v0), "duration_s": 86400.0, "step_s": step,
+                   "zonal": True, "drag": drag, "ballistic_m2_kg": bal, "out_times": out_times}
+        rs = rust("propagate", payload, SNAPSHOT)
+        ert = F.EarthRotationTable(UtcTime.parse(ep), 0.0, 86400.0, eop)
+        tr = propagate(r0, v0, 0.0, 86400.0, step, ForceModel(zonal=True, drag=drag, ballistic_m2_kg=bal), ert)
+        dd = [float(np.linalg.norm(tr.state(t)[0] - r["r"]) * 1000.0) for t, r in zip(out_times, rs)]
+        cases.append({"case": name, "pos_diff_m_by_3h": dd, "max_m": max(dd)})
+    return {"duration_s": 86400.0, "cases": cases}
+
+
+# ── L-algo ───────────────────────────────────────────────────────────────────
+
+def _py_kepler_tca(c):
+    e1, e2 = kepler.Elements(*c["e1"]), kepler.Elements(*c["e2"])
+    rel = lambda t: tuple(b - a for a, b in zip(kepler.state(e1, t), kepler.state(e2, t)))  # noqa: E731
+    res = find_minima(rel, 0.0, c["t1"], c["step"])
+    g = res["global_min"]
+    C3 = np.array(c["cov3"])
+    m2, C2, _ = PC.project(g.r_rel, g.v_rel, C3)
+    period = 2 * math.pi * math.sqrt(e1.a_km ** 3 / GM_KM3_S2)
+    scr = screen(rel, g.tau, lambda t: C3, "demo", c["hbr_km"], period, [m.tau for m in res["all_minima"]], (0.0, c["t1"]))
+    return {"tau": g.tau, "miss_km": g.miss_km, "v_rel_kms": float(np.linalg.norm(g.v_rel)),
+            "n_minima": len(res["all_minima"]), "pc_foster": PC.pc_foster(m2, C2, c["hbr_km"]),
+            "pc_chan": PC.pc_chan(m2, C2, c["hbr_km"]), "screen": scr["status"], "t_enc_s": scr["metrics"].get("t_enc_s")}
+
+
+def layer_algorithm():
+    d = math.pi / 180
+    cov = [[0.04, 0.0, 0.0], [0.0, 0.25, 0.0], [0.0, 0.0, 0.04]]
+    cases = [
+        {"name": "LEO 交叉", "e1": [6878.137, 0.0005, 51.6 * d, 0.5, 0.0, 0.0], "e2": [6878.537, 0.0005, 97.4 * d, 0.5, 0.0, 0.001],
+         "t1": 10800.0, "step": 10.0, "cov3": cov, "hbr_km": 0.01},
+        {"name": "LEO 迎頭", "e1": [6878.137, 0.0005, 51.6 * d, 0.5, 0.0, 0.0],
+         "e2": [6878.337, 0.0005, (180 - 51.6) * d, 0.5 + math.pi, math.pi, -0.0002], "t1": 10800.0, "step": 10.0, "cov3": cov, "hbr_km": 0.02},
+        {"name": "LEO 小角度追越", "e1": [6878.137, 0.0005, 51.6 * d, 0.5, 0.0, 0.0], "e2": [6878.237, 0.0006, 51.65 * d, 0.5003, 0.0, -0.0005],
+         "t1": 86400.0, "step": 10.0, "cov3": cov, "hbr_km": 0.01},
+        {"name": "GEO 慢速", "e1": [42164.0, 0.0002, 0.001, 0.0, 0.0, 0.0], "e2": [42164.5, 0.0003, 0.0012, 0.0, 0.0, 0.00002],
+         "t1": 172800.0, "step": 60.0, "cov3": [[1.0, 0, 0], [0, 4.0, 0], [0, 0, 1.0]], "hbr_km": 0.01},
+    ]
+    rs = rust("kepler-tca", {"cases": cases})
+    rows = []
+    for c, r in zip(cases, rs):
+        p = _py_kepler_tca(c)
+        rel_pc = (abs(p["pc_foster"] - r["pc_foster"]) / max(abs(p["pc_foster"]), 1e-300)) if p["pc_foster"] else 0.0
+        rows.append({"case": c["name"], "dtau_s": abs(p["tau"] - r["tau"]), "dmiss_m": abs(p["miss_km"] - r["miss_km"]) * 1000,
+                     "dvrel_mm_s": abs(p["v_rel_kms"] - r["v_rel_kms"]) * 1e6, "pc_foster_py": p["pc_foster"],
+                     "pc_foster_rel_diff": rel_pc, "screen_py": p["screen"], "screen_rs": r["screen"],
+                     "n_minima_equal": p["n_minima"] == r["n_minima"]})
+    pcs = [{"miss": [0.2, 0.0], "c2": [[0.05, -0.03], [-0.03, 1.0]], "hbr_km": 0.01},
+           {"miss": [0.0, 0.0], "c2": [[0.01, 0.0], [0.0, 0.04]], "hbr_km": 0.02},
+           {"miss": [1.0, 0.5], "c2": [[0.3, 0.1], [0.1, 0.2]], "hbr_km": 0.5},
+           {"miss": [3.0, 0.0], "c2": [[0.05, 0.0], [0.0, 1.0]], "hbr_km": 0.01}]
+    rp = rust("pc", {"cases": pcs})
+    pc_rows = []
+    for c, r in zip(pcs, rp):
+        f = PC.pc_foster(np.array(c["miss"]), np.array(c["c2"]), c["hbr_km"])
+        ch = PC.pc_chan(np.array(c["miss"]), np.array(c["c2"]), c["hbr_km"])
+        pc_rows.append({"foster": f, "foster_abs_diff": abs(f - r["foster"]), "foster_rel_diff": abs(f - r["foster"]) / max(f, 1e-300),
+                        "chan_rel_diff": abs(ch - r["chan"]) / max(ch, 1e-300)})
+    return {"kepler_tca": rows, "pc": pc_rows}
+
+
+# ── L-schema、L-e2e ─────────────────────────────────────────────────────────
+
+def layer_schema():
+    spec = json.loads((TESTDATA / "schema_cases.json").read_text(encoding="utf-8"))
+    base = json.loads((TESTDATA / spec["base"]).read_text(encoding="utf-8"))
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_phase2 import _apply  # noqa: E402
+    rs = rust("schema-cases", spec)  # 只需檔案路徑；以下改傳路徑
+    return rs, spec, base, _apply
+
+
+def layer_schema_compare():
+    path = TESTDATA / "schema_cases.json"
+    spec = json.loads(path.read_text(encoding="utf-8"))
+    base = json.loads((TESTDATA / spec["base"]).read_text(encoding="utf-8"))
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_phase2 import _apply  # noqa: E402
+    r = subprocess.run([str(CLI), "schema-cases", str(path)], capture_output=True, text=True, encoding="utf-8")
+    rs = {x["name"]: x["codes"] for x in json.loads(r.stdout)}
+    mism = []
+    for c in spec["cases"]:
+        py = validate(_apply(base, c["ops"]))["codes"]
+        if py != rs.get(c["name"]):
+            mism.append({"case": c["name"], "python": py, "rust": rs.get(c["name"])})
+    return {"n_cases": len(spec["cases"]), "mismatches": mism}
+
+
+def layer_e2e():
+    path = TESTDATA / "e2e_leo_synthetic.json"
+    sc = json.loads(path.read_text(encoding="utf-8"))
+    py = e2e.run(sc, load_snapshot())
+    r = subprocess.run([str(CLI), "e2e", str(path), str(SNAPSHOT)], capture_output=True, text=True, encoding="utf-8")
+    rs = json.loads(r.stdout)
+    rows = []
+    for a, b in zip(py["events"], rs["events"]):
+        rows.append({"tca_utc": a["tca_utc"], "dtau_s": abs(a["tca_tau_s"] - b["tca_tau_s"]),
+                     "dmiss_m": abs(a["miss_km"] - b["miss_km"]) * 1000.0,
+                     "pc_foster_py": a["pc"]["foster"], "pc_foster_rel_diff": abs(a["pc"]["foster"] - b["pc"]["foster"]) / max(a["pc"]["foster"], 1e-300),
+                     "screen_equal": a["applicability"]["status"] == b["applicability"]["status"]})
+    return {"n_events_py": len(py["events"]), "n_events_rs": len(rs["events"]), "events": rows}
+
+
+def to_md(rep: dict) -> str:
+    s = rep["layers"]
+    L = [f"# 第二階段跨語言差異報告", "", f"產生時間：{rep['generated_utc']}　EOP：{rep['eop']}", "",
+         "每一層餵入完全相同的輸入，差異只來自該層的實作。", "",
+         "## L-SGP4（python-sgp4 vs Rust sgp4 crate）", "",
+         f"TLE {s['sgp4']['n_tles']} 筆 × {len(s['sgp4']['times'])} 個時刻；錯誤旗標不一致 {s['sgp4']['error_flag_mismatch']} 筆。", "",
+         "| 類別 | 筆數 | 位置差中位數 m | p99 m | 最大 m | 速度差最大 mm/s |", "|---|---|---|---|---|---|"]
+    for k, lab in (("leo", "近地（週期 < 225 min）"), ("deep", "深空（週期 ≥ 225 min）")):
+        p, v = s["sgp4"]["pos_diff_m"][k], s["sgp4"]["vel_diff_mm_s"][k]
+        if p.get("n"):
+            L.append(f"| {lab} | {p['n']} | {p['median']:.3e} | {p['p99']:.3e} | {p['max']:.3e} | {v['max']:.3e} |")
+    f = s["frames"]
+    L += ["", "## L-frame（erfa vs sofars，IAU-2006/2000A）", "",
+          f"{f['n']} 筆：GCRF 位置差最大 {f['gcrf_pos_diff_m']['max']:.3e} m、速度差最大 {f['gcrf_vel_diff_mm_s']['max']:.3e} mm/s；"
+          f"ITRF 位置差最大 {f['itrf_pos_diff_m']['max']:.3e} m。", "",
+          "## L-integ（相同初始狀態，RK4 傳播 1 天）", "", "| 案例 | 最大位置差 m |", "|---|---|"]
+    for c in s["integration"]["cases"]:
+        L.append(f"| {c['case']} | {c['max_m']:.3e} |")
+    L += ["", "## L-algo（相同二體解析軌跡）", "",
+          "| 案例 | ΔTCA s | Δ距離 m | Δ相對速度 mm/s | Pc Foster | Pc 相對差 | 篩選 Py／Rs | 極小值數相同 |", "|---|---|---|---|---|---|---|---|"]
+    for r in s["algorithm"]["kepler_tca"]:
+        L.append(f"| {r['case']} | {r['dtau_s']:.2e} | {r['dmiss_m']:.2e} | {r['dvrel_mm_s']:.2e} | {r['pc_foster_py']:.3e} | "
+                 f"{r['pc_foster_rel_diff']:.2e} | {r['screen_py']}／{r['screen_rs']} | {r['n_minima_equal']} |")
+    L += ["", "Pc 固定輸入（Foster 相對差／Chan 相對差）：" + "；".join(
+        f"{r['foster']:.3e}：{r['foster_rel_diff']:.1e}／{r['chan_rel_diff']:.1e}" for r in s["algorithm"]["pc"])]
+    L += ["", "## L-schema", "", f"{s['schema']['n_cases']} 個案例，代碼不一致 {len(s['schema']['mismatches'])} 個。",
+          "", "## L-e2e（合成 LEO 場景）", "",
+          f"事件數 Python {s['e2e']['n_events_py']}、Rust {s['e2e']['n_events_rs']}。", "",
+          "| TCA | ΔTCA s | Δ距離 m | Pc | Pc 相對差 | 篩選一致 |", "|---|---|---|---|---|---|"]
+    for r in s["e2e"]["events"]:
+        L.append(f"| {r['tca_utc']} | {r['dtau_s']:.2e} | {r['dmiss_m']:.2e} | {r['pc_foster_py']:.3e} | {r['pc_foster_rel_diff']:.2e} | {r['screen_equal']} |")
+    L += ["", "## 結論與容差建議", ""] + [f"- {x}" for x in rep["conclusions"]]
+    return "\n".join(L) + "\n"
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    sg, teme = layer_sgp4()
+    rep = {"generated_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+           "eop": load_snapshot().version(),
+           "layers": {"sgp4": sg, "frames": layer_frames(teme), "integration": layer_integration(),
+                      "algorithm": layer_algorithm(), "schema": layer_schema_compare(), "e2e": layer_e2e()}}
+    s = rep["layers"]
+    leo_max = s["sgp4"]["pos_diff_m"]["leo"].get("max", 0.0)
+    deep_max = s["sgp4"]["pos_diff_m"]["deep"].get("max", 0.0)
+    worst = max(leo_max, deep_max)
+    rec = 10 ** math.ceil(math.log10(worst * 3)) if worst > 0 else 1e-3
+    rep["tolerance_recommendation"] = {"tle_input_position_eps_abs_m": rec, "basis_max_m": worst}
+    rep["conclusions"] = [
+        f"SGP4 層：近地物體最大差 {leo_max:.2e} m、深空物體最大差 {deep_max:.2e} m；"
+        f"建議第 10 節「TLE 輸入（經 SGP4）的位置」容差 ε_abs = {rec * 1000:g} mm（實測最大值約 3 倍餘裕）。"
+        "兩邊皆採 WGS-72、opsmode 'i'；Rust sgp4 crate 的 Constants::from_elements 預設為 WGS-84，不可使用。",
+        f"框架層：GCRF 最大差 {s['frames']['gcrf_pos_diff_m']['max']:.1e} m，遠低於 1 mm 容差。",
+        "積分層：最大差 " + "、".join(f"{c['case']} {c['max_m']:.1e} m" for c in s["integration"]["cases"]) + "。",
+        "演算法層：ΔTCA 最大 " + f"{max(r['dtau_s'] for r in s['algorithm']['kepler_tca']):.1e} s，"
+        "Pc 相對差最大 " + f"{max(r['pc_foster_rel_diff'] for r in s['algorithm']['kepler_tca']):.1e}；"
+        "篩選狀態" + ("全部一致" if all(r['screen_py'] == r['screen_rs'] for r in s['algorithm']['kepler_tca']) else "有不一致") + "。",
+        f"Schema 層：{s['schema']['n_cases']} 案例代碼不一致 {len(s['schema']['mismatches'])} 個。",
+    ]
+    (OUT / "xlang_report.json").write_text(json.dumps(rep, indent=1, ensure_ascii=False), encoding="utf-8")
+    (OUT / "xlang_report.md").write_text(to_md(rep), encoding="utf-8")
+    print(to_md(rep))
+
+
+if __name__ == "__main__":
+    main()

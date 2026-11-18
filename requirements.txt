@@ -12,6 +12,7 @@ waitress>=3.0
 scipy>=1.11
 PyYAML>=6.0
 jsonschema>=4.0
+pyerfa>=2.0.1   # 第二階段 frames/forces（IAU-2006/2000A 進動章動、ERA）
 matplotlib>=3.8   # /api/rpo/<p>/<s>/report.png 靜態影像報告
 
 # 開發/測試

@@ -87,8 +87,18 @@ class EarthRotationTable:
         self.dat = eop.at(epoch.plus(t0_s).mjd_float()).dat_s
         if eop.at(epoch.plus(t1_s).mjd_float()).dat_s != self.dat:
             raise ValueError("傳播區間跨越閏秒，Sprint 0 不支援")
+        self._memo: dict[float, EarthRotation] = {}
 
     def at(self, tau_s: float) -> EarthRotation:
+        """同一 τ 重複查詢（RK4 子步、狀態與協方差積分共用節點）時直接取快取；結果與直接計算完全相同。"""
+        hit = self._memo.get(tau_s)
+        if hit is None:
+            if len(self._memo) > 400_000:
+                self._memo.clear()
+            hit = self._memo[tau_s] = self._compute(tau_s)
+        return hit
+
+    def _compute(self, tau_s: float) -> EarthRotation:
         u = tau_s / self.step - self.n0
         i = min(max(int(np.floor(u)), 0), len(self.vals) - 2)
         f = u - i

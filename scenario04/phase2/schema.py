@@ -18,6 +18,9 @@
   E_DV_RANGE_ORDER                dv_ms 須 lo ≤ hi
   E_DRAG_PARAMS_MISSING           drag=true 但物體缺 area_to_mass_m2kg 或 cd
   E_TIME_PARSE                    時刻字串無法解析或無時區
+  E_PROPAGATOR_SGP4_NEEDS_TLE     screening.propagator=sgp4 但有物體以狀態向量給定
+  E_COV_EPOCH_MISMATCH            傳播模式協方差曆元須等於該物體星曆曆元（狀態向量 epoch；TLE 物體為 screening.start）
+  E_MIN_STEP_GT_COARSE            screening.min_step_s 大於 coarse_step_s
 """
 from __future__ import annotations
 
@@ -81,6 +84,17 @@ def validate(sc: dict) -> dict:
     roles = [o["role"] for o in sc["objects"]]
     if len(set(roles)) != len(roles):
         codes.add("E_ROLE_DUPLICATE")
+    scr = sc["screening"]
+    if scr.get("propagator") == "sgp4" and any(o["ephemeris"]["type"] != "TLE" for o in sc["objects"]):
+        codes.add("E_PROPAGATOR_SGP4_NEEDS_TLE")
+    if "min_step_s" in scr and scr["min_step_s"] > scr.get("coarse_step_s", 60.0):
+        codes.add("E_MIN_STEP_GT_COARSE")
+    for o in sc["objects"]:
+        cov = o.get("covariance") or {}
+        if cov.get("mode") == "propagated" and "epoch" in cov:
+            ref = o["ephemeris"]["epoch"] if o["ephemeris"]["type"] == "state" else scr["start"]
+            if abs(_seconds_between(ref, cov["epoch"])) > 1e-6:
+                codes.add("E_COV_EPOCH_MISMATCH")
 
     for o in sc["objects"]:
         cov = o.get("covariance")

@@ -1,27 +1,27 @@
-"""最小端到端案例（Sprint 0 出場條件第 3 項）：
+"""場景端到端：場景 JSON → 驗證 → 星曆（SGP4 或數值，GCRF）→ 自適應近接搜尋 → 協方差（展示或傳播模式）
+→ 適用性篩選 → Foster／Chan Pc → 報告（JSON＋Markdown）。
 
-場景 JSON → 驗證 → 初始狀態（state 或 TLE→SGP4→TEME）→ GCRF → RK4 數值傳播（二體＋J2–J4［＋阻力］）
-→ 近接極小值搜尋 → 固定協方差（展示模式）→ 適用性篩選 → Foster／Chan Pc → 報告（JSON＋Markdown）。
+screening.propagator：auto（TLE 用 SGP4、狀態向量用數值積分；預設）、sgp4（全部 SGP4，僅限 TLE）、
+numerical（全部數值積分；TLE 物件先以 SGP4 取 start 時刻狀態）。
 """
 from __future__ import annotations
-
-import math
 
 import numpy as np
 
 from . import constants as K
+from .covprop import CovarianceTrack
 from .eop import Eop
+from .ephemeris import NumericalEphemeris, RelativeState, Sgp4Ephemeris
+from .events import build_event
 from .forces import ExponentialAtmosphere, ForceModel
 from .frames import EarthRotationTable, earth_rotation, teme_to_gcrf
-from .integrator import Trajectory, propagate
-from .pc import pc_chan, pc_foster, project
-from .rtn import rtn_matrix
+from .integrator import propagate
+from .rtn import cov_rtn_to_gcrf, rtn_matrix
 from .schema import validate
-from .screening import screen
-from .tca import find_minima
+from .tca import find_minima_adaptive
 from .timescale import UtcTime
 
-CODE_VERSION = "phase2-sprint0"
+CODE_VERSION = "phase2-sprint1"
 
 
 def _seconds(a: UtcTime, b: UtcTime) -> float:
@@ -39,109 +39,116 @@ def initial_state_gcrf(obj: dict, start: UtcTime, eop: Eop):
         return r, v, _seconds(start, ep)
     from sgp4.api import Satrec
     sat = Satrec.twoline2rv(eph["line1"], eph["line2"])
-    jd, fr = K.MJD0 + start.mjd, start.sec / K.DAY_S
-    e, r, v = sat.sgp4(jd, fr)
+    e, r, v = sat.sgp4(K.MJD0 + start.mjd, start.sec / K.DAY_S)
     if e != 0:
         raise ValueError(f"SGP4 錯誤碼 {e}（{obj['name']}）")
     rg, vg = teme_to_gcrf(np.array(r), np.array(v), earth_rotation(start, eop))
     return rg, vg, 0.0
 
 
-def _demo_cov_gcrf(obj: dict, r, v) -> np.ndarray | None:
+def _object_covariance(obj, eph, t0, dur, ert, zonal, regime_geo):
+    """回傳 (c3_at, mode, source, describe)；無協方差則 (None, None, None, None)。"""
     cov = obj.get("covariance")
-    if not cov or cov["mode"] != "demo":
-        return None
-    C = rtn_matrix(r, v)
-    return C.T @ np.diag(np.square(cov["sigma_km"])) @ C
+    if not cov:
+        return None, None, None, None
+    if cov["mode"] == "demo":
+        s2 = np.square(np.asarray(cov["sigma_km"], float))
+
+        def f(tau):
+            r, v = eph.rv(tau)
+            C = rtn_matrix(r, v)
+            return C.T @ np.diag(s2) @ C
+        return f, "demo", cov["source"], {"method": "demo", "sigma_km": cov["sigma_km"]}
+    P0 = np.array(cov["matrix_6x6"], float)
+    r0, v0 = eph.rv(t0)
+    if cov["frame"] == "RTN":
+        P0 = cov_rtn_to_gcrf(P0, r0, v0, cov["velocity_convention"])
+    q = float(((cov.get("propagation") or {}).get("process_noise") or {}).get("q_km2_s3", 0.0))
+    step = K.COV_STEP_GEO_S if regime_geo else K.COV_STEP_LEO_S
+    track = CovarianceTrack(eph, P0, t0, dur, step, ert, zonal=zonal, q_km2_s3=q)
+    return (lambda tau: track.at(tau)[:3, :3]), "propagated", cov["source"], track.describe()
 
 
 def run(sc: dict, eop: Eop) -> dict:
     val = validate(sc)
     if not val["ok"]:
         return {"status": "invalid_scenario", "validation": val}
-    start = UtcTime.parse(sc["screening"]["start"])
-    dur = float(sc["screening"]["duration_s"])
+    scr_cfg = sc["screening"]
+    start = UtcTime.parse(scr_cfg["start"])
+    dur = float(scr_cfg["duration_s"])
     objs = {o["role"]: o for o in sc["objects"]}
     regimes = {o.get("orbit_regime", "LEO") for o in sc["objects"]}
-    step = float(sc["screening"].get("step_s") or (K.RK4_STEP_GEO_S if regimes == {"GEO"} else K.RK4_STEP_LEO_S))
+    geo = regimes == {"GEO"}
+    step = float(scr_cfg.get("step_s") or (K.RK4_STEP_GEO_S if geo else K.RK4_STEP_LEO_S))
+    coarse = float(scr_cfg.get("coarse_step_s") or K.SEARCH_COARSE_STEP_S)
+    min_step = float(scr_cfg.get("min_step_s") or K.SEARCH_MIN_STEP_S)
+    mode = scr_cfg.get("propagator", "auto")
     fm_cfg = sc["force_model"]
 
-    init = {role: initial_state_gcrf(o, start, eop) for role, o in objs.items()}
-    t_lo = min(min(t0 for _, _, t0 in init.values()), 0.0)
-    if any(t0 > 0 for _, _, t0 in init.values()):
-        return {"status": "invalid_scenario",
-                "validation": {"ok": False, "codes": ["E_STATE_EPOCH_AFTER_START"], "messages": []}}
-    ert = EarthRotationTable(start, t_lo, dur, eop) if (fm_cfg["zonal"] or fm_cfg["drag"]) else None
+    t_lo = 0.0
+    for o in sc["objects"]:
+        if o["ephemeris"]["type"] == "state":
+            t_lo = min(t_lo, _seconds(start, UtcTime.parse(o["ephemeris"]["epoch"])))
+            if _seconds(start, UtcTime.parse(o["ephemeris"]["epoch"])) > 0:
+                return {"status": "invalid_scenario",
+                        "validation": {"ok": False, "codes": ["E_STATE_EPOCH_AFTER_START"], "messages": []}}
+    ert = EarthRotationTable(start, t_lo - 1.0, dur + 1.0, eop)
 
-    traj: dict[str, Trajectory] = {}
-    for role, (r0, v0, t0) in init.items():
-        o = objs[role]
-        fm = ForceModel(zonal=fm_cfg["zonal"], drag=fm_cfg["drag"],
-                        ballistic_m2_kg=float(o.get("cd", 0.0)) * float(o.get("area_to_mass_m2kg", 0.0)),
-                        atmos=ExponentialAtmosphere())
-        traj[role] = propagate(r0, v0, t0, dur, step, fm, ert)
+    ephs, prov_eph, covs = {}, {}, {}
+    for role, o in objs.items():
+        use_sgp4 = o["ephemeris"]["type"] == "TLE" and mode in ("auto", "sgp4")
+        if use_sgp4:
+            ephs[role] = Sgp4Ephemeris(o["ephemeris"]["line1"], o["ephemeris"]["line2"], start, ert, (0.0, dur))
+            prov_eph[role] = "SGP4 (WGS-72, opsmode i) → GCRF"
+            t0 = 0.0
+        else:
+            r0, v0, t0 = initial_state_gcrf(o, start, eop)
+            fm = ForceModel(zonal=fm_cfg["zonal"], drag=fm_cfg["drag"],
+                            ballistic_m2_kg=float(o.get("cd", 0.0)) * float(o.get("area_to_mass_m2kg", 0.0)),
+                            atmos=ExponentialAtmosphere())
+            ephs[role] = NumericalEphemeris(propagate(r0, v0, t0, dur, step, fm, ert))
+            prov_eph[role] = f"numerical RK4 {step:g} s, {fm.describe()}"
+        covs[role] = _object_covariance(o, ephs[role], t0, dur, ert, fm_cfg["zonal"], geo)
 
-    P, S = traj["primary"], traj["secondary"]
-
-    def rel(tau):
-        rp, vp, ap = P.state(tau)
-        rs, vs, as_ = S.state(tau)
-        return rs - rp, vs - vp, as_ - ap
-
-    thr = float(sc["screening"]["threshold_km"])
-    res = find_minima(rel, 0.0, dur, step, thr)
+    rel = RelativeState(ephs["primary"], ephs["secondary"])
+    thr = float(scr_cfg["threshold_km"])
+    res = find_minima_adaptive(rel.rv, rel.rva, 0.0, dur, coarse, thr, min_step)
     hbr_km = (objs["primary"]["hbr_m"] + objs["secondary"]["hbr_m"]) / 1000.0
-    other = [m.tau for m in res["all_minima"]]
-
-    def c3_at(tau):
-        rp, vp, _ = P.state(tau)
-        rs, vs, _ = S.state(tau)
-        cp = _demo_cov_gcrf(objs["primary"], rp, vp)
-        cs = _demo_cov_gcrf(objs["secondary"], rs, vs)
-        if cp is None or cs is None:
-            return None
-        return cp + cs
-
-    have_cov = c3_at(0.0) is not None
-    events = []
-    for ev in res["events"]:
-        rp, vp, _ = P.state(ev.tau)
-        a_semi = 1.0 / (2.0 / np.linalg.norm(rp) - np.dot(vp, vp) / K.GM_KM3_S2)
-        period = 2 * math.pi * math.sqrt(a_semi ** 3 / K.GM_KM3_S2)
-        C = rtn_matrix(rp, vp)
-        out = {
-            "tca_utc": start.plus(ev.tau).iso(), "tca_tau_s": ev.tau, "flag": ev.flag,
-            "miss_km": ev.miss_km, "v_rel_kms": float(np.linalg.norm(ev.v_rel)),
-            "miss_rtn_km": [float(x) for x in C @ ev.r_rel],
-            "approach_angle_deg": float(math.degrees(math.acos(max(-1.0, min(1.0,
-                np.dot(vp, vp + ev.v_rel) / (np.linalg.norm(vp) * np.linalg.norm(vp + ev.v_rel))))))),
-            "accuracy_note": "TCA 與距離為數值解（求根容差 1e-6 s）；預報準確度受輸入狀態與模型不確定性限制",
-        }
-        scr = screen(rel, ev.tau, c3_at if have_cov else None, "demo", hbr_km, period, other, (0.0, dur))
-        out["applicability"] = scr
-        if have_cov:
-            C3 = c3_at(ev.tau)
-            miss2, C2, _F = project(ev.r_rel, ev.v_rel, C3)
-            out["bplane"] = {"miss_km": [float(x) for x in miss2], "cov_km2": C2.tolist()}
-            out["pc"] = {"foster": pc_foster(miss2, C2, hbr_km), "chan": pc_chan(miss2, C2, hbr_km),
-                         "hbr_km": hbr_km, "covariance_mode": "demo",
-                         "covariance_source": [objs[k]["covariance"]["source"] for k in ("primary", "secondary")],
-                         "interpretation": ("通過目前啟發式篩選；Pc 為展示模式假設下的值"
-                                            if scr["status"] == "passes_initial_screen" else
-                                            "未通過或無法判定適用性篩選；二維 Pc 僅供參考")}
-        events.append(out)
+    others = [m.tau for m in res["all_minima"]]
+    cp, cs = covs["primary"], covs["secondary"]
+    have_cov = cp[0] is not None and cs[0] is not None
+    if have_cov:
+        cov_mode = "propagated" if "propagated" in (cp[1], cs[1]) else "demo"
+        if cp[1] != cs[1]:
+            cov_mode = "mixed"
+        c3_at = lambda tau: cp[0](tau) + cs[0](tau)  # noqa: E731
+    else:
+        cov_mode, c3_at = None, None
+    screen_mode = "propagated" if cov_mode in ("propagated", "mixed") else "demo"
+    events = [build_event(start, ap, rel, ephs["primary"], c3_at, screen_mode, hbr_km, others, (0.0, dur),
+                          [cp[2], cs[2]] if have_cov else None) for ap in res["events"]]
+    for e in events:
+        if e.get("pc"):
+            e["pc"]["covariance_mode"] = cov_mode
 
     gmin = res["global_min"]
+    n_search_evals = rel.n_evals
+    n_series = int(min(600, max(2, dur / coarse + 1)))
+    s_step = dur / (n_series - 1)
+    series = {"step_s": s_step, "d_km": [float(np.linalg.norm(rel.rv(i * s_step)[0])) for i in range(n_series)]}
     return {
         "status": "ok",
         "scenario_id": sc["id"],
+        "start": start.iso(), "duration_s": dur, "threshold_km": thr,
+        "objects": {r: {"name": o["name"], "norad_id": o.get("norad_id")} for r, o in objs.items()},
+        "series": series,
         "provenance": {"code_version": CODE_VERSION, "constants_version": K.CONSTANTS_VERSION,
-                       "eop": eop.version(), "frames": {"sgp4_output": "TEME", "propagation": "GCRF",
-                                                         "precession_nutation": "IAU-2006/2000A CIO (xy06+s06), dX/dY applied"},
-                       "integrator": {"method": "RK4 fixed-step", "step_s": step,
-                                      "interpolation": "quintic Hermite (r, v, a)"},
-                       "force_model": ForceModel(zonal=fm_cfg["zonal"], drag=fm_cfg["drag"]).describe()},
-        "search": {**res["resolution"], "n_minima": len(res["all_minima"]),
+                       "eop": eop.version(),
+                       "frames": {"sgp4_output": "TEME", "propagation": "GCRF",
+                                  "precession_nutation": "IAU-2006/2000A CIO (xy06+s06), dX/dY applied"},
+                       "propagator_mode": mode, "ephemeris": prov_eph,
+                       "covariance": {"primary": cp[3], "secondary": cs[3]}},
+        "search": {**res["resolution"], "n_minima": len(res["all_minima"]), "n_evals": n_search_evals,
                    "global_min": ({"tca_utc": start.plus(gmin.tau).iso(), "miss_km": gmin.miss_km, "flag": gmin.flag}
                                   if gmin else None)},
         "events": events,
@@ -152,17 +159,20 @@ def to_markdown(rep: dict) -> str:
     if rep.get("status") != "ok":
         return f"# 場景無效\n\n錯誤代碼：{', '.join(rep['validation']['codes'])}\n"
     p = rep["provenance"]
+    s = rep["search"]
     lines = [f"# 端到端報告：{rep['scenario_id']}", "",
              f"- 程式版本：{p['code_version']}；常數：{p['constants_version']}",
              f"- EOP：{p['eop']['file']}（sha256 {p['eop']['sha256']}，最後觀測值 {p['eop']['last_observed']}）",
-             f"- 積分：{p['integrator']['method']}，步長 {p['integrator']['step_s']} s；力模型：{p['force_model']}",
-             f"- 搜尋：節點間距 {rep['search']['node_step_s']} s、門檻 {rep['search']['threshold_km']} km、"
-             f"極小值 {rep['search']['n_minima']} 個", "",
+             f"- 星曆：主星 {p['ephemeris']['primary']}；次星 {p['ephemeris']['secondary']}",
+             f"- 搜尋：自適應，粗掃 {s['coarse_step_s']} s、最小步長 {s['min_step_s']} s、門檻 {s['threshold_km']} km；"
+             f"極小值 {s['n_minima']} 個", "",
              "| TCA (UTC) | 距離 km | 相對速度 km/s | 適用性 | Pc Foster | Pc Chan |",
              "|---|---|---|---|---|---|"]
     for e in rep["events"]:
         pc = e.get("pc") or {}
+        f = pc.get("foster")
+        c = pc.get("chan")
         lines.append(f"| {e['tca_utc']} | {e['miss_km']:.4f} | {e['v_rel_kms']:.4f} | "
-                     f"{e['applicability']['status']} | {pc.get('foster', float('nan')):.3e} | {pc.get('chan', float('nan')):.3e} |")
-    lines += ["", "註：Pc 為展示模式（固定 RTN σ、忽略相關項）下的值；TCA 求根精度不代表預報準確度。"]
+                     f"{e['applicability']['status']} | {'—' if f is None else f'{f:.3e}'} | {'—' if c is None else f'{c:.3e}'} |")
+    lines += ["", "註：TCA 與距離的位數代表求根精度，不代表預報準確度；Pc 依所列協方差假設計算。"]
     return "\n".join(lines) + "\n"

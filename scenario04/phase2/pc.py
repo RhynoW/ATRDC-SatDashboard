@@ -102,7 +102,11 @@ def pc_chan(miss2, C2, hbr_km: float, max_terms: int = CHAN_MAX_TERMS) -> float:
     ym = -st * miss2[0] + ct * miss2[1]
     u = hbr_km ** 2 / (sx * sy)
     v = xm * xm / l1 + ym * ym / l2
-    # 1 − e^{−u/2} Σ_{k≤m} (u/2)^k/k! = Σ_{k>m} p_k（Poisson 尾項）；由大 k 往小 k 累加，避免相減相消
+    # Pc = Σ_m w_m · tail_m，w_m = e^{−v/2}(v/2)^m/m!（遞迴，不溢位），
+    # tail_m = 1 − e^{−u/2} Σ_{k≤m} (u/2)^k/k! = Σ_{k>m} p_k（Poisson 尾項，由大 k 往小 k 累加，避免相減相消）
+    if 0.5 * v > 700.0:          # e^{−v/2} 下溢：miss 遠大於 σ
+        return 0.0
+    max_terms = max_terms + int(math.ceil(0.5 * v))
     kmax = max_terms + 60
     pk = [0.0] * (kmax + 1)
     pk[0] = math.exp(-0.5 * u)
@@ -113,13 +117,13 @@ def pc_chan(miss2, C2, hbr_km: float, max_terms: int = CHAN_MAX_TERMS) -> float:
     for k in range(kmax, 0, -1):
         acc += pk[k]
         tail[k - 1] = acc
-    tv = 1.0                           # (v/2)^m / m!
+    w = math.exp(-0.5 * v)             # w_m
     total = 0.0
     for m in range(max_terms):
         if m > 0:
-            tv *= 0.5 * v / m
-        term = tv * tail[m]
+            w *= 0.5 * v / m
+        term = w * tail[m]
         total += term
-        if m > 2 and term < 1e-18 * max(total, 1e-300):
+        if m > 0.5 * v + 2 and term < 1e-18 * max(total, 1e-300):
             break
-    return float(math.exp(-0.5 * v) * total)
+    return float(total)

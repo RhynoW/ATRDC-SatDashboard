@@ -197,15 +197,6 @@ def layer_algorithm():
 
 # ── L-schema、L-e2e ─────────────────────────────────────────────────────────
 
-def layer_schema():
-    spec = json.loads((TESTDATA / "schema_cases.json").read_text(encoding="utf-8"))
-    base = json.loads((TESTDATA / spec["base"]).read_text(encoding="utf-8"))
-    sys.path.insert(0, str(ROOT / "tests"))
-    from test_phase2 import _apply  # noqa: E402
-    rs = rust("schema-cases", spec)  # 只需檔案路徑；以下改傳路徑
-    return rs, spec, base, _apply
-
-
 def layer_schema_compare():
     path = TESTDATA / "schema_cases.json"
     spec = json.loads(path.read_text(encoding="utf-8"))
@@ -223,18 +214,85 @@ def layer_schema_compare():
 
 
 def layer_e2e():
-    path = TESTDATA / "e2e_leo_synthetic.json"
-    sc = json.loads(path.read_text(encoding="utf-8"))
-    py = e2e.run(sc, load_snapshot())
-    r = subprocess.run([str(CLI), "e2e", str(path), str(SNAPSHOT)], capture_output=True, text=True, encoding="utf-8")
-    rs = json.loads(r.stdout)
+    out = {}
+    for name in ("e2e_leo_synthetic", "e2e_leo_propagated", "e2e_tle_iss_css"):
+        path = TESTDATA / f"{name}.json"
+        sc = json.loads(path.read_text(encoding="utf-8"))
+        py = e2e.run(sc, load_snapshot())
+        r = subprocess.run([str(CLI), "e2e", str(path), str(SNAPSHOT)], capture_output=True, text=True, encoding="utf-8")
+        rs = json.loads(r.stdout)
+        rows = []
+        for a, b in zip(py["events"], rs["events"]):
+            pa, pb = (a.get("pc") or {}).get("foster") or 0.0, (b.get("pc") or {}).get("foster") or 0.0
+            rows.append({"tca_utc": a["tca_utc"], "dtau_s": abs(a["tca_tau_s"] - b["tca_tau_s"]),
+                         "dmiss_m": abs(a["miss_km"] - b["miss_km"]) * 1000.0, "pc_foster_py": pa,
+                         "pc_foster_rel_diff": abs(pa - pb) / max(abs(pa), 1e-300) if pa else abs(pb),
+                         "screen_equal": a["applicability"]["status"] == b["applicability"]["status"]})
+        out[name] = {"n_events_py": len(py["events"]), "n_events_rs": len(rs["events"]), "events": rows,
+                     "n_minima_equal": py["search"]["n_minima"] == rs["search"]["n_minima"]}
+    return out
+
+
+def layer_adaptive():
+    from scenario04.phase2.ephemeris import RelativeState, Sgp4Ephemeris
+    from scenario04.phase2.tca import find_minima_adaptive
+    tles = json.loads((TESTDATA / "tle_fixture.json").read_text(encoding="utf-8"))["tles"]
+    pairs = [("25544", "48274"), ("59103", "68762"), ("69673", "67689")]
+    inp = {"start": "2026-11-18T00:00:00Z", "duration_s": 86400.0, "coarse_step_s": 60.0, "threshold_km": 1000.0,
+           "pairs": [{"p": tles[a], "s": tles[b]} for a, b in pairs]}
+    rs = rust("adaptive-tle", inp, SNAPSHOT)
+    start = UtcTime.parse(inp["start"])
+    ert = F.EarthRotationTable(start, -1.0, 86401.0, load_snapshot())
     rows = []
-    for a, b in zip(py["events"], rs["events"]):
-        rows.append({"tca_utc": a["tca_utc"], "dtau_s": abs(a["tca_tau_s"] - b["tca_tau_s"]),
-                     "dmiss_m": abs(a["miss_km"] - b["miss_km"]) * 1000.0,
-                     "pc_foster_py": a["pc"]["foster"], "pc_foster_rel_diff": abs(a["pc"]["foster"] - b["pc"]["foster"]) / max(a["pc"]["foster"], 1e-300),
-                     "screen_equal": a["applicability"]["status"] == b["applicability"]["status"]})
-    return {"n_events_py": len(py["events"]), "n_events_rs": len(rs["events"]), "events": rows}
+    for (a, b), r in zip(pairs, rs):
+        rel = RelativeState(Sgp4Ephemeris(tles[a]["line1"], tles[a]["line2"], start, ert, (0.0, 86400.0)),
+                            Sgp4Ephemeris(tles[b]["line1"], tles[b]["line2"], start, ert, (0.0, 86400.0)))
+        res = find_minima_adaptive(rel.rv, rel.rva, 0.0, 86400.0, 60.0, 1000.0)
+        pm, rm = res["all_minima"], r["minima"]
+        n = min(len(pm), len(rm))
+        rows.append({"pair": f"{a}×{b}", "n_py": len(pm), "n_rs": len(rm), "n_evals_py": rel.n_evals, "n_evals_rs": r["n_evals"],
+                     "max_dtau_s": max((abs(pm[i].tau - rm[i]["tau"]) for i in range(n)), default=0.0),
+                     "max_dmiss_m": max((abs(pm[i].miss_km - rm[i]["miss_km"]) * 1000 for i in range(n)), default=0.0),
+                     "flags_equal": all(pm[i].flag == rm[i]["flag"] for i in range(n))})
+    return rows
+
+
+def layer_covprop():
+    from scenario04.phase2.covprop import CovarianceTrack
+    from scenario04.phase2.ephemeris import NumericalEphemeris
+    el = kepler.Elements(6878.137, 0.001, 0.9, 0.3, 0.2, 0.1)
+    r0, v0, _ = kepler.state(el, 0.0)
+    P0 = np.diag([0.05 ** 2, 0.2 ** 2, 0.05 ** 2, 1e-8, 1e-8, 1e-8]).tolist()
+    outs = [3600.0, 10800.0, 20000.0, 43200.0]
+    inp = {"epoch": "2026-11-20T00:00:00Z", "r_km": list(r0), "v_kms": list(v0), "P0": P0, "duration_s": 43200.0,
+           "state_step_s": 10.0, "cov_step_s": 20.0, "zonal": True, "q_km2_s3": 0.0, "out_times": outs}
+    rs = rust("covprop", inp, SNAPSHOT)
+    ert = F.EarthRotationTable(UtcTime.parse(inp["epoch"]), -1.0, 43201.0, load_snapshot())
+    nom = NumericalEphemeris(propagate(r0, v0, 0.0, 43200.0, 10.0, ForceModel(zonal=True), ert))
+    trk = CovarianceTrack(nom, np.array(P0), 0.0, 43200.0, 20.0, ert, zonal=True)
+    return [{"tau_s": t, "max_rel_diff": float(np.abs(trk.at(t) - np.array(r["P"])).max() / np.abs(trk.at(t)).max())}
+            for t, r in zip(outs, rs)]
+
+
+def layer_csv_batch():
+    from scenario04.phase2.csvio import parse_secondaries
+    csv_path = TESTDATA / "batch_secondaries.csv"
+    py = parse_secondaries(csv_path.read_text(encoding="utf-8"))
+    r = subprocess.run([str(CLI), "csv-parse", str(csv_path)], capture_output=True, text=True, encoding="utf-8")
+    rs = json.loads(r.stdout)
+    csv_ok = (py["rows"] == rs["rows"]
+              and [[e["line"], e["code"]] for e in py["errors"]] == [[e["line"], e["code"]] for e in rs["errors"]])
+    exp = json.loads((TESTDATA / "batch_iss.expected.json").read_text(encoding="utf-8"))
+    r = subprocess.run([str(CLI), "batch", str(TESTDATA / "batch_iss.request.json"), str(SNAPSHOT),
+                        str(TESTDATA / "tle_fixture.json")], capture_output=True, text=True, encoding="utf-8")
+    rb = json.loads(r.stdout)
+    rows = []
+    for a, b in zip(exp["pairs"], rb["pairs"]):
+        ea, eb = a.get("events") or [], b.get("events") or []
+        rows.append({"secondary": a.get("secondary_norad"), "status_equal": a["status"] == b["status"],
+                     "n_events": [len(ea), len(eb)], "n_minima": [a.get("n_minima"), b.get("n_minima")],
+                     "max_dmiss_m": max((abs(x["miss_km"] - y["miss_km"]) * 1000 for x, y in zip(ea, eb)), default=0.0)})
+    return {"csv_equal": csv_ok, "batch_pairs": rows}
 
 
 def to_md(rep: dict) -> str:
@@ -262,12 +320,27 @@ def to_md(rep: dict) -> str:
                  f"{r['pc_foster_rel_diff']:.2e} | {r['screen_py']}／{r['screen_rs']} | {r['n_minima_equal']} |")
     L += ["", "Pc 固定輸入（Foster 相對差／Chan 相對差）：" + "；".join(
         f"{r['foster']:.3e}：{r['foster_rel_diff']:.1e}／{r['chan_rel_diff']:.1e}" for r in s["algorithm"]["pc"])]
-    L += ["", "## L-schema", "", f"{s['schema']['n_cases']} 個案例，代碼不一致 {len(s['schema']['mismatches'])} 個。",
-          "", "## L-e2e（合成 LEO 場景）", "",
-          f"事件數 Python {s['e2e']['n_events_py']}、Rust {s['e2e']['n_events_rs']}。", "",
-          "| TCA | ΔTCA s | Δ距離 m | Pc | Pc 相對差 | 篩選一致 |", "|---|---|---|---|---|---|"]
-    for r in s["e2e"]["events"]:
-        L.append(f"| {r['tca_utc']} | {r['dtau_s']:.2e} | {r['dmiss_m']:.2e} | {r['pc_foster_py']:.3e} | {r['pc_foster_rel_diff']:.2e} | {r['screen_equal']} |")
+    L += ["", "## L-schema", "", f"{s['schema']['n_cases']} 個案例，代碼不一致 {len(s['schema']['mismatches'])} 個。"]
+    L += ["", "## L-adaptive（相同 TLE、SGP4 星曆，自適應搜尋 1 天，門檻 1000 km）", "",
+          "| 配對 | 極小值數 Py／Rs | 評估次數 Py／Rs | 最大 ΔTCA s | 最大 Δ距離 m | 標記一致 |", "|---|---|---|---|---|---|"]
+    for r in s["adaptive"]:
+        L.append(f"| {r['pair']} | {r['n_py']}／{r['n_rs']} | {r['n_evals_py']}／{r['n_evals_rs']} | "
+                 f"{r['max_dtau_s']:.2e} | {r['max_dmiss_m']:.2e} | {r['flags_equal']} |")
+    L += ["", "## L-covprop（相同名義軌跡，傳播模式協方差）", "", "| τ s | 最大相對差 |", "|---|---|"]
+    L += [f"| {r['tau_s']:.0f} | {r['max_rel_diff']:.2e} |" for r in s["covprop"]]
+    cb = s["csv_batch"]
+    L += ["", "## L-csv／L-batch", "", f"CSV 解析一致：{cb['csv_equal']}。", "",
+          "| 次星 | 狀態一致 | 事件數 Py／Rs | 極小值數 Py／Rs | 最大 Δ距離 m |", "|---|---|---|---|---|"]
+    for r in cb["batch_pairs"]:
+        L.append(f"| {r['secondary']} | {r['status_equal']} | {r['n_events'][0]}／{r['n_events'][1]} | "
+                 f"{r['n_minima'][0]}／{r['n_minima'][1]} | {r['max_dmiss_m']:.2e} |")
+    for name, e in s["e2e"].items():
+        L += ["", f"## L-e2e：{name}", "",
+              f"事件數 Python {e['n_events_py']}、Rust {e['n_events_rs']}；極小值數一致 {e['n_minima_equal']}。", "",
+              "| TCA | ΔTCA s | Δ距離 m | Pc | Pc 相對差 | 篩選一致 |", "|---|---|---|---|---|---|"]
+        for r in e["events"]:
+            L.append(f"| {r['tca_utc']} | {r['dtau_s']:.2e} | {r['dmiss_m']:.2e} | {r['pc_foster_py']:.3e} | "
+                     f"{r['pc_foster_rel_diff']:.2e} | {r['screen_equal']} |")
     L += ["", "## 結論與容差建議", ""] + [f"- {x}" for x in rep["conclusions"]]
     return "\n".join(L) + "\n"
 
@@ -278,7 +351,8 @@ def main():
     rep = {"generated_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
            "eop": load_snapshot().version(),
            "layers": {"sgp4": sg, "frames": layer_frames(teme), "integration": layer_integration(),
-                      "algorithm": layer_algorithm(), "schema": layer_schema_compare(), "e2e": layer_e2e()}}
+                      "algorithm": layer_algorithm(), "schema": layer_schema_compare(), "e2e": layer_e2e(),
+                      "adaptive": layer_adaptive(), "covprop": layer_covprop(), "csv_batch": layer_csv_batch()}}
     s = rep["layers"]
     leo_max = s["sgp4"]["pos_diff_m"]["leo"].get("max", 0.0)
     deep_max = s["sgp4"]["pos_diff_m"]["deep"].get("max", 0.0)
@@ -295,6 +369,11 @@ def main():
         "Pc 相對差最大 " + f"{max(r['pc_foster_rel_diff'] for r in s['algorithm']['kepler_tca']):.1e}；"
         "篩選狀態" + ("全部一致" if all(r['screen_py'] == r['screen_rs'] for r in s['algorithm']['kepler_tca']) else "有不一致") + "。",
         f"Schema 層：{s['schema']['n_cases']} 案例代碼不一致 {len(s['schema']['mismatches'])} 個。",
+        "自適應搜尋層：" + "；".join(f"{r['pair']} 極小值 {r['n_py']}／{r['n_rs']}、ΔTCA ≤ {r['max_dtau_s']:.1e} s"
+                                for r in s["adaptive"]) + "。",
+        f"協方差傳播層：最大相對差 {max(r['max_rel_diff'] for r in s['covprop']):.1e}。",
+        f"CSV 解析一致：{s['csv_batch']['csv_equal']}；批次配對狀態全部一致："
+        f"{all(r['status_equal'] for r in s['csv_batch']['batch_pairs'])}。",
     ]
     (OUT / "xlang_report.json").write_text(json.dumps(rep, indent=1, ensure_ascii=False), encoding="utf-8")
     (OUT / "xlang_report.md").write_text(to_md(rep), encoding="utf-8")

@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-18T03:27:18+00:00",
+ "generated_utc": "2026-11-18T04:17:17+00:00",
  "eop": {
   "file": "eop_snapshot_20261118.csv",
   "sha256": "346d920b48a5e16a",
@@ -21,36 +21,36 @@
    "pos_diff_m": {
     "leo": {
      "n": 900,
-     "max": 1.8448969240651358e-05,
-     "p99": 1.6084544869985103e-05,
-     "median": 7.742099711533585e-06,
-     "mean": 8.962053205037862e-06
+     "max": 1.242592871733361e-06,
+     "p99": 8.879543303112246e-07,
+     "median": 1.2738892830362802e-07,
+     "mean": 1.7934371014153423e-07
     },
     "deep": {
      "n": 300,
-     "max": 0.0002923857157706524,
-     "p99": 7.950449941435856e-05,
-     "median": 4.7007936808173486e-06,
-     "mean": 1.0559570634104298e-05
+     "max": 0.0002913914901661655,
+     "p99": 8.319088346787731e-05,
+     "median": 1.3345275642965777e-06,
+     "mean": 8.442990337911334e-06
     }
    },
    "vel_diff_mm_s": {
     "leo": {
      "n": 900,
-     "max": 2.183738042777625e-05,
-     "p99": 1.78452686622251e-05,
-     "median": 8.534826490575851e-06,
-     "mean": 9.450038794927824e-06
+     "max": 1.4652450252907616e-06,
+     "p99": 9.643940309256651e-07,
+     "median": 1.348229311553428e-07,
+     "mean": 1.9033816086447348e-07
     },
     "deep": {
      "n": 300,
-     "max": 1.6321767684041328e-05,
-     "p99": 9.899185946093288e-06,
-     "median": 5.141267705688347e-07,
-     "mean": 1.0703353574347003e-06
+     "max": 1.2128175570411269e-05,
+     "p99": 4.8548162144749325e-06,
+     "median": 1.420838941973296e-07,
+     "mean": 5.660185851970755e-07
     }
    },
-   "worst_deep_m": 0.0002923857157706524
+   "worst_deep_m": 0.0002913914901661655
   },
   "frames": {
    "n": 120,
@@ -201,49 +201,208 @@
    ]
   },
   "schema": {
-   "n_cases": 27,
+   "n_cases": 32,
    "mismatches": []
   },
   "e2e": {
-   "n_events_py": 3,
-   "n_events_rs": 3,
-   "events": [
+   "e2e_leo_synthetic": {
+    "n_events_py": 3,
+    "n_events_rs": 3,
+    "events": [
+     {
+      "tca_utc": "2026-11-20T05:12:41.713318Z",
+      "dtau_s": 1.0913936421275139e-11,
+      "dmiss_m": 7.338272212109587e-07,
+      "pc_foster_py": 2.878016723868327e-218,
+      "pc_foster_rel_diff": 9.308920418553117e-09,
+      "screen_equal": true
+     },
+     {
+      "tca_utc": "2026-11-20T05:59:59.953373Z",
+      "dtau_s": 1.0913936421275139e-11,
+      "dmiss_m": 4.978277234890527e-07,
+      "pc_foster_py": 0.0001440885963897957,
+      "pc_foster_rel_diff": 2.5633553552820774e-10,
+      "screen_equal": true
+     },
+     {
+      "tca_utc": "2026-11-20T06:47:18.311825Z",
+      "dtau_s": 2.1827872842550278e-11,
+      "dmiss_m": 1.3400693887888337e-06,
+      "pc_foster_py": 1.921163994025806e-226,
+      "pc_foster_rel_diff": 3.1099655250078265e-08,
+      "screen_equal": true
+     }
+    ],
+    "n_minima_equal": true
+   },
+   "e2e_leo_propagated": {
+    "n_events_py": 3,
+    "n_events_rs": 3,
+    "events": [
+     {
+      "tca_utc": "2026-11-20T05:12:41.713318Z",
+      "dtau_s": 1.0913936421275139e-11,
+      "dmiss_m": 7.338272212109587e-07,
+      "pc_foster_py": 3.483730641108907e-58,
+      "pc_foster_rel_diff": 8.257431274481058e-10,
+      "screen_equal": true
+     },
+     {
+      "tca_utc": "2026-11-20T05:59:59.953373Z",
+      "dtau_s": 1.0913936421275139e-11,
+      "dmiss_m": 4.978277234890527e-07,
+      "pc_foster_py": 6.176960639754248e-06,
+      "pc_foster_rel_diff": 8.124108356871138e-11,
+      "screen_equal": true
+     },
+     {
+      "tca_utc": "2026-11-20T06:47:18.311825Z",
+      "dtau_s": 2.1827872842550278e-11,
+      "dmiss_m": 1.3400693887888337e-06,
+      "pc_foster_py": 2.5462402452785084e-30,
+      "pc_foster_rel_diff": 5.521179752366348e-10,
+      "screen_equal": true
+     }
+    ],
+    "n_minima_equal": true
+   },
+   "e2e_tle_iss_css": {
+    "n_events_py": 1,
+    "n_events_rs": 1,
+    "events": [
+     {
+      "tca_utc": "2026-11-18T06:33:05.759227Z",
+      "dtau_s": 0.0,
+      "dmiss_m": 2.4058977032836992e-08,
+      "pc_foster_py": 0.0,
+      "pc_foster_rel_diff": 0.0,
+      "screen_equal": true
+     }
+    ],
+    "n_minima_equal": true
+   }
+  },
+  "adaptive": [
+   {
+    "pair": "25544×48274",
+    "n_py": 32,
+    "n_rs": 32,
+    "n_evals_py": 1554,
+    "n_evals_rs": 1555,
+    "max_dtau_s": 1.4551915228366852e-11,
+    "max_dmiss_m": 1.5870682545937598e-07,
+    "flags_equal": true
+   },
+   {
+    "pair": "59103×68762",
+    "n_py": 16,
+    "n_rs": 16,
+    "n_evals_py": 10317,
+    "n_evals_rs": 10317,
+    "max_dtau_s": 1.5279510989785194e-09,
+    "max_dmiss_m": 1.9736035028472543e-07,
+    "flags_equal": true
+   },
+   {
+    "pair": "69673×67689",
+    "n_py": 31,
+    "n_rs": 31,
+    "n_evals_py": 2752,
+    "n_evals_rs": 2751,
+    "max_dtau_s": 0.09288591855147388,
+    "max_dmiss_m": 2.2173062171060298e-07,
+    "flags_equal": true
+   }
+  ],
+  "covprop": [
+   {
+    "tau_s": 3600.0,
+    "max_rel_diff": 1.7447926008088968e-13
+   },
+   {
+    "tau_s": 10800.0,
+    "max_rel_diff": 7.844603974457161e-12
+   },
+   {
+    "tau_s": 20000.0,
+    "max_rel_diff": 1.4378242820484343e-11
+   },
+   {
+    "tau_s": 43200.0,
+    "max_rel_diff": 4.0621992062915626e-11
+   }
+  ],
+  "csv_batch": {
+   "csv_equal": true,
+   "batch_pairs": [
     {
-     "tca_utc": "2026-11-20T05:12:41.713318Z",
-     "dtau_s": 1.0913936421275139e-11,
-     "dmiss_m": 7.337419560826675e-07,
-     "pc_foster_py": 2.8780167248096653e-218,
-     "pc_foster_rel_diff": 9.221884353020328e-09,
-     "screen_equal": true
+     "secondary": 48274,
+     "status_equal": true,
+     "n_events": [
+      1,
+      1
+     ],
+     "n_minima": [
+      32,
+      32
+     ],
+     "max_dmiss_m": 2.4058977032836992e-08
     },
     {
-     "tca_utc": "2026-11-20T05:59:59.953373Z",
-     "dtau_s": 1.0913936421275139e-11,
-     "dmiss_m": 4.978277234890527e-07,
-     "pc_foster_py": 0.0001440885963897957,
-     "pc_foster_rel_diff": 2.5633553552820774e-10,
-     "screen_equal": true
+     "secondary": 68762,
+     "status_equal": true,
+     "n_events": [
+      0,
+      0
+     ],
+     "n_minima": [
+      32,
+      32
+     ],
+     "max_dmiss_m": 0.0
     },
     {
-     "tca_utc": "2026-11-20T06:47:18.311825Z",
-     "dtau_s": 2.1827872842550278e-11,
-     "dmiss_m": 1.3410215160547523e-06,
-     "pc_foster_py": 1.9211639948471006e-226,
-     "pc_foster_rel_diff": 3.132604348306799e-08,
-     "screen_equal": true
+     "secondary": 59103,
+     "status_equal": true,
+     "n_events": [
+      0,
+      0
+     ],
+     "n_minima": [
+      32,
+      32
+     ],
+     "max_dmiss_m": 0.0
+    },
+    {
+     "secondary": 69673,
+     "status_equal": true,
+     "n_events": [
+      0,
+      0
+     ],
+     "n_minima": [
+      10,
+      10
+     ],
+     "max_dmiss_m": 0.0
     }
    ]
   }
  },
  "tolerance_recommendation": {
   "tle_input_position_eps_abs_m": 0.001,
-  "basis_max_m": 0.0002923857157706524
+  "basis_max_m": 0.0002913914901661655
  },
  "conclusions": [
-  "SGP4 層：近地物體最大差 1.84e-05 m、深空物體最大差 2.92e-04 m；建議第 10 節「TLE 輸入（經 SGP4）的位置」容差 ε_abs = 1 mm（實測最大值約 3 倍餘裕）。兩邊皆採 WGS-72、opsmode 'i'；Rust sgp4 crate 的 Constants::from_elements 預設為 WGS-84，不可使用。",
+  "SGP4 層：近地物體最大差 1.24e-06 m、深空物體最大差 2.91e-04 m；建議第 10 節「TLE 輸入（經 SGP4）的位置」容差 ε_abs = 1 mm（實測最大值約 3 倍餘裕）。兩邊皆採 WGS-72、opsmode 'i'；Rust sgp4 crate 的 Constants::from_elements 預設為 WGS-84，不可使用。",
   "框架層：GCRF 最大差 2.7e-09 m，遠低於 1 mm 容差。",
   "積分層：最大差 LEO 500 km J2–J4 1.9e-06 m、LEO 400 km J2–J4＋阻力 1.0e-06 m、GEO J2–J4 4.7e-08 m。",
   "演算法層：ΔTCA 最大 5.7e-14 s，Pc 相對差最大 2.5e-10；篩選狀態全部一致。",
-  "Schema 層：27 案例代碼不一致 0 個。"
+  "Schema 層：32 案例代碼不一致 0 個。",
+  "自適應搜尋層：25544×48274 極小值 32／32、ΔTCA ≤ 1.5e-11 s；59103×68762 極小值 16／16、ΔTCA ≤ 1.5e-09 s；69673×67689 極小值 31／31、ΔTCA ≤ 9.3e-02 s。",
+  "協方差傳播層：最大相對差 4.1e-11。",
+  "CSV 解析一致：True；批次配對狀態全部一致：True。"
  ]
 }

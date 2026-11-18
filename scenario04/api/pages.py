@@ -64,6 +64,12 @@ def orbit_tuner_page():
     return render_template("orbit_tuner.html")
 
 
+@bp.get("/manual")
+def manual_page():
+    """操作手冊（docs/SatDashboard_操作手冊_v*.md 經 tools/build_manual.py 產生的靜態頁）。"""
+    return render_template("manual.html")
+
+
 @bp.get("/cesium/<path:filename>")
 def cesium_static(filename: str):
     safe = (settings.CESIUM_LOCAL_DIR / filename).resolve()

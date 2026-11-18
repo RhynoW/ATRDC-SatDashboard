@@ -8,6 +8,7 @@
   L-schema 相同場景案例 → 錯誤代碼集合
   L-e2e    相同場景 → 端到端報告
   L-maneuver 相同避碰場景（maneuver_cases.json 套用 ops）→ 狀態、原因、候選方案與驗證結果（Sprint 2）
+  L-rpo    相同 RPO 場景（rpo_cases.json 套用 ops）→ 狀態、脈衝序列、違規、撤離表與故障注入（Sprint 3）
 用法：py -3.13 tools/phase2_xlang_report.py  （需先 cargo build --release --bin phase2_cli）
 輸出：scenario04/phase2/reports/xlang_report.{json,md}
 """
@@ -26,7 +27,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scenario04.phase2 import e2e, frames as F, kepler, maneuver, pc as PC  # noqa: E402
+from scenario04.phase2 import e2e, frames as F, kepler, maneuver, pc as PC, rpo  # noqa: E402
 from scenario04.phase2.constants import GM_KM3_S2  # noqa: E402
 from scenario04.phase2.eop import SNAPSHOT, TESTDATA, load_snapshot  # noqa: E402
 from scenario04.phase2.forces import ForceModel  # noqa: E402
@@ -283,6 +284,40 @@ def layer_maneuver():
     return rows
 
 
+def layer_rpo():
+    cases = json.loads((TESTDATA / "rpo_cases.json").read_text(encoding="utf-8"))
+    base = json.loads((TESTDATA / cases["base"]).read_text(encoding="utf-8"))
+    rows = []
+    for c in cases["cases"]:
+        sc = _apply_ops(base, c["ops"])
+        py = rpo.run(sc, load_snapshot())
+        rs = rust("rpo", sc, SNAPSHOT)
+        row = {"case": c["name"], "status_py": py["status"], "status_rs": rs["status"],
+               "reasons_equal": py.get("reasons") == rs.get("reasons") and py.get("reason") == rs.get("reason"),
+               "burns_equal": None, "violations_equal": None, "abort_equal": None, "fault_equal": None,
+               "n_burns": 0, "max_ddv_ms": 0.0, "max_dmin_m": 0.0, "max_dabort_rel": 0.0}
+        if "replay" in py and "replay" in rs:
+            bp, br = py["replay"]["burns"], rs["replay"]["burns"]
+            row["n_burns"] = len(bp)
+            row["burns_equal"] = [(b["t_s"], b["kind"], b["segment"]) for b in bp] ==                                  [(b["t_s"], b["kind"], b["segment"]) for b in br]
+            if row["burns_equal"]:
+                row["max_ddv_ms"] = max((max(abs(x - y) for x, y in zip(a["dv_rtn_ms"], b["dv_rtn_ms"]))
+                                         for a, b in zip(bp, br)), default=0.0)
+            vk = lambda v: (v["type"], v["segment"], v["first_t_s"], v["last_t_s"], v["count"])  # noqa: E731
+            row["violations_equal"] = [vk(v) for v in py["replay"]["violations"]] == [vk(v) for v in rs["replay"]["violations"]]
+            row["max_dmin_m"] = abs(py["replay"]["min_dist_m"] - rs["replay"]["min_dist_m"])
+            ep, er = py["abort"]["entries"], rs["abort"]["entries"]
+            row["abort_equal"] = [(e["t_s"], e["dv_rtn_ms"] == f["dv_rtn_ms"], e["safe"]) for e, f in zip(ep, er)] ==                                  [(e["t_s"], True, f["safe"]) for e, f in zip(ep, er)] and len(ep) == len(er)
+            row["max_dabort_rel"] = max((abs(e["nl_worst_m"] - f["nl_worst_m"]) / e["nl_worst_m"] for e, f in zip(ep, er)),
+                                        default=0.0)
+            fp, fr = py.get("fault"), rs.get("fault")
+            row["fault_equal"] = (fp is None and fr is None) or (fp is not None and fr is not None and
+                                  fp.get("status") == fr.get("status") and fp.get("safe") == fr.get("safe") and
+                                  fp.get("stored_entry_t_s") == fr.get("stored_entry_t_s"))
+        rows.append(row)
+    return rows
+
+
 def layer_adaptive():
     from scenario04.phase2.ephemeris import RelativeState, Sgp4Ephemeris
     from scenario04.phase2.tca import find_minima_adaptive
@@ -398,6 +433,13 @@ def to_md(rep: dict) -> str:
         L.append(f"| {r['case']} | {r['status_py']}／{r['status_rs']} | {r['reason_equal']} | {r['candidates_equal']} | "
                  f"{r['pass_checks_equal']} | {r['linear_map_equal']} | {r['n_candidates']} | {r['max_dburn_s']:.1e} | {r['max_dmiss_m']:.2e} | "
                  f"{r['max_dtau_s']:.2e} | {r['max_dlin_m']:.2e} | {r['max_pc_rel_diff']:.2e} | {r['max_dda_m']:.2e} |")
+    L += ["", "## L-rpo（相同 RPO 場景）", "",
+          "| 案例 | 狀態 Py／Rs | 原因一致 | 脈衝序列相同 | 違規相同 | 撤離表相同 | 故障一致 | 脈衝數 | 最大 Δ脈衝 m/s | Δ最近距離 m | 撤離最差距離相對差 |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in s["rpo"]:
+        L.append(f"| {r['case']} | {r['status_py']}／{r['status_rs']} | {r['reasons_equal']} | {r['burns_equal']} | "
+                 f"{r['violations_equal']} | {r['abort_equal']} | {r['fault_equal']} | {r['n_burns']} | {r['max_ddv_ms']:.2e} | "
+                 f"{r['max_dmin_m']:.2e} | {r['max_dabort_rel']:.2e} |")
     L += ["", "## 結論與容差建議", ""] + [f"- {x}" for x in rep["conclusions"]]
     return "\n".join(L) + "\n"
 
@@ -410,7 +452,7 @@ def main():
            "layers": {"sgp4": sg, "frames": layer_frames(teme), "integration": layer_integration(),
                       "algorithm": layer_algorithm(), "schema": layer_schema_compare(), "e2e": layer_e2e(),
                       "adaptive": layer_adaptive(), "covprop": layer_covprop(), "csv_batch": layer_csv_batch(),
-                      "maneuver": layer_maneuver()}}
+                      "maneuver": layer_maneuver(), "rpo": layer_rpo()}}
     s = rep["layers"]
     leo_max = s["sgp4"]["pos_diff_m"]["leo"].get("max", 0.0)
     deep_max = s["sgp4"]["pos_diff_m"]["deep"].get("max", 0.0)
@@ -437,6 +479,10 @@ def main():
         f"{all(r['candidates_equal'] and r['pass_checks_equal'] and r['linear_map_equal'] for r in s['maneuver'])}；"
         f"機動後距離最大差 {max(r['max_dmiss_m'] for r in s['maneuver']):.1e} m、"
         f"Pc 相對差最大 {max(r['max_pc_rel_diff'] for r in s['maneuver']):.1e}。",
+        f"RPO 層：{len(s['rpo'])} 案例狀態與原因全部一致 "
+        f"{all(r['status_py'] == r['status_rs'] and r['reasons_equal'] for r in s['rpo'])}；脈衝序列、違規、撤離表、故障結果全部相同 "
+        f"{all(r[k] in (True, None) for r in s['rpo'] for k in ('burns_equal', 'violations_equal', 'abort_equal', 'fault_equal'))}；"
+        f"脈衝最大差 {max(r['max_ddv_ms'] for r in s['rpo']):.1e} m/s、撤離最差距離相對差最大 {max(r['max_dabort_rel'] for r in s['rpo']):.1e}。",
     ]
     (OUT / "xlang_report.json").write_text(json.dumps(rep, indent=1, ensure_ascii=False), encoding="utf-8")
     (OUT / "xlang_report.md").write_text(to_md(rep), encoding="utf-8")

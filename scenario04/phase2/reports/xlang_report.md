@@ -1,6 +1,6 @@
 # 第二階段跨語言差異報告
 
-產生時間：2026-11-18T05:22:54+00:00　EOP：{'file': 'eop_snapshot_20261118.csv', 'sha256': '346d920b48a5e16a', 'mjd_range': [60310.0, 61542.0], 'last_observed': '2026-11-17'}
+產生時間：2026-11-18T06:23:11+00:00　EOP：{'file': 'eop_snapshot_20261118.csv', 'sha256': '346d920b48a5e16a', 'mjd_range': [60310.0, 61542.0], 'last_observed': '2026-11-17'}
 
 每一層餵入完全相同的輸入，差異只來自該層的實作。
 
@@ -111,6 +111,19 @@ CSV 解析一致：True。
 | demo_covariance_miss_only | feasible_solution_found／feasible_solution_found | True | True | True | True | 6 | 1.1e-11 | 1.52e-06 | 8.37e-11 | 1.19e-06 | 2.35e-09 | 1.82e-09 |
 | new_conjunction_rejects_best | feasible_solution_found／feasible_solution_found | True | True | True | True | 6 | 1.1e-11 | 1.97e-06 | 5.46e-11 | 1.17e-06 | 4.15e-10 | 2.73e-09 |
 
+## L-rpo（相同 RPO 場景）
+
+| 案例 | 狀態 Py／Rs | 原因一致 | 脈衝序列相同 | 違規相同 | 撤離表相同 | 故障一致 | 脈衝數 | 最大 Δ脈衝 m/s | Δ最近距離 m | 撤離最差距離相對差 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| base_nominal | pass／pass | True | True | True | True | True | 16 | 2.17e-10 | 1.22e-08 | 4.15e-10 |
+| fault_comm_loss | pass／pass | True | True | True | True | True | 16 | 2.17e-10 | 1.22e-08 | 4.15e-10 |
+| keep_out_violation | fail／fail | True | True | True | True | True | 16 | 2.17e-10 | 1.22e-08 | 4.15e-10 |
+| corridor_violation | fail／fail | True | True | True | True | True | 16 | 2.17e-10 | 1.22e-08 | 4.15e-10 |
+| closing_speed_violation | fail／fail | True | True | True | True | True | 16 | 2.17e-10 | 1.22e-08 | 4.15e-10 |
+| abort_dv_too_small | fail／fail | True | True | True | True | True | 16 | 2.17e-10 | 1.22e-08 | 1.84e-09 |
+| rbar_approach | pass／pass | True | True | True | True | True | 14 | 1.80e-11 | 2.37e-10 | 1.05e-11 |
+| transfer_dv_exceeds | invalid_design／invalid_design | True | None | None | None | None | 0 | 0.00e+00 | 0.00e+00 | 0.00e+00 |
+
 ## 結論與容差建議
 
 - SGP4 層：近地物體最大差 1.24e-06 m、深空物體最大差 2.91e-04 m；建議第 10 節「TLE 輸入（經 SGP4）的位置」容差 ε_abs = 1 mm（實測最大值約 3 倍餘裕）。兩邊皆採 WGS-72、opsmode 'i'；Rust sgp4 crate 的 Constants::from_elements 預設為 WGS-84，不可使用。
@@ -122,3 +135,4 @@ CSV 解析一致：True。
 - 協方差傳播層：最大相對差 4.1e-11。
 - CSV 解析一致：True；批次配對狀態全部一致：True。
 - 避碰層：10 案例狀態全部一致 True；候選方案與檢查結果全部相同 True；機動後距離最大差 2.0e-06 m、Pc 相對差最大 2.3e-09。
+- RPO 層：8 案例狀態與原因全部一致 True；脈衝序列、違規、撤離表、故障結果全部相同 True；脈衝最大差 2.2e-10 m/s、撤離最差距離相對差最大 1.8e-09。

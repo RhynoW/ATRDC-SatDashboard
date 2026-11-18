@@ -16,7 +16,7 @@ from .events import build_event
 from .forces import ExponentialAtmosphere, ForceModel
 from .frames import EarthRotationTable, earth_rotation, teme_to_gcrf
 from .integrator import propagate
-from .rtn import cov_rtn_to_gcrf, rtn_matrix
+from .rtn import cov_rtn_to_gcrf, rtn_matrix, rtn_offset_to_gcrf
 from .schema import validate
 from .tca import find_minima_adaptive
 from .timescale import UtcTime
@@ -102,9 +102,17 @@ def build_context(sc: dict, eop: Eop) -> dict:
     ert = EarthRotationTable(start, t_lo - 1.0, dur + 1.0, eop)
 
     ephs, prov_eph, covs = {}, {}, {}
-    for role, o in objs.items():
+    for role in ("primary", "secondary"):     # rtn_offset 物體需要先有主星星曆
+        o = objs[role]
         use_sgp4 = o["ephemeris"]["type"] == "TLE" and mode in ("auto", "sgp4")
-        if use_sgp4:
+        if o["ephemeris"]["type"] == "rtn_offset":
+            rt, vt = ephs["primary"].rv(0.0)
+            r0, v0 = rtn_offset_to_gcrf(rt, vt, o["ephemeris"]["r_m"], o["ephemeris"]["v_ms"])
+            t0 = 0.0
+            fm = object_force_model(o, fm_cfg)
+            ephs[role] = NumericalEphemeris(propagate(r0, v0, t0, dur, step, fm, ert))
+            prov_eph[role] = f"numerical RK4 {step:g} s, {fm.describe()}"
+        elif use_sgp4:
             ephs[role] = Sgp4Ephemeris(o["ephemeris"]["line1"], o["ephemeris"]["line2"], start, ert, (0.0, dur))
             prov_eph[role] = "SGP4 (WGS-72, opsmode i) → GCRF"
             t0 = 0.0

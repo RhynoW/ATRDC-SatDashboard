@@ -21,6 +21,7 @@
   E_PROPAGATOR_SGP4_NEEDS_TLE     screening.propagator=sgp4 但有物體以狀態向量給定
   E_COV_EPOCH_MISMATCH            傳播模式協方差曆元須等於該物體星曆曆元（狀態向量 epoch；TLE 物體為 screening.start）
   E_MIN_STEP_GT_COARSE            screening.min_step_s 大於 coarse_step_s
+  E_RTN_OFFSET_ROLE               rtn_offset 星曆只能用於 secondary（相對 primary）；主星或二次篩選物體不可使用
 """
 from __future__ import annotations
 
@@ -90,6 +91,10 @@ def validate(sc: dict) -> dict:
     scr = sc["screening"]
     if scr.get("propagator") == "sgp4" and any(o["ephemeris"]["type"] != "TLE" for o in sc["objects"]):
         codes.add("E_PROPAGATOR_SGP4_NEEDS_TLE")
+    if any(o["ephemeris"]["type"] == "rtn_offset" for o in sc["objects"] if o["role"] == "primary") or any(
+            o["ephemeris"]["type"] == "rtn_offset"
+            for o in ((sc.get("maneuver_search") or {}).get("secondary_screening") or {}).get("objects") or []):
+        codes.add("E_RTN_OFFSET_ROLE")
     if "min_step_s" in scr and scr["min_step_s"] > scr.get("coarse_step_s", 60.0):
         codes.add("E_MIN_STEP_GT_COARSE")
     for o in sc["objects"]:

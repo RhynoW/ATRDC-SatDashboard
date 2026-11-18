@@ -48,3 +48,26 @@ def cov_rtn_to_gcrf(P_rtn, r, v, convention: str) -> np.ndarray:
 def cov_gcrf_to_rtn(P, r, v, convention: str) -> np.ndarray:
     J = jacobian_gcrf_to_rtn(r, v, convention)
     return J @ np.asarray(P, float) @ J.T
+
+
+def _omega_rtn(r, v) -> np.ndarray:
+    """RTN 軸相對慣性系的角速度（RTN 分量，二體近似）：(0, 0, |r×v|/|r|²)。"""
+    r_, v_ = np.asarray(r, float), np.asarray(v, float)
+    return np.array([0.0, 0.0, np.linalg.norm(np.cross(r_, v_)) / np.dot(r_, r_)])
+
+
+def relative_rtn(rt, vt, rc, vc):
+    """追蹤星相對目標星的 RTN 狀態（m、m/s）；速度為旋轉 RTN 座標中的時間導數（HCW 的 ẋ, ẏ, ż）。"""
+    C = rtn_matrix(rt, vt)
+    rho = C @ (np.asarray(rc, float) - np.asarray(rt, float)) * 1000.0
+    rhod = C @ (np.asarray(vc, float) - np.asarray(vt, float)) * 1000.0 - np.cross(_omega_rtn(rt, vt), rho)
+    return rho, rhod
+
+
+def rtn_offset_to_gcrf(rt, vt, r_m, v_ms):
+    """relative_rtn 的反函數：目標星 GCRF 狀態＋RTN 相對狀態（m、m/s，旋轉座標導數）→ 追蹤星 GCRF（km、km/s）。"""
+    C = rtn_matrix(rt, vt)
+    rho = np.asarray(r_m, float)
+    rc = np.asarray(rt, float) + C.T @ rho / 1000.0
+    vc = np.asarray(vt, float) + C.T @ (np.asarray(v_ms, float) + np.cross(_omega_rtn(rt, vt), rho)) / 1000.0
+    return rc, vc

@@ -8,6 +8,8 @@ POST /api/lab/batch.csv   {"events": [...]} → 結果 CSV（下載）
 POST /api/lab/csv/parse   CSV 文字 → 解析結果與錯誤（前端預覽）
 GET  /api/lab/maneuver/demo  避碰示範案例（maneuver_cases.json 套用 ops 後的完整場景）
 POST /api/lab/maneuver    {"scenario": 場景, "screening_norad_ids": [...]} → 避碰決策報告（Sprint 2）
+GET  /api/lab/rpo/demo    RPO 示範案例（rpo_cases.json 套用 ops 後的完整場景）
+POST /api/lab/rpo         {"scenario": 場景} → RPO 控制模擬報告（Sprint 3）
 """
 from __future__ import annotations
 
@@ -18,7 +20,7 @@ from flask import Blueprint, Response, render_template, request
 
 from . import json_response
 from ..ingestion.index import get_sat_index
-from ..phase2 import e2e, maneuver
+from ..phase2 import e2e, maneuver, rpo
 from ..phase2.batch import run_batch
 from ..phase2.csvio import events_to_csv, parse_secondaries
 from ..phase2.eop import TESTDATA, default_eop
@@ -170,4 +172,24 @@ def lab_maneuver():
     except ValueError as ex:
         return json_response({"status": "error", "error": str(ex)}), 400
     rep["screening_unresolved"] = unresolved
+    return json_response(rep, default=_float_default)
+
+
+@bp.get("/api/lab/rpo/demo")
+def lab_rpo_demo():
+    cases = json.loads((TESTDATA / "rpo_cases.json").read_text(encoding="utf-8"))
+    base = json.loads((TESTDATA / cases["base"]).read_text(encoding="utf-8"))
+    out = [{"id": c["name"], "scenario": apply_ops(base, c["ops"])} for c in cases["cases"]]
+    return json_response({"description": base.get("description", ""), "scenarios": out}, max_age=3600)
+
+
+@bp.post("/api/lab/rpo")
+def lab_rpo():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("scenario"), dict):
+        return json_response({"status": "error", "error": "需要 {\"scenario\": 場景 JSON}"}), 400
+    try:
+        rep = rpo.run(body["scenario"], default_eop())
+    except ValueError as ex:
+        return json_response({"status": "error", "error": str(ex)}), 400
     return json_response(rep, default=_float_default)

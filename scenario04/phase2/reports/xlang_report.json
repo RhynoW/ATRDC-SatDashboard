@@ -1,5 +1,5 @@
 {
- "generated_utc": "2026-11-18T05:22:54+00:00",
+ "generated_utc": "2026-11-18T06:23:11+00:00",
  "eop": {
   "file": "eop_snapshot_20261118.csv",
   "sha256": "346d920b48a5e16a",
@@ -551,6 +551,120 @@
     "max_dda_m": 2.7284841053187847e-09,
     "max_dburn_s": 1.0913936421275139e-11
    }
+  ],
+  "rpo": [
+   {
+    "case": "base_nominal",
+    "status_py": "pass",
+    "status_rs": "pass",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 16,
+    "max_ddv_ms": 2.1676982431273473e-10,
+    "max_dmin_m": 1.2160796813986963e-08,
+    "max_dabort_rel": 4.150065487826738e-10
+   },
+   {
+    "case": "fault_comm_loss",
+    "status_py": "pass",
+    "status_rs": "pass",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 16,
+    "max_ddv_ms": 2.1676982431273473e-10,
+    "max_dmin_m": 1.2160796813986963e-08,
+    "max_dabort_rel": 4.150065487826738e-10
+   },
+   {
+    "case": "keep_out_violation",
+    "status_py": "fail",
+    "status_rs": "fail",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 16,
+    "max_ddv_ms": 2.1676982431273473e-10,
+    "max_dmin_m": 1.2160796813986963e-08,
+    "max_dabort_rel": 4.150065487826738e-10
+   },
+   {
+    "case": "corridor_violation",
+    "status_py": "fail",
+    "status_rs": "fail",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 16,
+    "max_ddv_ms": 2.1676982431273473e-10,
+    "max_dmin_m": 1.2160796813986963e-08,
+    "max_dabort_rel": 4.150065487826738e-10
+   },
+   {
+    "case": "closing_speed_violation",
+    "status_py": "fail",
+    "status_rs": "fail",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 16,
+    "max_ddv_ms": 2.1676982431273473e-10,
+    "max_dmin_m": 1.2160796813986963e-08,
+    "max_dabort_rel": 4.150065487826738e-10
+   },
+   {
+    "case": "abort_dv_too_small",
+    "status_py": "fail",
+    "status_rs": "fail",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 16,
+    "max_ddv_ms": 2.1676982431273473e-10,
+    "max_dmin_m": 1.2160796813986963e-08,
+    "max_dabort_rel": 1.8351443914996984e-09
+   },
+   {
+    "case": "rbar_approach",
+    "status_py": "pass",
+    "status_rs": "pass",
+    "reasons_equal": true,
+    "burns_equal": true,
+    "violations_equal": true,
+    "abort_equal": true,
+    "fault_equal": true,
+    "n_burns": 14,
+    "max_ddv_ms": 1.7975732014008372e-11,
+    "max_dmin_m": 2.374349605815951e-10,
+    "max_dabort_rel": 1.045264023158237e-11
+   },
+   {
+    "case": "transfer_dv_exceeds",
+    "status_py": "invalid_design",
+    "status_rs": "invalid_design",
+    "reasons_equal": true,
+    "burns_equal": null,
+    "violations_equal": null,
+    "abort_equal": null,
+    "fault_equal": null,
+    "n_burns": 0,
+    "max_ddv_ms": 0.0,
+    "max_dmin_m": 0.0,
+    "max_dabort_rel": 0.0
+   }
   ]
  },
  "tolerance_recommendation": {
@@ -566,6 +680,7 @@
   "自適應搜尋層：25544×48274 極小值 32／32、ΔTCA ≤ 1.5e-11 s；59103×68762 極小值 16／16、ΔTCA ≤ 1.5e-09 s；69673×67689 極小值 31／31、ΔTCA ≤ 9.3e-02 s。",
   "協方差傳播層：最大相對差 4.1e-11。",
   "CSV 解析一致：True；批次配對狀態全部一致：True。",
-  "避碰層：10 案例狀態全部一致 True；候選方案與檢查結果全部相同 True；機動後距離最大差 2.0e-06 m、Pc 相對差最大 2.3e-09。"
+  "避碰層：10 案例狀態全部一致 True；候選方案與檢查結果全部相同 True；機動後距離最大差 2.0e-06 m、Pc 相對差最大 2.3e-09。",
+  "RPO 層：8 案例狀態與原因全部一致 True；脈衝序列、違規、撤離表、故障結果全部相同 True；脈衝最大差 2.2e-10 m/s、撤離最差距離相對差最大 1.8e-09。"
  ]
 }

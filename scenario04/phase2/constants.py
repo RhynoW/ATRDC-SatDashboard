@@ -56,6 +56,26 @@ MAN_PREFILTER_MARGIN_KM = 25.0       # 二次篩選近遠地點預篩的額外�
 MAN_TARGET_MATCH_FRAC_PERIOD = 0.25  # 機動後目標事件：與參考 TCA 相差 ≤ 0.25 週期的極小值
 MAN_PLOT_POINTS = 241                # 3D 與距離歷程取樣點數
 
+# RPO 控制模擬（Sprint 3）
+RPO_RETARGET_S = 600.0               # 駐留段死區修正的瞄準時間
+RPO_DEADBAND_M = 20.0
+RPO_MAX_BURN_MS = 2.0                # 單次設計脈衝上限；超過視為設計不可行（例如轉移時間接近整數週期）
+RPO_ABORT_UPDATE_S = 900.0           # 預存撤離脈衝的更新間隔
+RPO_ABORT_MIN_DV_MS = 0.01
+RPO_ABORT_MAX_DV_MS = 1.0
+RPO_ABORT_N_DV = 25                  # 撤離 Δv 量級數（幾何級數）
+RPO_ABORT_MARGIN = 1.5               # HCW 搜尋要求的距離 = max(keep_out, min(margin·keep_out, 0.95·目前距離))
+RPO_ABORT_ESCAPE_FACTOR = 1.5        # 撤離：safe_orbits 圈末距離 ≥ max(2·margin·keep_out, 1.5·目前距離)
+RPO_ABORT_SAMPLE_S = 30.0            # HCW 撤離軌跡的取樣間隔
+RPO_EXEC_MAG_FRAC = 0.05             # 撤離脈衝執行誤差（1σ）；驗證取 ±3σ
+RPO_EXEC_POINT_DEG = 2.0
+RPO_HCW_ECC_MAX = 0.01               # HCW 適用前提：目標星近圓
+RPO_HCW_RANGE_FRAC_MAX = 0.005       # 相對距離／軌道半徑
+RPO_TIMELINE_MAX = 1000              # 輸出時間序列的最大點數
+RPO_LIMITS_DEFAULT = {"keep_out_m": 200.0, "max_closing_ms": 0.5, "corridor_half_angle_deg": 10.0,
+                      "corridor_axis": "-T", "corridor_range_m": 1000.0, "closing_range_m": 1000.0}
+RPO_COMM_LOSS_DEFAULT = {"strategy": "abort_to_hold", "trigger_s": 600.0, "safe_orbits": 3.0}
+
 # 二維 Pc 適用性啟發式篩選初始判定值（v0.3 第 5 節；待 Sprint 4 以 Monte Carlo 校正）
 SCREEN_K_SIGMA = 5.0
 SCREEN_TENC_MAX_FRAC_PERIOD = 0.01

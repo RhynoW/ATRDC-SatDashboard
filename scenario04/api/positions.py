@@ -97,6 +97,44 @@ def api_positions():
     })
 
 
+@bp.get("/api/tles")
+def api_tles():
+    """分類篩選的 TLE 批次（地球儀前端以 Web Worker 自行傳播；只需下載一次，之後不再輪詢位置）。"""
+    ftype = request.args.get("ftype", "").strip()
+    fval  = request.args.get("fval",  "").strip()
+    payload_only = request.args.get("payload_only", "0") == "1"
+    VALID = {"country", "purpose", "era", "constellation"}
+    if ftype not in VALID or not fval:
+        return jsonify({"error": "ftype 必須為 country/purpose/era/constellation，且 fval 不可空白"}), 400
+
+    EXCLUDE = {"碎片", "火箭體"} if payload_only else set()
+    idx = get_sat_index()
+    sats = []
+    for n, i in idx.items():
+        if i.get(ftype) != fval or i.get("purpose") in EXCLUDE:
+            continue
+        if not i.get("line1") or not i.get("line2"):
+            continue
+        sats.append({
+            "norad_id":      n,
+            "name":          i["name"],
+            "country":       i["country"],
+            "purpose":       i["purpose"],
+            "era":           i["era"],
+            "constellation": i["constellation"] or "—",
+            "line1":         i["line1"],
+            "line2":         i["line2"],
+        })
+    return jsonify({
+        "ftype":      ftype,
+        "fval":       fval,
+        "color":      get_color(ftype, fval),
+        "count":      len(sats),
+        "satellites": sats,
+        "timestamp":  datetime.now(timezone.utc).isoformat(),
+    })
+
+
 @bp.get("/api/positions/coords")
 def api_positions_coords():
     """中頻更新端點：從背景快取讀取位置，不在請求路徑觸發 SGP4。

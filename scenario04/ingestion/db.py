@@ -167,6 +167,9 @@ def tle_select_sql(con: duckdb.DuckDBPyConnection, extra_where: str = "") -> str
     line_sel   = "r.line1, r.line2," if has_lines else "NULL AS line1, NULL AS line2,"
     line_where = "r.line1 IS NOT NULL AND r.line2 IS NOT NULL" if has_lines else "1=1"
 
+    # 同一曆元有多筆不同 TLE 時（資料庫約 90 顆），加上 TLE 內容當平手判定，每次載入都挑同一筆
+    tiebreak = ", r.line1, r.line2" if has_lines else ""
+
     parts = [line_where]
     if extra_where:
         parts.append(extra_where)
@@ -181,7 +184,7 @@ def tle_select_sql(con: duckdb.DuckDBPyConnection, extra_where: str = "") -> str
         LEFT JOIN {META_TABLE} m ON r.norad_id = m.norad_id
         WHERE {" AND ".join(parts)}
         QUALIFY ROW_NUMBER() OVER (
-            PARTITION BY r.norad_id ORDER BY r.epoch_utc DESC
+            PARTITION BY r.norad_id ORDER BY r.epoch_utc DESC{tiebreak}
         ) = 1
     """
 

@@ -12,3 +12,4 @@ fetch-first
 *.bat
 *.md
 !scenario04/**/*.md
+rust/debris_cli/target/

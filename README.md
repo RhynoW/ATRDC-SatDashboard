@@ -28,6 +28,7 @@ pinned: false
 | Starlink 離軌名單 | `/starlink-deorbit` | 即時離軌中的 Starlink（SGP4 再入時刻／落點估算） |
 | Starlink V3 佈署統計 | `/starlink-v3` | V1.0→V3.0 世代規格與佈署數量比較 |
 | 全球海纜態勢 | `/cable` | TeleGeography 海纜圖資＋台灣斷纜事件互動地圖 |
+| **碎片連鎖**（太空小遊戲） | `/game` | 衛星解體（NASA 標準解體模型）與凱斯勒連鎖蒙地卡羅：任務、緩解決策卡與對照組、風險儀表板；中／EN／日。計算核心與 Rust 單機版共用（`rust/debris_cli/`，以 `tools/sync_debris.py` 自 RUST_SatDashboard 同步，Docker 建置時編譯） |
 
 ### 衛星類別（overpass_cats.yaml）
 

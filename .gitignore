@@ -43,3 +43,6 @@ manual_tle_downloads/
 
 # 本機打包 DB 目錄（run.py 優先讀取，但發布用 scenario04/DB 之精簡 DB）
 DB/
+
+# 碎片連鎖 CLI 本機建置輸出（Docker 內編譯）
+rust/debris_cli/target/

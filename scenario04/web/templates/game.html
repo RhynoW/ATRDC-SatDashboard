@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+{% include "_net_retry.html" %}
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>碎片連鎖 — 太空小遊戲</title>
+{% include "_cesium_loader.html" %}
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#c9d1d9;--hi:#e6edf3;--mute:#8b949e;--acc:#58a6ff;--ok:#3fb950;--warn:#f2a73b;--bad:#ff7b72}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px "Microsoft JhengHei","Noto Sans TC","Noto Sans CJK TC","Hiragino Sans",sans-serif}
+#top{height:44px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:2px solid #a371f7;background:#010409}
+#top h1{font-size:16px;margin:0;color:#d2a8ff;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+#top a{color:var(--acc);text-decoration:none;white-space:nowrap}
+#lang-switcher{display:flex;gap:4px;margin-left:auto}
+.lang-btn{padding:3px 8px;background:#21262d;color:var(--mute);border:1px solid var(--line);border-radius:4px;font-size:11px;cursor:pointer}
+.lang-btn.active{background:#a371f7;color:#fff;border-color:#a371f7}
+#main{display:flex;height:calc(100% - 44px)}
+#side{width:420px;min-width:420px;overflow:auto;border-right:1px solid var(--line);padding:8px 12px 20px}
+#map{flex:1;position:relative}
+#cesium{position:absolute;inset:0}
+.cesium-widget-credits{display:none!important}
+h3{font-size:13px;color:var(--hi);margin:14px 0 6px;border-left:3px solid #a371f7;padding-left:6px}
+.row{display:flex;gap:6px;align-items:center;margin:4px 0}
+.row label{color:var(--mute);min-width:64px}
+input[type=number],input[type=date],input[type=text],select{background:var(--bg);color:var(--hi);border:1px solid var(--line);border-radius:6px;padding:3px 6px;width:100%;font:inherit}
+input[type=range]{width:100%}
+button{background:#21262d;color:var(--hi);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit;white-space:nowrap}
+button:hover{border-color:var(--acc)}
+button:disabled{opacity:.55;cursor:progress}
+button.go{background:#8957e5;border-color:#a371f7}
+.hint{color:var(--mute);font-size:11px;line-height:1.55}
+label.chk{display:flex;gap:6px;align-items:center;cursor:pointer;margin:4px 0}
+table.kv{width:100%;border-collapse:collapse;font-size:12px}
+table.kv td{padding:2px 3px;border-bottom:1px solid #21262d;vertical-align:top}
+table.kv td:first-child{color:var(--mute);white-space:nowrap;width:96px}
+.views{display:flex;flex-wrap:wrap;gap:4px}
+#status{color:var(--mute);font-size:11px;margin-top:6px;min-height:14px}
+#side a{color:#79c0ff}
+.mission{margin:6px 0 8px;padding:7px 10px;border:1px solid #6e40c9;border-radius:8px;background:#1b1530}
+.mission .q{color:var(--hi);font-weight:700;margin-bottom:2px}
+.mission ol{margin:2px 0 6px;padding-left:20px;line-height:1.6}
+.mission .demo{background:#238636;border-color:#2ea043;margin-right:6px}
+.coach{margin:6px 0;padding:6px 9px;border-left:3px solid #f2a73b;background:#2a2010;border-radius:4px;line-height:1.6}
+.coach b{color:#f2c46b}
+.act{position:sticky;bottom:0;z-index:5;background:var(--bg);padding:6px 0;box-shadow:0 -8px 8px -6px #000a}
+#d-res,#d-mission-res{scroll-margin-bottom:70px}
+#clockbar{display:flex;gap:6px;align-items:center;margin:2px 0 6px}
+#clockbar select{width:auto}
+#t-now-label{color:var(--hi);font-variant-numeric:tabular-nums}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mute);z-index:2}
+@media (max-width: 820px){
+  html,body{height:auto}
+  #top{height:auto;flex-wrap:wrap;gap:4px 8px;padding:6px 10px}
+  #main{flex-direction:column;height:auto}
+  #map{order:-1;flex:none;position:sticky;top:0;z-index:6;height:42vh;min-height:220px;border-bottom:2px solid #a371f7}
+  #side{width:auto;min-width:0;overflow:visible;border-right:none;padding:8px 12px 24px}
+  #d-res,#d-mission-res{scroll-margin-top:calc(42vh + 10px)}
+}
+</style>
+</head>
+<body>
+<div id="top">
+  <h1 id="pg-title">💥 碎片連鎖 — 太空小遊戲</h1>
+  <div id="lang-switcher">
+    <button type="button" class="lang-btn" data-lang="zh">中</button>
+    <button type="button" class="lang-btn" data-lang="en">EN</button>
+    <button type="button" class="lang-btn" data-lang="ja">日</button>
+  </div>
+  <a href="/" id="pg-home">← 返回主頁</a>
+</div>
+<div id="main">
+  <div id="side">
+    <div class="mission">
+      <div class="q">🎯 一顆大衛星解體，會引發碎片連鎖碰撞嗎？</div>
+      <ol>
+        <li>選任務或情境（含歷史案例），或自選衛星、碎片數與解體方式</li>
+        <li>可選緩解決策卡，按「引爆」（預設 ×1 寫實；想看連鎖可改 ×1,000 誇張模式）</li>
+        <li>看結果、風險儀表板與成就；點「看全程」播放</li>
+      </ol>
+      <button type="button" class="demo" id="pg-demo">▶ 示範</button><span class="hint">自動帶入一組參數並執行</span>
+    </div>
+    <div id="clockbar"><span class="hint">時間（UTC+8）</span><span id="t-now-label">—</span>
+      <select id="t-speed" title="播放速度"><option value="">自訂</option><option value="60">1 分鐘／秒</option><option value="3600">1 小時／秒</option><option value="86400">1 天／秒</option><option value="2592000">30 天／秒</option></select>
+      <button type="button" id="t-play">⏸</button></div>
+    {% include "_game_debris_panel.html" %}
+    <div id="status"></div>
+    <div class="hint" style="margin-top:10px">計算核心與 ATRDC SatDashboard Rust 單機版相同（NASA 標準解體模型、NRLMSISE-00 大氣、Cosmos 1408 驗證）；線上版同時只算一個模擬，忙碌時會自動排隊重試。</div>
+  </div>
+  <div id="map"><div id="cesium"></div><div id="loading">載入 3D 地球中…</div></div>
+</div>
+<script src="/static/js/game_core.js"></script>
+</body>
+</html>

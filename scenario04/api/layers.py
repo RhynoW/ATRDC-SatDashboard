@@ -44,6 +44,7 @@ BASEMAP_CATALOG: dict[str, dict] = {
 _texture_file_cache:  dict[str, bytes] = {}
 _globe_texture_cache: bytes | None = None
 _borders_cache:       bytes | None = None
+_globe_texture_fail_at: float = 0.0   # CDN 失敗時間；5 分鐘內不重試，避免每次請求都卡 10 秒逾時
 
 
 def _get_globe_texture() -> bytes | None:
@@ -58,6 +59,10 @@ def _get_globe_texture() -> bytes | None:
         except Exception as exc:
             logger.warning("Globe 貼圖讀取失敗: %s", exc)
     # 本地不存在時嘗試 CDN fallback
+    global _globe_texture_fail_at
+    import time
+    if time.time() - _globe_texture_fail_at < 300:
+        return None
     try:
         import requests
         logger.info("嘗試下載 Globe 貼圖 CDN fallback…")
@@ -68,6 +73,7 @@ def _get_globe_texture() -> bytes | None:
             return _globe_texture_cache
     except Exception as exc:
         logger.error("Globe 貼圖 CDN fallback 失敗: %s", exc)
+    _globe_texture_fail_at = time.time()
     logger.error("Globe 貼圖無法取得（本地: %s）", settings.GLOBE_TEXTURE_LOCAL)
     return None
 
@@ -96,6 +102,10 @@ def api_globe_texture_named(name: str):
         return make_response(f"未知底圖: {name}", 404, {"Content-Type": "text/plain; charset=utf-8"})
     if entry.get("type") == "tms":
         return make_response("TMS 底圖請直接使用 tms_url", 400)
+    if name == "default":
+        # 預設底圖與 /api/globe_texture 同一來源：本地檔不存在時走 CDN 備援
+        # （HF Space 映像檔未附 data/globe_texture.jpg，否則首頁地球底圖 503）
+        return api_globe_texture()
     path = next((p for p in entry["candidates"] if p.exists()), None)
     if path is None:
         return make_response(f"底圖檔案尚未下載: {entry['file']}", 503)
@@ -115,7 +125,9 @@ def api_textures():
     """回傳可用底圖清單，含 type/tms_url 與是否可用。"""
     result = []
     for key, entry in BASEMAP_CATALOG.items():
-        available = any(p.exists() for p in entry["candidates"])
+        # default 有 CDN 備援，只要曾成功取得（或本地檔存在）即視為可用
+        available = any(p.exists() for p in entry["candidates"]) or (
+            key == "default" and _get_globe_texture() is not None)
         item = {
             "key":       key,
             "label":     entry["label"],

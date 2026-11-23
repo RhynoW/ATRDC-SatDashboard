@@ -46,3 +46,7 @@ DB/
 
 # 碎片連鎖 CLI 本機建置輸出（Docker 內編譯）
 rust/debris_cli/target/
+
+# AIS 船舶追蹤金鑰（本機用；線上版用 HF Secret AISSTREAM_API_KEY），不可提交或打包
+aisstream_key.txt
+**/aisstream_key.txt

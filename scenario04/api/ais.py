@@ -8,8 +8,8 @@
   改用 NO_DATA_SEC 看門狗；斷線以指數退避＋抖動重連。每段連線長度記在 sessions，用來看斷線頻率。
 - 航港局「臺灣海域船舶動態資訊系統」（https://mpbais.motcmpb.gov.tw/aismpb/）：網頁本身使用的
   GeoJSON 端點 tools/geojsonais.ashx，台灣周邊約 8,000～9,000 艘，每 60 秒輪詢一次。
-  這不是政府資料開放平台上的正式資料集、頁面也沒有使用條款，因此線上版預設關閉（AIS_MPB=1 才啟用），
-  Rust 單機版預設開啟。
+  這不是政府資料開放平台上的正式資料集、頁面也沒有使用條款；線上版與 Rust 單機版皆預設開啟
+  （AIS_MPB=0 關閉）。
 
 共通
 - 有人開 AIS 圖層（/api/ais/ships、/api/ais/ship）才連線／輪詢；閒置 AIS_IDLE_SEC（預設 600 秒）停止。
@@ -18,7 +18,7 @@
 - 船位只存在記憶體；超過 1 小時沒收到即移除；航跡保留 6 小時（每艘至多每 60 秒一點）。
 
 金鑰：環境變數 AISSTREAM_API_KEY（HF Secret），或本機 scenario-advanced01/aisstream_key.txt（不提交、不打包）。
-其他環境變數：AIS_BBOX（JSON，[[[lat,lon],[lat,lon]], …]）、AIS_MPB（1 啟用航港局來源）、AIS_IDLE_SEC。
+其他環境變數：AIS_BBOX（JSON，[[[lat,lon],[lat,lon]], …]）、AIS_MPB（0 關閉航港局來源，預設開啟）、AIS_IDLE_SEC。
 """
 from __future__ import annotations
 
@@ -108,7 +108,7 @@ class AisHub:
         self.key = key if key is not None else _load_key()
         self.bbox = _bbox_env()
         self.idle_sec = float(os.getenv("AIS_IDLE_SEC", "600"))
-        self.mpb_on = (os.getenv("AIS_MPB", "0").strip() == "1") if mpb is None else mpb
+        self.mpb_on = (os.getenv("AIS_MPB", "1").strip() != "0") if mpb is None else mpb
         self._connect = connector          # 測試注入；None → websockets
         self._mpb_fetch = mpb_fetch        # 測試注入；None → requests
         self.lock = threading.Lock()

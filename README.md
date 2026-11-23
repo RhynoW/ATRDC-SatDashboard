@@ -28,7 +28,7 @@ pinned: false
 | Starlink 離軌名單 | `/starlink-deorbit` | 即時離軌中的 Starlink（SGP4 再入時刻／落點估算） |
 | Starlink V3 佈署統計 | `/starlink-v3` | V1.0→V3.0 世代規格與佈署數量比較 |
 | 全球海纜態勢 | `/cable` | TeleGeography 海纜圖資＋台灣斷纜事件互動地圖 |
-| **AIS 船舶追蹤** | 地球儀左側「向量圖層」→「🚢 AIS 船舶」 | 兩個來源以 MMSI 合併（較新回報為準，點選可看來源）：① aisstream.io（預設只訂閱台灣與東亞，`AIS_BBOX` 可改）；② 航港局「臺灣海域船舶動態資訊系統」GeoJSON（台灣周邊約 9,000 艘、每 60 秒輪詢；非正式開放資料，預設開啟，`AIS_MPB=0` 關閉）。伺服器端連 aisstream.io（WebSocket＋permessage-deflate），船隻依航向／船型顯示、點選看船名／航速／目的地與 6 小時航跡、只顯示航行中；勾選才連線、閒置 10 分鐘斷線。需環境變數 `AISSTREAM_API_KEY`（HF Space 設為 Secret；本機也可放 `aisstream_key.txt`，已列入 .gitignore／.dockerignore）。API：`/api/ais/status`、`/api/ais/ships?w=&s=&e=&n=&moving=1&src=aisstream,mpb`、`/api/ais/ship/<mmsi>`。AIS 為自主回報、僅近岸有收訊 |
+| **AIS 船舶追蹤** | 地球儀左側「向量圖層」→「🚢 AIS 船舶」 | 兩個來源以 MMSI 合併（較新回報為準，點選可看來源）：① aisstream.io（預設只訂閱台灣與東亞，`AIS_BBOX` 可改）；② 航港局「臺灣海域船舶動態資訊系統」GeoJSON（台灣周邊約 9,000 艘、每 60 秒輪詢；非正式開放資料、HF 等海外主機連不到，**線上版預設關閉**，`AIS_MPB=1` 啟用）。伺服器端連 aisstream.io（WebSocket＋permessage-deflate），船隻依航向／船型顯示、點選看船名／航速／目的地與 6 小時航跡、只顯示航行中；勾選才連線、閒置 10 分鐘斷線。需環境變數 `AISSTREAM_API_KEY`（HF Space 設為 Secret；本機也可放 `aisstream_key.txt`，已列入 .gitignore／.dockerignore）。API：`/api/ais/status`、`/api/ais/ships?w=&s=&e=&n=&moving=1&src=aisstream,mpb`、`/api/ais/ship/<mmsi>`。AIS 為自主回報、僅近岸有收訊 |
 | **碎片連鎖**（太空小遊戲） | `/game` | 衛星解體（NASA 標準解體模型）與凱斯勒連鎖蒙地卡羅：任務、緩解決策卡與對照組、風險儀表板；中／EN／日。計算核心與 Rust 單機版共用（`rust/debris_cli/`，以 `tools/sync_debris.py` 自 RUST_SatDashboard 同步，Docker 建置時編譯） |
 
 ### 衛星類別（overpass_cats.yaml）

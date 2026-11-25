@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-update_satcat.py — 把 SATCAT（含 DECAY 再入日期）寫進打包 DB，跟著資料庫一起發布
+update_satcat.py — 把 SATCAT（含 DECAY 再入日期）與 GCAT（建議名稱）寫進打包 DB，跟著資料庫一起發布
 ================================================================================
 線上版（HF Space）連不到 CelesTrak，因此改在本機每日管線下載 SATCAT、寫入 slim DB 的
 `satcat`／`satcat_meta` 資料表；線上版（api/satadmin.py）與 Rust 單機版（src/ephemeris.rs）優先讀這兩張表。
@@ -8,6 +8,9 @@ update_satcat.py — 把 SATCAT（含 DECAY 再入日期）寫進打包 DB，跟
 來源：Space-Track class/satcat（帳號取自父專案 .env 的 SPACE_TRACK_IDENTITY／SPACE_TRACK_PASSWORD，
 或 SPACETRACK_USER／SPACETRACK_PASS）；沒有帳號或失敗時改用 CelesTrak satcat.csv。
 依 Space-Track 規範 SATCAT 每天只抓一次：下載結果快取在暫存目錄，20 小時內重複執行直接用快取。
+
+GCAT（Jonathan McDowell 的 General Catalog of Artificial Space Objects，planet4589.org，CC-BY）提供逐顆名稱與
+各次發射的任務名稱，寫入 gcat_sat／gcat_launch／gcat_meta 表，供「建議名稱」辨識 OBJECT A/B/C；同樣每天一次。
 
 每日管線由 tools/merge_storymap_tle.py 結束時呼叫（失敗只警告、不中斷管線）。
 
@@ -179,10 +182,97 @@ def write_db(target: Path, rows: list[dict], source: str, fetched_at: str) -> No
     print(f"✅ SATCAT 寫入 {target.name}：{len(data):,} 筆（已再入 {decayed:,}），來源 {source}，{fetched_at}")
 
 
-def run(target: Path, source: str = "auto", max_age_h: float = 20.0) -> None:
+# ── GCAT（Jonathan McDowell, planet4589.org，CC-BY）：OBJECT A/B/C 的建議名稱來源 ──────────
+GCAT = os.getenv("SATDASH_GCAT_BASE", "https://planet4589.org/space/gcat/tsv")
+GCAT_CACHE = Path(tempfile.gettempdir()) / "atrdc_gcat_pipeline"
+
+
+def _gcat_file(name: str, sub: str, max_age_h: float) -> tuple[str, bool]:
+    """下載 GCAT TSV（快取 20 小時；失敗退回 7 天內快取）→（內容, 是否來自快取）"""
+    GCAT_CACHE.mkdir(exist_ok=True)
+    p = GCAT_CACHE / name
+    age = (time.time() - p.stat().st_mtime) / 3600 if p.exists() else 1e9
+    if age < max_age_h:
+        return p.read_text(encoding="utf-8"), True
+    try:
+        print(f"  下載 GCAT {name} …")
+        r = requests.get(f"{GCAT}/{sub}/{name}", timeout=180, headers={"User-Agent": UA})
+        r.raise_for_status()
+        r.encoding = "utf-8"
+        if len(r.text) < 100_000:
+            raise RuntimeError(f"{name} 只有 {len(r.text)} bytes")
+        p.write_text(r.text, encoding="utf-8")
+        return r.text, False
+    except Exception as e:
+        if age < 168:
+            print(f"  ⚠ GCAT {name} 下載失敗（{e}），改用 {age:.0f} 小時前的快取")
+            return p.read_text(encoding="utf-8"), True
+        raise
+
+
+def _tsv(text: str) -> tuple[list[str], list[list[str]], str]:
+    lines = text.splitlines()
+    head = lines[0].lstrip("#").split("\t")
+    updated = next((l[1:].strip() for l in lines[1:3] if l.startswith("#")), "")
+    rows = [[c.strip() for c in l.split("\t")] for l in lines if l and not l.startswith("#")]
+    return [h.strip() for h in head], rows, updated
+
+
+def update_gcat(target: Path, max_age_h: float = 20.0) -> None:
+    sat_txt, _ = _gcat_file("satcat.tsv", "cat", max_age_h)
+    lau_txt, _ = _gcat_file("launch.tsv", "launch", max_age_h)
+    h, rows, sat_upd = _tsv(sat_txt)
+    ix = {k: h.index(k) for k in ("Satcat", "Launch_Tag", "Piece", "Type", "Name", "PLName", "Owner")}
+    sats, seen = [], set()
+    for r in rows:
+        try:
+            n = int(r[ix["Satcat"]])
+        except (ValueError, IndexError):
+            continue
+        if n in seen:
+            continue
+        seen.add(n)
+        g = lambda k: r[ix[k]] if ix[k] < len(r) and r[ix[k]] != "-" else ""
+        sats.append([n, g("Launch_Tag"), g("Piece"), g("Type"), g("Name"), g("PLName"), g("Owner")])
+    h, rows, lau_upd = _tsv(lau_txt)
+    ix = {k: h.index(k) for k in ("Launch_Tag", "Launch_Date", "LV_Type", "Flight", "Mission", "Agency")}
+    launches = []
+    for r in rows:
+        g = lambda k: r[ix[k]] if ix[k] < len(r) and r[ix[k]] != "-" else ""
+        if g("Launch_Tag"):
+            launches.append([g("Launch_Tag"), g("Launch_Date"), g("LV_Type"), g("Flight"), g("Mission"), g("Agency")])
+    con = duckdb.connect(str(target))
+    try:
+        con.begin()
+        con.execute("CREATE OR REPLACE TABLE gcat_sat (norad_id INTEGER, launch_tag VARCHAR, piece VARCHAR, type VARCHAR, name VARCHAR, plname VARCHAR, owner VARCHAR)")
+        con.executemany("INSERT INTO gcat_sat VALUES (?,?,?,?,?,?,?)", sats)
+        con.execute("CREATE OR REPLACE TABLE gcat_launch (launch_tag VARCHAR, ldate VARCHAR, lv VARCHAR, flight VARCHAR, mission VARCHAR, agency VARCHAR)")
+        con.executemany("INSERT INTO gcat_launch VALUES (?,?,?,?,?,?)", launches)
+        con.execute("CREATE OR REPLACE TABLE gcat_meta (fetched_at VARCHAR, sat_count INTEGER, launch_count INTEGER, sat_updated VARCHAR, launch_updated VARCHAR)")
+        con.execute("INSERT INTO gcat_meta VALUES (?,?,?,?,?)",
+                    [datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), len(sats), len(launches), sat_upd, lau_upd])
+        con.commit()
+        con.execute("CHECKPOINT")
+    except Exception:
+        try:
+            con.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        con.close()
+    print(f"✅ GCAT 寫入 {target.name}：衛星 {len(sats):,} 筆（{sat_upd}）、發射 {len(launches):,} 筆（{lau_upd}）")
+
+
+def run(target: Path, source: str = "auto", max_age_h: float = 20.0, gcat: bool = True) -> None:
     t0 = time.monotonic()
     rows, src, at = get_satcat(source, max_age_h)
     write_db(target, rows, src, at)
+    if gcat:
+        try:
+            update_gcat(target, max_age_h)
+        except Exception as e:
+            print(f"⚠ GCAT 更新失敗（不影響 SATCAT）：{e}")
     print(f"  耗時 {time.monotonic() - t0:.0f} s")
 
 
@@ -191,13 +281,14 @@ def main() -> int:
     ap.add_argument("--target", default=str(DEFAULT_TARGET))
     ap.add_argument("--source", default="auto", choices=["auto", "spacetrack", "celestrak"])
     ap.add_argument("--max-age-hours", type=float, default=20.0)
+    ap.add_argument("--no-gcat", action="store_true", help="不更新 GCAT 建議名稱資料")
     args = ap.parse_args()
     target = Path(args.target)
     if not target.exists():
         print(f"❌ 目標 DB 不存在：{target}")
         return 1
     try:
-        run(target, args.source, args.max_age_hours)
+        run(target, args.source, args.max_age_hours, gcat=not args.no_gcat)
     except Exception as e:
         print(f"❌ {e}")
         return 1

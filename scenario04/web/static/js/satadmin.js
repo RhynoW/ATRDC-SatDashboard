@@ -54,7 +54,7 @@
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="muted">沒有符合的衛星</td></tr>'; return; }
     tb.innerHTML = rows.map(function (r) {
       var c = names[r.norad_id];
-      var nm = c ? '<span class="cust" title="自訂名稱（' + esc(fmtT(c.at)) + '）">✎ ' + esc(c.name) + '</span>' : esc(r.name);
+      var nm = c ? '<span class="cust" title="自訂名稱（' + esc(fmtT(c.at)) + '）">✎ ' + esc(c.name) + '</span>' + (c.status && c.status !== 'manual' ? ' <span class="muted">[' + esc(c.status) + (c.confidence ? '/' + esc(c.confidence) : '') + ']</span>' : '') : esc(r.name);
       nm += stBadge(r);
       if (c && c.note) nm += '<div class="muted">' + esc(c.note) + '</div>';
       var grp = S.groupsOf(r.norad_id).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join('');
@@ -62,7 +62,7 @@
         (r.in_catalog ? '' : ' <span class="muted">（不在目前目錄）</span>') + '</td><td>' + esc(r.intl_code || '—') + '</td><td class="num">' + esc(fmtT(r.tle_epoch)) +
         '</td><td>' + esc(r.country || '—') + '／' + esc(r.purpose || '—') + '</td><td>' + grp + '</td><td style="white-space:nowrap">' +
         '<button onclick="SA.rename(' + r.norad_id + ')">更名</button> ' + (c ? '<button class="dan" onclick="SA.unrename(' + r.norad_id + ')">還原</button> ' : '') +
-        '<button onclick="SA.addToGroup(' + r.norad_id + ')">加入群組</button></td></tr>';
+        '<button onclick="SA.addToGroup(' + r.norad_id + ')">加入群組</button> <button onclick="SA.loadSuggest([' + r.norad_id + '])">建議名稱</button></td></tr>';
     }).join('');
   }
   function lookup(text) {
@@ -107,6 +107,69 @@
   function loadNamed() {
     var ids = Object.keys(S.data().names).map(Number);
     fetchRows(ids).then(function (rows) { renderRows(rows); msg('q-msg', '已自訂名稱 ' + ids.length + ' 筆', true); });
+  }
+
+  // ── 建議名稱 ──
+  var SG = [], SG_STATUS = { official: 'official', inferred: 'inferred', group_inferred: 'group_inferred', conflict: 'conflict', unresolved: 'unresolved' };
+  var CONF_LABEL = { high: '高', medium: '中', low: '低' };
+  var IND_LABEL = { confirmed: '已確認', inferred: '推論', disputed: '有爭議', unconfirmed: '未確認' };
+  function sgChanged(r) {
+    var c = S.data().names[r.norad_id];
+    if (!c) return '';
+    if (r.name_status === 'official' && c.status !== 'official') return '可升級：Space-Track 已正式命名';
+    if (c.suggest_raw && r.raw_name && c.suggest_raw !== r.raw_name) return '來源名稱已變動：' + c.suggest_raw + ' → ' + r.raw_name;
+    return '';
+  }
+  function renderSuggest() {
+    var f = $('sg-filter').value, names = S.data().names;
+    var rows = SG.filter(function (r) { return !f || (f === 'upgrade' ? sgChanged(r) : r.name_status === f); });
+    var stc = { official: 'st-ok', inferred: 'st-stale', group_inferred: 'st-stale', conflict: 'st-decayed', unresolved: 'st-no_satcat' };
+    document.querySelector('#sg tbody').innerHTML = rows.map(function (r) {
+      var c = names[r.norad_id], ch = sgChanged(r), L = r.layers || {};
+      var mates = (r.mates || []).map(function (m) { return m.intl + ' ' + (m.name || '') + (m.gcat_name ? '（GCAT：' + m.gcat_name + '）' : '') + (m.self ? ' ←' : ''); }).join('\n');
+      var warn = (r.warnings || []).concat(ch ? [ch] : []);
+      return '<tr data-n="' + r.norad_id + '"><td>' + (r.suggest ? '<input type="checkbox" class="sg-chk" value="' + r.norad_id + '"/>' : '') + '</td><td class="num">' + r.norad_id +
+        '<div class="muted">' + esc(r.intl_code || '') + '</div></td><td>' + esc(r.current_name) + (c ? '<div class="cust">✎ ' + esc(c.name) + '</div>' : '') + '</td><td>' +
+        (r.suggest ? '<input class="sg-name" style="width:240px" maxlength="64" value="' + esc(r.suggest) + '"/>' + (r.raw_name && r.raw_name !== r.suggest ? '<div class="muted">原始：' + esc(r.raw_name) + '</div>' : '') : '<span class="muted">（無可靠來源，維持原名）</span>') +
+        '</td><td><span class="st ' + (stc[r.name_status] || '') + '">' + esc(r.name_status) + '</span>' + (r.confidence ? ' <span class="muted">可信度' + CONF_LABEL[r.confidence] + '</span>' : '') +
+        '</td><td title="' + esc(mates) + '">' + esc((L.launch_group || {}).value || '—') + '<div class="muted">同次發射 ' + (r.mates || []).length + ' 個物體（游標停留看清單）</div></td><td>' +
+        esc((L.candidate_mission || {}).value || '—') + '</td><td>' + esc(IND_LABEL[(L.individual || {}).status] || '—') + '</td><td style="white-space:normal;max-width:280px;color:#e3b341">' +
+        esc(warn.join('；')) + '</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="muted">沒有符合的項目</td></tr>';
+    var all = $('sg-all'); if (all) all.onchange = function () { document.querySelectorAll('.sg-chk').forEach(function (x) { x.checked = all.checked; }); };
+  }
+  function loadSuggest(ids) {
+    msg('sg-msg', '分析中…', true);
+    var url = ids ? '/api/satadmin/suggest?norad=' + ids.join(',') : '/api/satadmin/suggest?scope=objects&limit=2000';
+    api('GET', url).then(function (j) {
+      SG = j.results;
+      if (!j.gcat) msg('sg-msg', '資料庫內尚無 GCAT 資料（每日管線更新後才有逐顆與發射任務名稱）', false);
+      else {
+        var c = j.counts;
+        msg('sg-msg', '共 ' + j.count + ' 顆：official ' + c.official + '、inferred ' + c.inferred + '、group_inferred ' + c.group_inferred + '、conflict ' + c.conflict + '、unresolved ' + c.unresolved + '（GCAT ' + (j.gcat.sat_updated || '') + '）', true);
+      }
+      renderSuggest();
+      if (ids) $('sg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }).catch(function (e) { msg('sg-msg', e.message); });
+  }
+  function sgCheck(mode) {
+    document.querySelectorAll('.sg-chk').forEach(function (x) {
+      var r = SG.find(function (y) { return y.norad_id === +x.value; });
+      x.checked = mode === 'safe' && r && (r.name_status === 'official' || r.name_status === 'inferred') && !(r.warnings || []).length;
+    });
+  }
+  function applySuggest() {
+    var ev = ($('sg-evidence').value.match(/https?:\/\/\S+/g) || []), review = $('sg-review').value, n = 0, errs = [];
+    document.querySelectorAll('.sg-chk:checked').forEach(function (x) {
+      var r = SG.find(function (y) { return y.norad_id === +x.value; }); if (!r) return;
+      var name = x.closest('tr').querySelector('.sg-name').value.trim();
+      var evid = (r.sources || []).map(function (s) { return s.url; }).concat(ev).filter(function (u, i, a) { return u && a.indexOf(u) === i; });
+      var note = r.note + (name !== r.suggest ? '；人工修改建議名稱' : '') + (ev.length ? '；證據：' + ev.join(' ') : '');
+      try { S.rename(r.norad_id, name, note, r.current_name, { status: name !== r.suggest ? 'manual' : r.name_status, confidence: r.confidence, evidence: evid, review: review, suggest_raw: r.raw_name }); n++; }
+      catch (e) { errs.push(r.norad_id + '：' + e.message); }
+    });
+    msg('sg-msg', '已套用 ' + n + ' 筆（存在這個瀏覽器）' + (errs.length ? '；失敗：' + errs.slice(0, 3).join('；') : ''), !errs.length);
+    renderSuggest();
   }
 
   // ── 群組 ──
@@ -297,7 +360,8 @@
   function clearAll() { if (confirm('清除這個瀏覽器中所有更名與群組？（建議先下載備份）')) { S.clearAll(); SEL = null; msg('bk-msg', '已清除', true); } }
 
   $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(); });
-  window.SA = { lookup: lookup, rename: rename, unrename: unrename, loadDup: loadDup, loadNamed: loadNamed, newGroup: newGroup, addToGroup: addToGroup,
+  $('sg-filter').addEventListener('change', renderSuggest);
+  window.SA = { loadSuggest: loadSuggest, sgCheck: sgCheck, applySuggest: applySuggest, lookup: lookup, rename: rename, unrename: unrename, loadDup: loadDup, loadNamed: loadNamed, newGroup: newGroup, addToGroup: addToGroup,
     loadDecay: loadDecay, decayCsv: decayCsv, loadRecent: loadRecent, refresh: refresh, importCsv: importCsv, exportCsv: exportCsv,
     exportJson: exportJson, importJson: importJson, clearAll: clearAll };
   var t = new URLSearchParams(location.search).get('tab');

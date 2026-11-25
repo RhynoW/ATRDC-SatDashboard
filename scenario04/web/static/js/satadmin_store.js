@@ -45,10 +45,19 @@
     data: function () { return D; },
     group: group, children: children, descendants: descendants, path: path, effSensor: effSensor, effLook: effLook,
     allMembers: allMembers, groupsOf: groupsOf,
-    rename: function (n, name, note, orig) {
+    /* meta（選填）：{ status: official|inferred|group_inferred|conflict|manual, confidence: high|medium|low,
+       evidence: [網址…], review: unreviewed|accepted|disputed|superseded, suggest_raw: 原始建議名稱 } */
+    rename: function (n, name, note, orig, meta) {
       name = (name || '').trim(); checkName(name, '名稱');
       var prev = D.names[n];
-      D.names[n] = { name: name, orig: (prev && prev.orig) || orig || '', note: (note || '').trim(), at: now() };
+      var rec = { name: name, orig: (prev && prev.orig) || orig || '', note: (note || '').trim().slice(0, 500), at: now() };
+      meta = meta || {};
+      rec.status = meta.status || 'manual';
+      if (meta.confidence) rec.confidence = meta.confidence;
+      if (meta.evidence && meta.evidence.length) rec.evidence = meta.evidence.slice(0, 10);
+      rec.review = meta.review || 'unreviewed';
+      if (meta.suggest_raw) rec.suggest_raw = meta.suggest_raw;
+      D.names[n] = rec;
       save();
     },
     unrename: function (n) { delete D.names[n]; save(); },

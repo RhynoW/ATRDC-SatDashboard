@@ -29,6 +29,8 @@ pinned: false
 | Starlink V3 佈署統計 | `/starlink-v3` | V1.0→V3.0 世代規格與佈署數量比較 |
 | 全球海纜態勢 | `/cable` | TeleGeography 海纜圖資＋台灣斷纜事件互動地圖 |
 | **AIS 船舶追蹤** | 地球儀左側「向量圖層」→「🚢 AIS 船舶」 | 兩個來源以 MMSI 合併（較新回報為準，點選可看來源）：① aisstream.io（預設只訂閱台灣與東亞，`AIS_BBOX` 可改）；② 航港局「臺灣海域船舶動態資訊系統」GeoJSON（台灣周邊約 9,000 艘、每 60 秒輪詢；非正式開放資料、HF 等海外主機連不到，**線上版預設關閉**，`AIS_MPB=1` 啟用）。伺服器端連 aisstream.io（WebSocket＋permessage-deflate），船隻依航向／船型顯示、點選看船名／航速／目的地與 6 小時航跡、只顯示航行中；勾選才連線、閒置 10 分鐘斷線。需環境變數 `AISSTREAM_API_KEY`（HF Space 設為 Secret；本機也可放 `aisstream_key.txt`，已列入 .gitignore／.dockerignore）。API：`/api/ais/status`、`/api/ais/ships?w=&s=&e=&n=&moving=1&src=aisstream,mpb`、`/api/ais/ship/<mmsi>`。AIS 為自主回報、僅近岸有收訊 |
+| **衛星管理** | 頂端「🗂 衛星管理」（`/satadmin`） | 依 NORAD ID 或名稱查詢與更名（保留 Space-Track 原名）、列出重複名稱（OBJECT A、TBA 等，可排除碎片）、多層群組（感測器類型、偵照角度沿用上層）、CSV 匯入匯出與 JSON 備份。**線上版的更名與群組只存在使用者自己的瀏覽器（localStorage），不上傳伺服器**；帳號權限與伺服器端保存只在 Rust 單機版。「衛星失能」以 SATCAT（CelesTrak，12 小時內只抓一次）列出群組內已再入（DECAY 日期、在軌天數）、TLE 停更、近期再入；「星歷資料」顯示最後更新時間與目錄曆元分布，重新抓取 CelesTrak 需 `ADMIN_TOKEN`（每 2 小時限一次）。API：`/api/satadmin/lookup`、`/api/satadmin/duplicates`、`POST /api/satadmin/status`、`/api/satadmin/recent_decay`、`/api/ephemeris/status`、`POST /api/ephemeris/refresh` |
+| **過頂預報** | 頂端「📅 過頂預報」（`/forecast`） | 多中心點（可設半徑）、最長 62 天，輸出過頂清單／日出日落／歷史誤差三個 CSV。過頂＝中心點仰角 ≥ 門檻；可偵照＝離天底角 ≤ 偵照角度（群組設定或預設 15°／30°）；每筆附太陽仰角、日照與當日日出日落，可只保留光學衛星的日照時段；歷史誤差以資料庫中同一顆衛星的 TLE 兩兩比對估算提前 1–30 天的位置與時間誤差，並標在每筆過頂。與 Rust 單機版同一套判定（31 天 3 顆 2 點 678 筆逐筆一致）。線上版一次最多 300 顆（`FORECAST_MAX_SATS`） |
 | **碎片連鎖**（太空小遊戲） | `/game` | 衛星解體（NASA 標準解體模型）與凱斯勒連鎖蒙地卡羅：任務、緩解決策卡與對照組、風險儀表板；中／EN／日。計算核心與 Rust 單機版共用（`rust/debris_cli/`，以 `tools/sync_debris.py` 自 RUST_SatDashboard 同步，Docker 建置時編譯） |
 
 ### 衛星類別（overpass_cats.yaml）

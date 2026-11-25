@@ -50,3 +50,5 @@ rust/debris_cli/target/
 # AIS 船舶追蹤金鑰（本機用；線上版用 HF Secret AISSTREAM_API_KEY），不可提交或打包
 aisstream_key.txt
 **/aisstream_key.txt
+# 單機版帳號與衛星管理私有資料（Rust 開發時資料目錄＝scenario04），不可提交／打包
+**/user_private/

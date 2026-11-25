@@ -26,8 +26,8 @@ def parse_float_arg(args, name: str, default: float, lo: float, hi: float) -> fl
 
 
 def register_blueprints(app: Flask) -> None:
-    from . import (admin, ais, conjunctions, games, lab, layers, orbit_history, pages,
-                   passes, positions, rpo, starlink, starlink_census, story, user_data)
+    from . import (admin, ais, conjunctions, forecast, games, lab, layers, orbit_history, pages,
+                   passes, positions, rpo, satadmin, starlink, starlink_census, story, user_data)
     app.register_blueprint(pages.bp)
     app.register_blueprint(positions.bp)
     app.register_blueprint(passes.bp)
@@ -43,3 +43,5 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(lab.bp)
     app.register_blueprint(games.bp)
     app.register_blueprint(ais.bp)
+    app.register_blueprint(satadmin.bp)
+    app.register_blueprint(forecast.bp)

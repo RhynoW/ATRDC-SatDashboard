@@ -12,6 +12,11 @@ update_satcat.py — 把 SATCAT（含 DECAY 再入日期）與 GCAT（建議名�
 GCAT（Jonathan McDowell 的 General Catalog of Artificial Space Objects，planet4589.org，CC-BY）提供逐顆名稱與
 各次發射的任務名稱，寫入 gcat_sat／gcat_launch／gcat_meta 表，供「建議名稱」辨識 OBJECT A/B/C；同樣每天一次。
 
+SATCAT 每日異動（satcat_change／satcat_change_meta 表）：① Space-Track class/satcat_change（近 90 天的名稱／國際編號／
+國家／發射日／DECAY 異動與 CHANGE_MADE 時間，每天一次）；② 新抓的 SATCAT 與前一份快照逐筆比對（補 OBJECT_TYPE 變更；
+沒有 Space-Track 帳號時也能以 CelesTrak 比對），比對結果累積在暫存目錄的歷史檔（slim DB 每天重建，不能存在 DB 裡）。
+每筆分類為 new（新編目）／named（OBJECT x → 正式名稱）／renamed／decayed（再入）／decay_fix（再入日期修正）／type／other。
+
 每日管線由 tools/merge_storymap_tle.py 結束時呼叫（失敗只警告、不中斷管線）。
 
 用法：
@@ -19,6 +24,7 @@ GCAT（Jonathan McDowell 的 General Catalog of Artificial Space Objects，plane
   python tools/update_satcat.py --target scenario04/DB/space_db_slim.duckdb
   python tools/update_satcat.py --source celestrak  # 強制來源（auto／spacetrack／celestrak）
   python tools/update_satcat.py --max-age-hours 0   # 忽略快取（仍請遵守每天一次）
+  python tools/update_satcat.py --no-gcat --no-changes
 """
 from __future__ import annotations
 
@@ -27,6 +33,7 @@ import csv
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -42,6 +49,9 @@ CACHE = Path(tempfile.gettempdir()) / "atrdc_satcat_pipeline.json"
 ST = os.getenv("SATDASH_SPACETRACK_BASE", "https://www.space-track.org")
 CT = os.getenv("SATDASH_CELESTRAK_BASE", "https://celestrak.org")
 UA = "ATRDC-SatDashboard pipeline (satcat)"
+CHG_CACHE = Path(tempfile.gettempdir()) / "atrdc_satcat_change_pipeline.json"   # Space-Track satcat_change 快取
+DIFF_HIST = Path(tempfile.gettempdir()) / "atrdc_satcat_diff_history.json"      # 快照比對累積（slim DB 每天重建，另存）
+CHANGE_DAYS = 90
 COLS = ["norad_id", "name", "intl", "object_type", "ops_status", "owner", "launch", "decay", "period", "incl", "apogee", "perigee"]
 
 
@@ -135,6 +145,10 @@ def get_satcat(source: str, max_age_h: float) -> tuple[list[dict], str, str]:
                 raise RuntimeError(f"只有 {len(rows)} 筆，疑似不完整")
             at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             try:
+                record_diff(src, rows, at)
+            except Exception as e:
+                print(f"  ⚠ SATCAT 快照比對失敗（不影響寫入）：{e}")
+            try:
                 CACHE.write_text(json.dumps({"source": src, "fetched_at": at, "rows": rows}, ensure_ascii=False), encoding="utf-8")
             except Exception:
                 pass
@@ -180,6 +194,202 @@ def write_db(target: Path, rows: list[dict], source: str, fetched_at: str) -> No
     finally:
         con.close()
     print(f"✅ SATCAT 寫入 {target.name}：{len(data):,} 筆（已再入 {decayed:,}），來源 {source}，{fetched_at}")
+
+
+# ── SATCAT 每日異動 ────────────────────────────────────────────────────────────
+NONAME_RE = re.compile(r"^(OBJECT [A-Z]{1,3}|TBA.*|UNKNOWN|)$")
+FIELDS = [("NAME", "name"), ("INTLDES", "intl"), ("COUNTRY", "owner"), ("LAUNCH", "launch"), ("DECAY", "decay")]
+CHG_COLS = ["norad_id", "change_made", "kind", "field", "previous", "current", "name", "intl", "source"]
+
+
+def _s(v) -> str:
+    return "" if v is None else str(v).strip()
+
+
+def classify(field: str, prev: str, cur: str) -> str:
+    """一筆欄位異動的類別"""
+    if field == "catalog":
+        return "new"
+    if field == "name":
+        return "named" if NONAME_RE.match(prev.upper()) and not NONAME_RE.match(cur.upper()) else "renamed"
+    if field == "decay":
+        return "decayed" if not prev and cur else "decay_fix"
+    if field == "object_type":
+        return "type"
+    return "other"
+
+
+def _chg(n: int, at: str, field: str, prev: str, cur: str, name: str, intl: str, src: str) -> dict:
+    return {"norad_id": n, "change_made": at, "kind": classify(field, prev, cur), "field": field, "previous": prev,
+            "current": cur, "name": name, "intl": intl, "source": src}
+
+
+def from_spacetrack(raw: list[dict]) -> list[dict]:
+    """class/satcat_change 一列 → 每個有變動的欄位一筆；PREVIOUS_NAME 與 PREVIOUS_INTLDES 皆空＝新編目"""
+    out = []
+    for m in raw:
+        try:
+            n = int(m.get("NORAD_CAT_ID"))
+        except (TypeError, ValueError):
+            continue
+        at = _s(m.get("CHANGE_MADE"))[:19]
+        name, intl = _s(m.get("CURRENT_NAME")), _s(m.get("CURRENT_INTLDES"))
+        if m.get("PREVIOUS_NAME") is None and m.get("PREVIOUS_INTLDES") is None:
+            out.append(_chg(n, at, "catalog", "", name, name, intl, "spacetrack"))
+            continue
+        for k, f in FIELDS:
+            a, b = _s(m.get("PREVIOUS_" + k)), _s(m.get("CURRENT_" + k))
+            if a != b:
+                out.append(_chg(n, at, f, a, b, name, intl, "spacetrack"))
+    return out
+
+
+def diff_snapshots(old: list[dict], new: list[dict], at: str, src: str) -> list[dict]:
+    """前一份 SATCAT 快照 vs 新快照（同一來源）→ 異動清單"""
+    o = {r["norad_id"]: r for r in old}
+    at = at.replace("T", " ").replace("Z", "")[:19]
+    out = []
+    for r in new:
+        n = r["norad_id"]
+        p = o.get(n)
+        nm, intl = _s(r.get("name")), _s(r.get("intl"))
+        if p is None:
+            out.append(_chg(n, at, "catalog", "", nm, nm, intl, "diff:" + src))
+            continue
+        for f in ("name", "intl", "owner", "launch", "decay", "object_type"):
+            a, b = _s(p.get(f)), _s(r.get(f))
+            if a != b:
+                out.append(_chg(n, at, f, a, b, nm, intl, "diff:" + src))
+    return out
+
+
+def _load_hist() -> list[dict]:
+    try:
+        return json.loads(DIFF_HIST.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _cutoff(days: int) -> str:
+    return datetime.fromtimestamp(time.time() - days * 86400, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def record_diff(src: str, rows: list[dict], at: str) -> int:
+    """新下載的 SATCAT 與前一份快取比對，累積到 DIFF_HIST（只比同一來源；異動過多視為格式改變而略過）"""
+    try:
+        c = json.loads(CACHE.read_text(encoding="utf-8"))
+    except Exception:
+        return 0
+    if c.get("source") != src or len(c.get("rows") or []) < 1000:
+        return 0
+    ch = diff_snapshots(c["rows"], rows, at, src)
+    if len(ch) > 20000:
+        print(f"  ⚠ 快照比對出 {len(ch):,} 筆異動，疑似格式改變，略過")
+        return 0
+    cut = _cutoff(CHANGE_DAYS)
+    hist = [h for h in _load_hist() if h.get("change_made", "") >= cut] + ch
+    DIFF_HIST.write_text(json.dumps(hist, ensure_ascii=False), encoding="utf-8")
+    print(f"  SATCAT 快照比對：{len(ch):,} 筆異動（{c['fetched_at']} → {at}）")
+    return len(ch)
+
+
+def fetch_satcat_change(user: str, pw: str, days: int) -> list[dict]:
+    s = requests.Session()
+    s.headers["User-Agent"] = UA
+    r = s.post(f"{ST}/ajaxauth/login", data={"identity": user, "password": pw}, timeout=60)
+    if r.status_code != 200 or '"Failed"' in r.text:
+        raise RuntimeError(f"Space-Track 登入失敗（HTTP {r.status_code}）")
+    try:
+        r = s.get(f"{ST}/basicspacedata/query/class/satcat_change/CHANGE_MADE/%3Enow-{days}/orderby/CHANGE_MADE%20desc/format/json", timeout=300)
+        r.raise_for_status()
+        return r.json()
+    finally:
+        try:
+            s.get(f"{ST}/ajaxauth/logout", timeout=30)
+        except Exception:
+            pass
+
+
+def get_satcat_change(max_age_h: float, days: int = CHANGE_DAYS) -> tuple[list[dict], str | None]:
+    """Space-Track satcat_change（快取 20 小時；失敗退回 7 天內快取；沒帳號回傳空清單）"""
+    try:
+        c = json.loads(CHG_CACHE.read_text(encoding="utf-8"))
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(c["fetched_at"].replace("Z", "+00:00"))).total_seconds() / 3600
+    except Exception:
+        c, age = None, 1e9
+    if c and age < max_age_h:
+        print(f"  satcat_change 使用快取（{age:.1f} 小時前，{len(c['rows']):,} 筆）")
+        return c["rows"], c["fetched_at"]
+    cr = _creds()
+    if not cr:
+        print("  satcat_change：未設定 Space-Track 帳號，只用快照比對")
+        return [], None
+    try:
+        print("  下載 Space-Track satcat_change …")
+        rows = fetch_satcat_change(*cr, days)
+        at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        try:
+            CHG_CACHE.write_text(json.dumps({"fetched_at": at, "rows": rows}, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+        return rows, at
+    except Exception as e:
+        if c and age < 168:
+            print(f"  ⚠ satcat_change 下載失敗（{e}），改用 {age:.0f} 小時前的快取")
+            return c["rows"], c["fetched_at"]
+        raise
+
+
+def merge_changes(st_rows: list[dict], diff_rows: list[dict], days: int = CHANGE_DAYS) -> list[dict]:
+    """Space-Track 為準；快照比對只補 Space-Track 沒有的（OBJECT_TYPE 等）"""
+    cut = _cutoff(days)
+    key = lambda r: (r["norad_id"], r["field"], r["current"])
+    have = {key(r) for r in st_rows}
+    seen, out = set(), []
+    for r in st_rows + [r for r in diff_rows if key(r) not in have]:
+        k = key(r) + (r["previous"],)
+        if r["change_made"] < cut or k in seen:
+            continue
+        seen.add(k)
+        out.append(r)
+    out.sort(key=lambda r: (r["change_made"], r["norad_id"]), reverse=True)
+    return out
+
+
+def update_changes(target: Path, satcat_rows: list[dict], max_age_h: float = 20.0) -> None:
+    raw, at = get_satcat_change(max_age_h)
+    st = from_spacetrack(raw)
+    names = {r["norad_id"]: (_s(r.get("name")), _s(r.get("intl"))) for r in satcat_rows}
+    for r in st:   # 以最新 SATCAT 名稱顯示（同一顆之後可能又改名）
+        nm = names.get(r["norad_id"])
+        if nm:
+            r["name"], r["intl"] = nm[0] or r["name"], nm[1] or r["intl"]
+    rows = merge_changes(st, _load_hist())
+    n_st = sum(1 for r in rows if r["source"] == "spacetrack")
+    con = duckdb.connect(str(target))
+    try:
+        con.begin()
+        con.execute("""CREATE OR REPLACE TABLE satcat_change (norad_id INTEGER, change_made VARCHAR, kind VARCHAR, field VARCHAR,
+                       previous VARCHAR, current VARCHAR, name VARCHAR, intl VARCHAR, source VARCHAR)""")
+        con.executemany(f"INSERT INTO satcat_change VALUES ({','.join('?' * len(CHG_COLS))})", [[r[c] for c in CHG_COLS] for r in rows])
+        con.execute("CREATE OR REPLACE TABLE satcat_change_meta (fetched_at VARCHAR, days INTEGER, count INTEGER, spacetrack INTEGER, diff INTEGER)")
+        con.execute("INSERT INTO satcat_change_meta VALUES (?,?,?,?,?)",
+                    [at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), CHANGE_DAYS, len(rows), n_st, len(rows) - n_st])
+        con.commit()
+        con.execute("CHECKPOINT")
+    except Exception:
+        try:
+            con.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        con.close()
+    kc: dict[str, int] = {}
+    for r in rows:
+        kc[r["kind"]] = kc.get(r["kind"], 0) + 1
+    print(f"✅ SATCAT 異動寫入 {target.name}：{len(rows):,} 筆（Space-Track {n_st:,}、快照比對 {len(rows) - n_st:,}）："
+          + "、".join(f"{k} {v}" for k, v in sorted(kc.items(), key=lambda x: -x[1])))
 
 
 # ── GCAT（Jonathan McDowell, planet4589.org，CC-BY）：OBJECT A/B/C 的建議名稱來源 ──────────
@@ -264,10 +474,15 @@ def update_gcat(target: Path, max_age_h: float = 20.0) -> None:
     print(f"✅ GCAT 寫入 {target.name}：衛星 {len(sats):,} 筆（{sat_upd}）、發射 {len(launches):,} 筆（{lau_upd}）")
 
 
-def run(target: Path, source: str = "auto", max_age_h: float = 20.0, gcat: bool = True) -> None:
+def run(target: Path, source: str = "auto", max_age_h: float = 20.0, gcat: bool = True, changes: bool = True) -> None:
     t0 = time.monotonic()
     rows, src, at = get_satcat(source, max_age_h)
     write_db(target, rows, src, at)
+    if changes:
+        try:
+            update_changes(target, rows, max_age_h)
+        except Exception as e:
+            print(f"⚠ SATCAT 異動更新失敗（不影響 SATCAT）：{e}")
     if gcat:
         try:
             update_gcat(target, max_age_h)
@@ -282,13 +497,14 @@ def main() -> int:
     ap.add_argument("--source", default="auto", choices=["auto", "spacetrack", "celestrak"])
     ap.add_argument("--max-age-hours", type=float, default=20.0)
     ap.add_argument("--no-gcat", action="store_true", help="不更新 GCAT 建議名稱資料")
+    ap.add_argument("--no-changes", action="store_true", help="不更新 SATCAT 每日異動")
     args = ap.parse_args()
     target = Path(args.target)
     if not target.exists():
         print(f"❌ 目標 DB 不存在：{target}")
         return 1
     try:
-        run(target, args.source, args.max_age_hours, gcat=not args.no_gcat)
+        run(target, args.source, args.max_age_hours, gcat=not args.no_gcat, changes=not args.no_changes)
     except Exception as e:
         print(f"❌ {e}")
         return 1

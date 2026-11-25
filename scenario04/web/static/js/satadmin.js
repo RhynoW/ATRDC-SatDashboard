@@ -266,7 +266,7 @@
         '<label>資料庫</label><div>' + esc(s.db.name || '—') + '，更新於 ' + esc(fmtT(s.db.updated_at)) + '（' + ago(s.db.updated_at) + '）</div>' +
         '<label>最近重抓</label><div>' + (gp ? 'CelesTrak ' + esc(fmtT(gp.fetched_at)) + '：' + gp.count.toLocaleString() + ' 筆，更新 ' + gp.newer.toLocaleString() + ' 顆、新增 ' + gp.added + ' 顆' : '尚未重抓（本次服務啟動以來）') + '</div>' +
         '<label>目前目錄</label><div>' + ix.count.toLocaleString() + ' 顆；最新曆元 ' + esc(fmtT(ix.epoch_latest)) + '；曆元中位數 ' + ix.median_age_days + ' 天前；1 天內 ' + ix.within_1d.toLocaleString() + ' 顆、3 天內 ' + ix.within_3d.toLocaleString() + ' 顆、超過 30 天 ' + ix.older_30d.toLocaleString() + ' 顆</div>' +
-        '<label>SATCAT</label><div>' + (sc ? 'CelesTrak ' + esc(fmtT(sc.fetched_at)) + '：' + sc.count.toLocaleString() + ' 筆（已再入 ' + sc.decayed.toLocaleString() + '）' : '<span class="muted">需要時自動下載</span>') + '</div></div>';
+        '<label>SATCAT</label><div>' + (sc ? esc(sc.source) + ' ' + esc(fmtT(sc.fetched_at)) + '：' + sc.count.toLocaleString() + ' 筆（已再入 ' + sc.decayed.toLocaleString() + '）' : '<span class="muted">需要時自動下載</span>') + '</div></div>';
       var jb = s.job || {};
       if (jb.started_at) $('ep-job').textContent = (jb.running ? '⏳ 進行中\n' : (jb.ok ? '✅ ' : '❌ ') + '最近一次（' + fmtT(jb.finished_at) + '）\n') + (jb.log || []).join('\n');
       clearTimeout(EP_TIMER); if (jb.running) EP_TIMER = setTimeout(loadEphem, 1500);

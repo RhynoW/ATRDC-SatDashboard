@@ -195,6 +195,14 @@ def main() -> int:
     con.close()
     print(f"✅ 完成：{after[0]:,} 列 / {after[1]:,} 顆，最新 epoch {after[2]}；"
           f"檔案 {target.stat().st_size/1e6:.1f} MB，耗時 {time.monotonic()-t0:.0f} s → {target}")
+    # SATCAT（DECAY 再入日期）跟著 DB 發布：線上版連不到 CelesTrak，改讀 DB 內 satcat 表（tools/update_satcat.py）。
+    # 失敗只警告，不中斷每日管線（DB 仍照常發布，只是沿用上一份或沒有 SATCAT）。
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from update_satcat import run as update_satcat
+        update_satcat(target)
+    except Exception as e:
+        print(f"⚠ SATCAT 更新失敗（不影響 TLE 發布）：{e}")
     return 0
 
 

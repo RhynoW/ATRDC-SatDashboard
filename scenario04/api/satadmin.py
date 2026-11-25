@@ -102,9 +102,56 @@ def _parse_satcat_csv(text: str) -> dict[int, dict]:
     return out
 
 
+_db_sc: dict[int, dict] = {}
+_db_sc_meta: dict | None = None
+_db_sc_mtime = -1.0
+
+
+def _db_satcat() -> tuple[dict[int, dict], dict | None]:
+    """DB 內 satcat／satcat_meta 表（本機每日管線 tools/update_satcat.py 寫入、跟著 DB 發布）；DB 檔更新才重讀"""
+    global _db_sc, _db_sc_meta, _db_sc_mtime
+    db = resolve_db()
+    if db is None:
+        return {}, None
+    try:
+        mt = db.stat().st_mtime
+    except OSError:
+        return {}, None
+    if mt == _db_sc_mtime:
+        return _db_sc, _db_sc_meta
+    import duckdb
+    sc, meta = {}, None
+    try:
+        with duckdb.connect(str(db), read_only=True) as con:
+            tabs = {r[0] for r in con.execute("SELECT table_name FROM information_schema.tables").fetchall()}
+            if "satcat" in tabs:
+                for n, name, intl, ot, owner, launch, decay in con.execute(
+                        "SELECT norad_id, name, intl, object_type, owner, launch, decay FROM satcat").fetchall():
+                    sc[int(n)] = {"name": name or "", "intl": intl or "", "object_type": ot or "", "owner": owner or "",
+                                  "launch": launch or "", "decay": (decay or "").strip()}
+            if "satcat_meta" in tabs:
+                r = con.execute("SELECT source, fetched_at, count, decayed FROM satcat_meta LIMIT 1").fetchone()
+                if r:
+                    meta = {"source": f"資料庫（{r[0]}）", "fetched_at": r[1], "count": r[2], "decayed": r[3]}
+    except Exception as e:
+        logger.warning("讀取 DB satcat 失敗：%s", e)
+    _db_sc, _db_sc_meta, _db_sc_mtime = sc, meta, mt
+    if sc:
+        logger.info("SATCAT 取自資料庫：%d 筆", len(sc))
+    return sc, meta
+
+
+def satcat_meta() -> dict | None:
+    sc, meta = _db_satcat()
+    return meta if sc else _meta().get("satcat")
+
+
 def get_satcat(fetch: bool = True) -> dict[int, dict]:
-    """記憶體 → 暫存檔 → CelesTrak（12 小時內只抓一次）"""
+    """DB 內 satcat 表 → 記憶體 → 暫存檔 → CelesTrak（12 小時內只抓一次；HF 連不到 CelesTrak 時靠 DB）"""
     global _satcat, _satcat_at, _satcat_err
+    sc, _ = _db_satcat()
+    if sc:
+        return sc
     with _lock:
         if _satcat and time.time() - _satcat_at < SATCAT_TTL:
             return _satcat
@@ -217,7 +264,7 @@ def api_status():
     idx = get_sat_index()
     sc = get_satcat()
     rows = [_sat_row(idx, sc, n, stale) for n in ids]
-    m = _meta().get("satcat")
+    m = satcat_meta()
     return jsonify({"rows": rows, "satcat_loaded": bool(sc), "satcat": m, "satcat_error": _satcat_err or None})
 
 
@@ -265,7 +312,7 @@ def api_ephem_status():
     from .admin import _admin_allowed
     wait = max(0, int(GP_MIN_INTERVAL - (time.time() - m.get("gp_attempt", 0))))
     return jsonify({"last_updated": last, "db": {"name": info.get("db_name"), "updated_at": db_at}, "index": _index_epoch_stats(),
-                    "gp": gp, "satcat": m.get("satcat"), "job": dict(_job), "can_refresh": _admin_allowed(), "wait_s": {"gp:celestrak": wait}})
+                    "gp": gp, "satcat": satcat_meta(), "job": dict(_job), "can_refresh": _admin_allowed(), "wait_s": {"gp:celestrak": wait}})
 
 
 def _run_refresh(by: str) -> None:

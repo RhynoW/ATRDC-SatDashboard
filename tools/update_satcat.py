@@ -40,7 +40,7 @@ import re
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import duckdb
@@ -480,6 +480,49 @@ def update_gcat(target: Path, max_age_h: float = 20.0) -> None:
 # ── SupGP：CelesTrak 營運商補充星曆（一箭多星身分比對用）────────────────────────
 SUPGP_FILES = ["starlink", "oneweb", "planet", "kuiper", "iridium", "orbcomm", "ses", "intelsat", "telesat", "iss", "css", "gps", "glonass", "ast"]
 SUPGP_CACHE = Path(tempfile.gettempdir()) / "atrdc_supgp_pipeline"
+SUPGP_HIST = APP / "DB" / "supgp_history.duckdb"   # 歷史存檔（不隨 slim DB 發布、不被每日重建覆蓋；機動標註用）
+_A5 = "ABCDEFGHJKLMNPQRSTUVWXYZ"   # Alpha-5：A=10 … Z=33（無 I、O）
+
+
+def _norad5(f: str) -> int | None:
+    f = f.strip()
+    if f.isdigit():
+        return int(f)
+    if len(f) == 5 and f[0] in _A5 and f[1:].isdigit():
+        return (_A5.index(f[0]) + 10) * 10000 + int(f[1:])
+    return None
+
+
+def _tle_epoch(l1: str) -> datetime | None:
+    try:
+        yy, doy = int(l1[18:20]), float(l1[20:32])
+    except ValueError:
+        return None
+    y = 2000 + yy if yy < 57 else 1900 + yy
+    return datetime(y, 1, 1, tzinfo=timezone.utc) + timedelta(days=doy - 1)
+
+
+def archive_supgp(data: list[list[str]], fetched_at: str, path: Path | None = None) -> tuple[int, int]:
+    """SupGP 附加寫入歷史檔（同一顆同一曆元只留第一筆）→（新增筆數, 總筆數）"""
+    path = path or SUPGP_HIST
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for f, name, l1, l2 in data:
+        n, ep = _norad5(l1[2:7]), _tle_epoch(l1)
+        if n is not None and ep is not None:
+            rows.append((n, ep.replace(tzinfo=None), f, name, l1, l2, fetched_at))
+    con = duckdb.connect(str(path))
+    try:
+        con.execute("""CREATE TABLE IF NOT EXISTS supgp_hist (norad_id INTEGER, epoch_utc TIMESTAMP, file VARCHAR, name VARCHAR,
+                       line1 VARCHAR, line2 VARCHAR, fetched_at VARCHAR, PRIMARY KEY (norad_id, epoch_utc))""")
+        before = con.execute("SELECT count(*) FROM supgp_hist").fetchone()[0]
+        if rows:
+            con.executemany("INSERT OR IGNORE INTO supgp_hist VALUES (?,?,?,?,?,?,?)", rows)
+        total = con.execute("SELECT count(*) FROM supgp_hist").fetchone()[0]
+        con.execute("CHECKPOINT")
+    finally:
+        con.close()
+    return total - before, total
 
 
 def _parse_tle3(text: str) -> list[tuple[str, str, str]]:
@@ -542,6 +585,12 @@ def update_supgp(target: Path, max_age_h: float = 20.0) -> None:
     finally:
         con.close()
     print(f"✅ SupGP 寫入 {target.name}：{len(data):,} 筆（{', '.join(used) or '無'}）")
+    if data:
+        try:
+            add, total = archive_supgp(data, datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
+            print(f"  SupGP 歷史存檔 {SUPGP_HIST.name}：新增 {add:,} 筆、累計 {total:,} 筆")
+        except Exception as e:
+            print(f"⚠ SupGP 歷史存檔失敗（不影響 DB）：{e}")
 
 
 def run(target: Path, source: str = "auto", max_age_h: float = 20.0, gcat: bool = True, changes: bool = True, supgp: bool = True) -> None:

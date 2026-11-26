@@ -92,6 +92,75 @@ def _validate(p: dict, sites: list) -> str | None:
     return None
 
 
+OWNER_CODE = {"PRC": "中共", "US": "美國", "CIS": "俄羅斯", "FR": "法國", "JPN": "日本", "IND": "印度", "UK": "英國", "ESA": "歐洲太空總署", "GER": "德國", "IT": "義大利", "CA": "加拿大", "SPN": "西班牙", "SKOR": "南韓", "NKOR": "北韓", "ROC": "台灣", "ISRA": "以色列", "TURK": "土耳其", "AUS": "澳洲", "IRAN": "伊朗", "PAKI": "巴基斯坦"}
+
+
+def owner_label(country: str | None, satcat_owner: str | None = "") -> str:
+    """衛星隸屬預設值：先用系統國別分類（中國→中共）；分類為其他／不明（新發射、尚未收錄）時改用 SATCAT 擁有者代碼（與 Rust owner_label 相同）"""
+    c = str(country or "").strip()
+    if c == "中國":
+        return "中共"
+    if c not in ("", "不明", "—", "其他"):
+        return c
+    o = str(satcat_owner or "").strip()
+    return OWNER_CODE.get(o, "" if o in ("", "TBD", "UNK") else o)
+
+
+def _brief_map(b: dict, sats: list[dict]) -> dict[int, tuple[str, str]]:
+    """簡要版輸出用：NORAD →（衛星隸屬, 解析度）。屬性表存在使用者瀏覽器，隨請求送來（attrs）；隸屬空白＝依 SATCAT 國別"""
+    idx = get_sat_index()
+    raw = b.get("attrs") or {}
+    attrs = {}
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if str(k).isdigit() and isinstance(v, dict):
+                attrs[int(k)] = (str(v.get("owner") or "").strip()[:32], str(v.get("resolution") or "").strip()[:64])
+    from .satadmin import get_satcat
+    try:
+        sc = get_satcat(fetch=False)
+    except Exception:
+        sc = {}
+    out = {}
+    for sj in sats:
+        own, reso = attrs.get(sj["norad"], ("", ""))
+        out[sj["norad"]] = (own or owner_label((idx.get(sj["norad"]) or {}).get("country"), (sc.get(sj["norad"]) or {}).get("owner")), reso)
+    return out
+
+
+SENSOR_RANK = {"電子偵察": 0, "光學": 1, "雷達": 2, "其他": 3}
+
+
+def _brief_rows(r: dict) -> list[dict]:
+    return [x for x in r["passes"] if x["coverable"] and x["img_start"] and x["img_end"]]
+
+
+def brief_a_rows(r: dict) -> list[list]:
+    """簡要版檔案 A：經過日期、衛星隸屬、衛星種類、國際名稱、解析度、開始／結束時間（可偵照時段，CSV 時區）——與 Rust brief_a_csv 相同"""
+    tz, brief = r["tz"], r.get("brief", {})
+    day = lambda t: t.astimezone(tz).strftime("%Y-%m-%d")
+    rows = sorted(_brief_rows(r), key=lambda x: (x["site"], day(x["img_start"]), SENSOR_RANK.get(x["sensor"], 4), x["img_start"], x["norad_id"]))
+    out = []
+    for x in rows:
+        own, reso = brief.get(x["norad_id"], ("", ""))
+        out.append([day(x["img_start"]), own, x["sensor"], x["name"], reso, x["img_start"].astimezone(tz).strftime("%H:%M:%S"),
+                    x["img_end"].astimezone(tz).strftime("%H:%M:%S"), x["norad_id"], x["site"]])
+    return out
+
+
+def brief_b_rows(r: dict) -> list[list]:
+    """簡要版檔案 B：經過日期（M月D日）、國際名稱、過頂時間（HHMM-HHMM）、種類，依時間排序"""
+    tz = r["tz"]
+    out = []
+    for x in sorted(_brief_rows(r), key=lambda x: (x["site"], x["img_start"], x["norad_id"])):
+        a, b = x["img_start"].astimezone(tz), x["img_end"].astimezone(tz)
+        out.append([f"{a.month}月{a.day}日", x["name"], f"{a:%H%M}-{b:%H%M}", x["sensor"], x["norad_id"], x["site"]])
+    return out
+
+
+BRIEF_A_HDR = ["經過日期", "衛星隸屬", "衛星種類", "國際名稱", "解析度", "開始時間", "結束時間", "NORAD", "中心點"]
+BRIEF_B_HDR = ["經過日期", "國際名稱", "過頂時間", "種類", "NORAD", "中心點"]
+
+
 def _select(b: dict, p: dict) -> tuple[list[dict], list[int]]:
     idx = get_sat_index()
     names = {int(k): str(v) for k, v in (b.get("names") or {}).items() if str(k).isdigit()}
@@ -148,7 +217,7 @@ def _history(ids: list[int], days: float) -> dict[int, list[tuple[datetime, str,
     return out
 
 
-def _run(job: dict, sats: list[dict], sites: list[dict], p: dict, start: datetime) -> None:
+def _run(job: dict, sats: list[dict], sites: list[dict], p: dict, start: datetime, brief: dict | None = None) -> None:
     try:
         span = p["days"] * 86400
         tz = timezone(timedelta(hours=p["tz_hours"]))
@@ -193,7 +262,7 @@ def _run(job: dict, sats: list[dict], sites: list[dict], p: dict, start: datetim
         for x in passes:
             e = per.setdefault(x["site"], [0, 0, 0])
             e[0] += 1; e[1] += x["coverable"]; e[2] += x["sunlit"]
-        job["result"] = {"passes": passes, "sun": sun, "errors": errors, "tz": tz, "summary": {
+        job["result"] = {"passes": passes, "sun": sun, "errors": errors, "tz": tz, "brief": brief or {}, "summary": {
             "start": _iso(start), "end": _iso(start + timedelta(seconds=span)), "days": p["days"], "sats": len(sats), "sites": len(targets),
             "passes": len(passes), "per_site": [{"site": k, "passes": v[0], "coverable": v[1], "sunlit": v[2]} for k, v in sorted(per.items())],
             "not_in_catalog": job["missing"], "fleet_error": fleet}}
@@ -245,7 +314,7 @@ def api_run():
                "created": datetime.now(timezone.utc), "params": dict(p, sites=[s["name"] for s in sites])}
         _jobs.append(job)
         del _jobs[:-5]
-    threading.Thread(target=_run, args=(job, sats, sites, p, start), daemon=True).start()
+    threading.Thread(target=_run, args=(job, sats, sites, p, start, _brief_map(b, sats)), daemon=True).start()
     return jsonify({"ok": True, "job_id": job["id"], "sats": len(sats)})
 
 
@@ -316,4 +385,8 @@ def api_job_file(jid: str, fname: str):
         rows = [["ALL" if n == 0 else n, name, e["lead_days"], e["n"], e["pos_med_km"], e["pos_p90_km"], e["time_med_s"], e["time_p90_s"]]
                 for n, name, e in r["errors"]]
         return _csv(rows, ["NORAD", "名稱", "提前天數", "樣本數", "位置誤差中位數km", "位置誤差p90km", "時間誤差中位數秒", "時間誤差p90秒"], f"tle_error_{stamp}.csv")
-    return jsonify({"error": "檔案需為 passes.csv／sun.csv／errors.csv"}), 404
+    if fname == "brief_a.csv":
+        return _csv(brief_a_rows(r), BRIEF_A_HDR, f"brief_A_{stamp}.csv")
+    if fname == "brief_b.csv":
+        return _csv(brief_b_rows(r), BRIEF_B_HDR, f"brief_B_{stamp}.csv")
+    return jsonify({"error": "檔案需為 passes.csv／sun.csv／errors.csv／brief_a.csv／brief_b.csv"}), 404

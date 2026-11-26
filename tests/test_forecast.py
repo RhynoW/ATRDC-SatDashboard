@@ -85,3 +85,36 @@ def test_error_curve():
     assert fc.bucket_of(0.2) is None and fc.bucket_of(1.2) == 0 and fc.bucket_of(4.0) == 3
     s = fc.summarize([(0, 1.0, 1.0), (0, 3.0, 2.0), (2, 9.0, 4.0)])
     assert len(s) == 2 and s[0]["pos_med_km"] == 3.0
+
+
+def test_brief_csvs():
+    """簡要版檔案 A／B：與 Rust forecast::tests::brief_csvs 同一組資料、同一組期望字串"""
+    import csv, io
+    from datetime import datetime, timedelta, timezone
+    from scenario04.api import forecast as api_fc
+    t = lambda s: datetime.fromisoformat(s.replace("Z", "+00:00"))
+    mk = lambda n, name, sensor, a, b, cov: {"norad_id": n, "name": name, "sensor": sensor, "site": "台北", "coverable": cov,
+                                             "img_start": t(a) if cov else None, "img_end": t(b) if cov else None}
+    r = {"tz": timezone(timedelta(hours=8)), "brief": {1: ("中共", "判優於1公尺"), 2: ("中共", "")}, "passes": [
+        mk(1, "四維高景2號02星", "光學", "2026-11-30T22:27:30Z", "2026-11-30T22:30:34Z", True),
+        mk(2, "遙感32號2B星", "電子偵察", "2026-11-30T18:26:30Z", "2026-11-30T18:27:05Z", True),
+        mk(3, 'X, "Y"', "雷達", "2026-11-30T16:27:49Z", "2026-11-30T16:31:43Z", True),
+        mk(4, "不可偵照", "光學", "2026-11-30T17:00:00Z", "2026-11-30T17:05:00Z", False)]}
+
+    def text(hdr, rows):
+        buf = io.StringIO(); w = csv.writer(buf, lineterminator="\n"); w.writerow(hdr); w.writerows(rows)
+        return buf.getvalue().splitlines()
+    a = text(api_fc.BRIEF_A_HDR, api_fc.brief_a_rows(r))
+    assert a[0] == "經過日期,衛星隸屬,衛星種類,國際名稱,解析度,開始時間,結束時間,NORAD,中心點"
+    assert a[1] == "2026-12-01,中共,電子偵察,遙感32號2B星,,02:26:30,02:27:05,2,台北"
+    assert a[2] == "2026-12-01,中共,光學,四維高景2號02星,判優於1公尺,06:27:30,06:30:34,1,台北"
+    assert a[3] == '2026-12-01,,雷達,"X, ""Y""",,00:27:49,00:31:43,3,台北'
+    assert len(a) == 4
+    b = text(api_fc.BRIEF_B_HDR, api_fc.brief_b_rows(r))
+    assert b[0] == "經過日期,國際名稱,過頂時間,種類,NORAD,中心點"
+    assert b[1] == '12月1日,"X, ""Y""",0027-0031,雷達,3,台北'
+    assert b[3] == "12月1日,四維高景2號02星,0627-0630,光學,1,台北"
+    assert api_fc.owner_label("中國", "CIS") == "中共" and api_fc.owner_label("不明", "") == ""
+    assert api_fc.owner_label("美國", "CIS") == "美國", "系統分類優先"
+    assert api_fc.owner_label("其他", "PRC") == "中共", "未收錄的新物體用 SATCAT 代碼"
+    assert api_fc.owner_label("其他", "TBD") == "" and api_fc.owner_label("", "ORB") == "ORB"

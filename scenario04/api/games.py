@@ -3,6 +3,8 @@
 GET  /game                     頁面（Cesium 地球＋碎片連鎖面板，中／EN／日）
 POST /api/games/breakup        解體與碎片連鎖模擬（請求與回應格式同 Rust 單機版）
 GET  /api/games/crowd/catalog  目錄背景點用的 TLE 清單 [norad, 群組, line1, line2]
+GET  /api/games/mega/background 百萬顆長期風險：各 25 km 高度格的運作中／失效／碎片顆數（計算核心在前端 games_mega.js，兩版共用；
+                               分類規則與 Rust 單機版 src/games_mega.rs 相同）
 
 計算核心是 Rust 單機版的 debris_engine.rs，編成 debris_cli（Dockerfile 的建置階段；
 本機測試用環境變數 DEBRIS_CLI 指定執行檔）。目錄沿用本站的衛星索引，依 NORAD 排序寫成 JSONL 給 CLI 讀。
@@ -82,6 +84,63 @@ def _raw(body: bytes) -> Response:
 @bp.get("/game")
 def game_page():
     return render_template("game.html")
+
+
+MEGA_H0, MEGA_DH, MEGA_NB, MEGA_ACTIVE_DAYS = 200.0, 25.0, 72, 2922
+
+
+def mega_classify(object_type: str, launch: str, apogee, perigee, cutoff: str):
+    """（高度格, 類別 0 運作中／1 失效／2 碎片）；與 Rust games_mega::classify 相同"""
+    if apogee is None or perigee is None:
+        return None
+    alt = (float(apogee) + float(perigee)) / 2.0
+    if not (alt == alt) or alt < MEGA_H0 or alt >= MEGA_H0 + MEGA_DH * MEGA_NB:
+        return None
+    b = int((alt - MEGA_H0) // MEGA_DH)
+    t = (object_type or "").strip().upper()
+    if t == "DEBRIS":
+        k = 2
+    elif t == "PAYLOAD":
+        ln = (launch or "").strip()
+        k = 0 if ln and ln >= cutoff else 1
+    else:
+        k = 1
+    return b, k
+
+
+def mega_background(db_path, cutoff: str) -> dict:
+    import duckdb
+    counts = [[0] * MEGA_NB for _ in range(3)]
+    total = 0
+    with duckdb.connect(str(db_path), read_only=True) as con:
+        rows = con.execute("SELECT coalesce(object_type, ''), coalesce(launch, ''), apogee, perigee FROM satcat WHERE coalesce(decay, '') = ''").fetchall()
+        try:
+            src = con.execute("SELECT coalesce(source, '') || '，' || coalesce(fetched_at, '') FROM satcat_meta LIMIT 1").fetchone()[0]
+        except Exception:  # noqa: BLE001
+            src = "SATCAT"
+    for ot, ln, ap, pe in rows:
+        r = mega_classify(ot, ln, ap, pe, cutoff)
+        if r:
+            counts[r[1]][r[0]] += 1
+            total += 1
+    return {"h0": MEGA_H0, "dh": MEGA_DH, "n": MEGA_NB, "cutoff": cutoff,
+            "active": counts[0], "derelict": counts[1], "debris": counts[2], "total": total, "source": f"SATCAT {src}",
+            "rule": "高度＝(遠地點＋近地點)/2；DEBRIS→碎片；PAYLOAD 發射 8 年內→運作中、其餘→失效；ROCKET BODY、UNKNOWN→失效"}
+
+
+@bp.get("/api/games/mega/background")
+def mega_background_api():
+    from datetime import datetime, timedelta, timezone
+    from ..ingestion.db import resolve_db
+    db = resolve_db()
+    if db is None:
+        return _error("找不到資料庫", 503)
+    cutoff = (datetime.now(timezone.utc).date() - timedelta(days=MEGA_ACTIVE_DAYS)).isoformat()
+    try:
+        return json_response(mega_background(db, cutoff))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("百萬顆背景族群失敗")
+        return _error(f"讀取 SATCAT 失敗：{e}", 503)
 
 
 @bp.get("/api/games/crowd/catalog")

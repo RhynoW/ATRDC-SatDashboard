@@ -85,11 +85,16 @@ table.kv td:first-child{color:var(--mute);white-space:nowrap;width:96px}
       <select id="t-speed" title="播放速度"><option value="">自訂</option><option value="60">1 分鐘／秒</option><option value="3600">1 小時／秒</option><option value="86400">1 天／秒</option><option value="2592000">30 天／秒</option></select>
       <button type="button" id="t-play">⏸</button></div>
     {% include "_game_debris_panel.html" %}
+    <details id="mega-wrap" style="margin-top:12px;border-top:1px solid var(--line);padding-top:8px">
+      <summary style="cursor:pointer;font-weight:600;color:var(--hi)">🌐 百萬顆衛星：長期風險與管控</summary>
+      <div id="mega-panel"></div>
+    </details>
     <div id="status"></div>
     <div class="hint" style="margin-top:10px">計算核心與 ATRDC SatDashboard Rust 單機版相同（NASA 標準解體模型、NRLMSISE-00 大氣、Cosmos 1408 驗證）；線上版同時只算一個模擬，忙碌時會自動排隊重試。</div>
   </div>
   <div id="map"><div id="cesium"></div><div id="loading">載入 3D 地球中…</div></div>
 </div>
 <script src="/static/js/game_core.js"></script>
+<script src="/static/js/games_mega.js"></script>
 </body>
 </html>

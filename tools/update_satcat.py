@@ -17,6 +17,9 @@ SATCAT 每日異動（satcat_change／satcat_change_meta 表）：① Space-Trac
 沒有 Space-Track 帳號時也能以 CelesTrak 比對），比對結果累積在暫存目錄的歷史檔（slim DB 每天重建，不能存在 DB 裡）。
 每筆分類為 new（新編目）／named（OBJECT x → 正式名稱）／renamed／decayed（再入）／decay_fix（再入日期修正）／type／other。
 
+SupGP（supgp／supgp_meta 表）：CelesTrak 營運商補充星曆（Starlink、OneWeb、Planet、Kuiper 等），供一箭多星身分比對；
+每檔每天一次（CelesTrak 規範同一檔 2 小時內只能抓一次），失敗沿用 7 天內快取。
+
 每日管線由 tools/merge_storymap_tle.py 結束時呼叫（失敗只警告、不中斷管線）。
 
 用法：
@@ -474,10 +477,82 @@ def update_gcat(target: Path, max_age_h: float = 20.0) -> None:
     print(f"✅ GCAT 寫入 {target.name}：衛星 {len(sats):,} 筆（{sat_upd}）、發射 {len(launches):,} 筆（{lau_upd}）")
 
 
-def run(target: Path, source: str = "auto", max_age_h: float = 20.0, gcat: bool = True, changes: bool = True) -> None:
+# ── SupGP：CelesTrak 營運商補充星曆（一箭多星身分比對用）────────────────────────
+SUPGP_FILES = ["starlink", "oneweb", "planet", "kuiper", "iridium", "orbcomm", "ses", "intelsat", "telesat", "iss", "css", "gps", "glonass", "ast"]
+SUPGP_CACHE = Path(tempfile.gettempdir()) / "atrdc_supgp_pipeline"
+
+
+def _parse_tle3(text: str) -> list[tuple[str, str, str]]:
+    lines = [l.rstrip() for l in text.splitlines() if l.strip()]
+    out = []
+    for i in range(len(lines) - 1):
+        if lines[i].startswith("1 ") and lines[i + 1].startswith("2 ") and len(lines[i]) >= 68 and len(lines[i + 1]) >= 68:
+            name = lines[i - 1].strip() if i > 0 and not lines[i - 1].startswith(("1 ", "2 ")) else ""
+            out.append((name, lines[i], lines[i + 1]))
+    return out
+
+
+def _supgp_file(f: str, max_age_h: float) -> tuple[list[tuple[str, str, str]], str]:
+    """下載一個 SupGP 檔（CelesTrak 規範：同一檔 2 小時內只能抓一次；本管線快取 20 小時，失敗退回 7 天內快取）→（資料, 狀態）"""
+    SUPGP_CACHE.mkdir(exist_ok=True)
+    p = SUPGP_CACHE / f"{f}.tle"
+    age = (time.time() - p.stat().st_mtime) / 3600 if p.exists() else 1e9
+    cached = _parse_tle3(p.read_text(encoding="utf-8")) if p.exists() else []
+    if age < max_age_h and cached:
+        return cached, "快取"
+    try:
+        r = requests.get(f"{CT}/NORAD/elements/supplemental/sup-gp.php", params={"FILE": f, "FORMAT": "tle"}, timeout=120, headers={"User-Agent": UA})
+        r.raise_for_status()
+        rows = _parse_tle3(r.text)
+        if rows:
+            p.write_text(r.text, encoding="utf-8")
+            return rows, "下載"
+        msg = r.text.strip().splitlines()[0][:80] if r.text.strip() else "空白"
+    except Exception as e:
+        msg = str(e)[:80]
+    if cached and age < 168:
+        return cached, f"沿用 {age:.0f} 小時前快取（{msg}）"
+    return [], f"無資料（{msg}）"
+
+
+def update_supgp(target: Path, max_age_h: float = 20.0) -> None:
+    data, used = [], []
+    for f in SUPGP_FILES:
+        rows, st = _supgp_file(f, max_age_h)
+        print(f"  SupGP {f}：{len(rows):,} 筆（{st}）")
+        if rows:
+            used.append(f)
+            data.extend([f, n, l1, l2] for n, l1, l2 in rows)
+    con = duckdb.connect(str(target))
+    try:
+        con.begin()
+        con.execute("CREATE OR REPLACE TABLE supgp (file VARCHAR, name VARCHAR, line1 VARCHAR, line2 VARCHAR)")
+        if data:
+            con.executemany("INSERT INTO supgp VALUES (?,?,?,?)", data)
+        con.execute("CREATE OR REPLACE TABLE supgp_meta (fetched_at VARCHAR, files VARCHAR, count INTEGER)")
+        con.execute("INSERT INTO supgp_meta VALUES (?,?,?)", [datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), ",".join(used), len(data)])
+        con.commit()
+        con.execute("CHECKPOINT")
+    except Exception:
+        try:
+            con.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        con.close()
+    print(f"✅ SupGP 寫入 {target.name}：{len(data):,} 筆（{', '.join(used) or '無'}）")
+
+
+def run(target: Path, source: str = "auto", max_age_h: float = 20.0, gcat: bool = True, changes: bool = True, supgp: bool = True) -> None:
     t0 = time.monotonic()
     rows, src, at = get_satcat(source, max_age_h)
     write_db(target, rows, src, at)
+    if supgp:
+        try:
+            update_supgp(target, max_age_h)
+        except Exception as e:
+            print(f"⚠ SupGP 更新失敗（不影響 SATCAT）：{e}")
     if changes:
         try:
             update_changes(target, rows, max_age_h)
@@ -498,13 +573,14 @@ def main() -> int:
     ap.add_argument("--max-age-hours", type=float, default=20.0)
     ap.add_argument("--no-gcat", action="store_true", help="不更新 GCAT 建議名稱資料")
     ap.add_argument("--no-changes", action="store_true", help="不更新 SATCAT 每日異動")
+    ap.add_argument("--no-supgp", action="store_true", help="不更新 SupGP 營運商補充星曆")
     args = ap.parse_args()
     target = Path(args.target)
     if not target.exists():
         print(f"❌ 目標 DB 不存在：{target}")
         return 1
     try:
-        run(target, args.source, args.max_age_hours, gcat=not args.no_gcat, changes=not args.no_changes)
+        run(target, args.source, args.max_age_hours, gcat=not args.no_gcat, changes=not args.no_changes, supgp=not args.no_supgp)
     except Exception as e:
         print(f"❌ {e}")
         return 1

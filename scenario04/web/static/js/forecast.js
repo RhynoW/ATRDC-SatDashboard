@@ -45,8 +45,41 @@
   function saveSites() {
     var s = sites();
     if (s.some(function (x) { return !x.name || isNaN(x.lat) || isNaN(x.lon); })) { msg('site-msg', '每個中心點都需要名稱與經緯度'); return; }
-    if (S.saveSites(s)) msg('site-msg', '已儲存 ' + s.length + ' 個常用中心點（本瀏覽器）', true); else msg('site-msg', '瀏覽器無法儲存');
+    upsertPois(s).then(function (r) {
+      msg('site-msg', '已寫入地面 POI（本瀏覽器）：更新 ' + r.updated + ' 個、新增 ' + r.added + ' 個' + (r.errors.length ? '；失敗：' + r.errors.join('；') : ''), !r.errors.length);
+      return loadPois();
+    });
   }
+  /* 依名稱寫回地面 POI：同名更新座標／半徑／備註並保留類型，新名稱新增為關注地點 */
+  function upsertPois(list) {
+    var B = window.OBS_BACKEND, res = { updated: 0, added: 0, errors: [] };
+    return B.load().then(function (d) {
+      return list.reduce(function (p, s) {
+        return p.then(function () {
+          var old = d.pois.find(function (x) { return String(x.name).toUpperCase() === s.name.toUpperCase(); });
+          if (old) return B.update('pois', old.id, Object.assign({}, old, { name: s.name, lat: s.lat, lon: s.lon, alt_m: s.alt_m, radius_km: s.radius_km, note: s.note }))
+            .then(function () { res.updated++; }, function (e) { res.errors.push(s.name + '：' + e.message); });
+          return B.add('pois', [Object.assign({ kind: 'site' }, s)]).then(function (r) { if (r.added) res.added++; else res.errors.push(s.name + '：' + r.errors.map(function (e) { return e.msg; }).join('；')); });
+        });
+      }, Promise.resolve());
+    }).then(function () { return res; });
+  }
+  function loadPois() { return window.OBS_BACKEND.load().then(function (d) { POIS = d.pois || []; fillPoiSel(); return POIS; }); }
+
+  // ── 從地面 POI 加入（與「觀測與身分驗證」共用同一份 POI 清單）──
+  var POIS = [];
+  function fillPoiSel() {
+    var sel = $('poi-sel'); if (!sel) return;
+    sel.innerHTML = POIS.length ? POIS.map(function (p, i) { return '<option value="' + i + '">' + esc(p.name) + '（' + (p.kind === 'site' ? '關注地點' : '觀測站') + (p.radius_km ? '・' + p.radius_km + ' km' : '') + '）</option>'; }).join('')
+      : '<option value="">（尚無地面 POI）</option>';
+  }
+  function addPoi() {
+    var p = POIS[+$('poi-sel').value]; if (!p) return;
+    var dup = sites().some(function (s) { return s.name.toUpperCase() === String(p.name).toUpperCase(); });
+    if (dup) { msg('site-msg', '「' + p.name + '」已在中心點清單中'); return; }
+    siteRow({ name: p.name, lat: p.lat, lon: p.lon, alt_m: p.alt_m || 0, radius_km: p.radius_km || 0, note: p.note || '' });
+  }
+
 
   // ── 群組 ──
   var SENS = { optical: '光學', radar: '雷達', sigint: '電子偵察', other: '其他' };
@@ -129,9 +162,15 @@
     }).join('') || '<tr><td colspan="14" class="muted">期間內沒有符合條件的過頂</td></tr>';
   }
 
-  window.FC = { addSite: addSite, saveSites: saveSites, run: run, setLook: setLook };
-  var saved = S.loadSites();
-  if (saved && saved.length) saved.forEach(siteRow);
-  else api('GET', '/api/forecast/sites').then(function (j) { j.sites.forEach(siteRow); });
+  window.FC = { addPoi: addPoi, addSite: addSite, saveSites: saveSites, run: run, setLook: setLook };
+  // 舊版常用中心點（只存在本瀏覽器）一次性併入地面 POI；之後中心點一律取自地面 POI 的「關注地點」
+  var legacy = S.loadSites(), MIG = 'atrdc_forecast_sites_migrated';
+  var mig = (function () { try { return localStorage.getItem(MIG); } catch (e) { return '1'; } })();
+  (legacy && legacy.length && !mig ? upsertPois(legacy).then(function () { try { localStorage.setItem(MIG, '1'); } catch (e) { /* 忽略 */ } }) : Promise.resolve())
+    .then(loadPois).then(function (pois) {
+      var st = pois.filter(function (p) { return p.kind === 'site'; });
+      if (st.length) st.forEach(siteRow);
+      else return api('GET', '/api/forecast/sites').then(function (j) { j.sites.forEach(siteRow); });
+    });
   loadGroups();
 })();
